@@ -1,9 +1,29 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/genai";
 import { ImageAnalysisResult } from '../types';
 
-// Initialize Gemini Client
-// We assume process.env.API_KEY is available in the environment
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization of the Gemini client
+// This prevents the app from crashing on load if process.env.API_KEY is missing momentarily
+let aiInstance: GoogleGenAI | null = null;
+
+const getApiKey = (): string => {
+  // Robustly check for API key in various global locations to prevent ReferenceError
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
+    return (window as any).process.env.API_KEY;
+  }
+  return '';
+};
+
+const getAiClient = () => {
+  if (!aiInstance) {
+    const apiKey = getApiKey();
+    // We strictly use the key. If empty, the SDK might throw on calls, but we avoid crash on load.
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, a helpful, intelligent AI assistant specialized in Kinyarwanda. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, concise, and helpful. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists.";
 
@@ -13,6 +33,7 @@ export const streamChatResponse = async (
   onChunk: (text: string) => void
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
   
   const chat = ai.chats.create({
     model: model,
@@ -41,6 +62,7 @@ export const generateConversationResponse = async (
   newMessage: string
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
   
   // Optimized instruction for oral conversation: shorter, more natural
   const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short, natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists if possible, just natural speech text.";
@@ -63,6 +85,7 @@ export const generateTextAnalysis = async (
   tone: 'formal' | 'informal' | 'friendly' = 'formal'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
   
   let toneInstruction = "";
   switch (tone) {
@@ -102,6 +125,7 @@ export const generateTextAnalysis = async (
 // Updated Image Analysis to return structured data with confidence
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
   
   const response = await ai.models.generateContent({
     model: model,
@@ -168,6 +192,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
   // We do NOT use the Kinyarwanda system instruction here to avoid forced translation.
   // We want the raw text exactly as it appears.
   const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language (e.g., if it's English, keep it English). Do not summarize. Return ONLY the extracted text.";
@@ -187,6 +212,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 
 export const generateImage = async (prompt: string): Promise<string> => {
   const model = "gemini-2.5-flash-image";
+  const ai = getAiClient();
 
   try {
     const response = await ai.models.generateContent({
@@ -216,6 +242,7 @@ export const generateRuralAdvice = async (
   sector: 'agriculture' | 'business' | 'services'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
 
   let systemRole = "";
   if (sector === 'agriculture') {
@@ -244,6 +271,7 @@ export const generateCourse = async (
   prerequisites?: string
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
+  const ai = getAiClient();
 
   const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
   
@@ -296,6 +324,7 @@ export const generateCourse = async (
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
   const model = "gemini-2.5-flash-preview-tts";
+  const ai = getAiClient();
   
   // Map custom UI voices to API valid voices
   let apiVoice = voiceName;

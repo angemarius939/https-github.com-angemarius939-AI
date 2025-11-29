@@ -20,4 +20,5 @@ try {
   console.log("Application mounted successfully.");
 } catch (error) {
   console.error("Failed to mount application:", error);
+  rootElement.innerHTML = '<div style="color:red; padding:20px;">Failed to start application. Please check the console.</div>';
 }
