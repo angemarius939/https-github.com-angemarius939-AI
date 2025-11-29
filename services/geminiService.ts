@@ -245,29 +245,33 @@ export const generateCourse = async (
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
 
-  const systemInstruction = `You are an educational expert creating short, custom courses in Kinyarwanda. 
-  Create a structured mini-course on the provided topic. 
-  Structure it with the following sections using these exact Kinyarwanda headings (Use Markdown formatting like # for main headings):
+  const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
   
-  # 1. Intangiriro (Introduction)
-  Include estimated duration and prerequisites here if provided.
-  
-  # 2. Ingingo z'ingenzi (Key Points)
-  Bullet points of the main concepts.
-  
-  # 3. Urugero rufatika (Practical Example)
-  Real world application context suitable for Rwanda.
-  
-  # 4. Ibitabo n'Inyandiko (Recommended Books)
-  List 2-3 specific books, manuals, or reports recommended for reading. Prioritize resources available in Kinyarwanda or relevant to the region.
-  
-  # 5. Aho gushakira amakuru (Other Resources)
-  List websites, organizations, or tools for further learning.
-  
-  # 6. Ibibazo n'Imyitozo (Quiz & Exercises)
-  Provide 3-5 specific questions (Ibibazo) to test understanding, and 1 practical exercise (Umwitozo).
-  
-  Keep language simple, educational, and strictly in Kinyarwanda.`;
+  YOU MUST FOLLOW THIS EXACT STRUCTURE FOR EVERY COURSE GENERATED (Use Markdown ## for titles):
+
+  ## 1. Ibikubiye mu Isomo (Course Structure)
+  List the sections of this course here as a Table of Contents.
+
+  ## 2. Intangiriro (Introduction)
+  Explain the context, importance, estimated duration, and prerequisites.
+
+  ## 3. Incamake y'Isomo (Outline)
+  Provide a brief overview of the modules/chapters.
+
+  ## 4. Ingingo z'Ingenzi (Birambuye)
+  This is the main content. Provide DETAILED explanations, deep dives into sub-topics, and clear concepts. Do not just list points, explain them in full paragraphs.
+
+  ## 5. Ingero Zifatika (Examples)
+  Provide real-world scenarios and practical applications suitable for Rwanda.
+
+  ## 6. Imfashanyigisho & Ibitabo
+  List recommended books, articles, and resources for further reading.
+
+  ## 7. Ibibazo & Imyitozo (Quiz)
+  Provide at least 5 assessment questions and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end.
+
+  Language: Strictly Kinyarwanda.
+  Tone: Professional, Educational, Encouraging.`;
 
   let prompt = `Create a ${level} level course about: ${topic}.`;
   

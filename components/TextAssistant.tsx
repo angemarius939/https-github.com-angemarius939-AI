@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2 } from 'lucide-react';
+import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Code, Terminal } from 'lucide-react';
 import { generateTextAnalysis } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -41,11 +41,71 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyCodeSnippet = (code: string) => {
+    navigator.clipboard.writeText(code);
+    showToast('Code yakoporowe!', 'info');
+  };
+
   const toneOptions = [
     { value: 'formal', label: 'Byiyubashye' },
     { value: 'informal', label: 'Bisanzwe' },
     { value: 'friendly', label: 'Gicuti' },
   ] as const;
+
+  // Function to render text with syntax highlighting for code blocks
+  const renderFormattedResult = (text: string) => {
+    if (!text) return <span className="text-stone-400 italic">Igisubizo kizaza hano...</span>;
+
+    // Split text by markdown code blocks: ```lang ... ```
+    const parts = text.split(/(```[\w-]*\n[\s\S]*?```)/g);
+
+    return parts.map((part, index) => {
+      // Check if this part is a code block
+      if (part.startsWith('```')) {
+        const match = part.match(/```([\w-]*)\n([\s\S]*?)```/);
+        if (match) {
+          const language = match[1] || 'Code';
+          const codeContent = match[2];
+          return (
+            <div key={index} className="my-4 rounded-lg overflow-hidden border border-emerald-900/10 shadow-sm group">
+              <div className="bg-stone-800 text-stone-300 px-4 py-1.5 text-xs font-mono flex justify-between items-center border-b border-stone-700">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-3 h-3" />
+                  <span className="uppercase tracking-wider text-[10px]">{language || 'TEXT'}</span>
+                </div>
+                <button
+                  onClick={() => copyCodeSnippet(codeContent)}
+                  className="hover:text-white transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-200"
+                  title="Koporora Code"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span className="text-[10px]">Koporora</span>
+                </button>
+              </div>
+              <pre className="bg-[#1e1e1e] text-emerald-50 p-4 overflow-x-auto text-sm font-mono leading-relaxed">
+                <code>{codeContent}</code>
+              </pre>
+            </div>
+          );
+        }
+      }
+
+      // Handle regular text paragraphs and bold formatting
+      return (
+        <div key={index} className="whitespace-pre-wrap mb-2 leading-relaxed text-stone-800">
+          {part.split(/(\*\*.*?\*\*)/g).map((subPart, subIndex) => 
+            subPart.startsWith('**') && subPart.endsWith('**') ? (
+              <strong key={subIndex} className="font-bold text-emerald-900">
+                {subPart.slice(2, -2)}
+              </strong>
+            ) : (
+              subPart
+            )
+          )}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="flex flex-col h-full p-6 space-y-6 max-w-4xl mx-auto w-full">
@@ -85,13 +145,13 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
         {/* Input Section */}
         <div className="flex flex-col space-y-4">
           <label className="text-sm font-medium text-emerald-800">Umwandiko wawe</label>
           
           <textarea
-            className="flex-1 w-full p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none bg-white text-stone-800 min-h-[150px]"
+            className="flex-1 w-full p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none bg-white text-stone-800 min-h-[150px] font-sans"
             placeholder="Shyira umwandiko hano..."
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -130,7 +190,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
         </div>
 
         {/* Output Section */}
-        <div className="flex flex-col space-y-3">
+        <div className="flex flex-col space-y-3 h-full">
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-emerald-800">Igisubizo</label>
             {result && (
@@ -138,7 +198,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
                 {onNavigateToTTS && (
                   <button
                     onClick={() => onNavigateToTTS(result)}
-                    className="text-xs flex items-center text-emerald-600 hover:text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-md transition-colors"
+                    className="text-xs flex items-center text-emerald-600 hover:text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-md transition-colors border border-emerald-100"
                     title="Soma"
                   >
                     <Volume2 className="w-3 h-3 mr-1.5" />
@@ -147,7 +207,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
                 )}
                 <button 
                   onClick={handleCopy}
-                  className="text-xs flex items-center text-emerald-600 hover:text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-md transition-colors"
+                  className="text-xs flex items-center text-emerald-600 hover:text-emerald-700 font-medium bg-emerald-50 px-2 py-1 rounded-md transition-colors border border-emerald-100"
                 >
                   {copied ? <Check className="w-3 h-3 mr-1.5" /> : <Copy className="w-3 h-3 mr-1.5" />}
                   {copied ? 'Byakoporowe' : 'Koporora'}
@@ -155,8 +215,22 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
               </div>
             )}
           </div>
-          <div className="flex-1 w-full p-4 border border-emerald-200 rounded-xl bg-emerald-50/30 text-stone-800 overflow-y-auto whitespace-pre-wrap min-h-[250px]">
-            {result || <span className="text-stone-400 italic">Igisubizo kizaza hano...</span>}
+          
+          <div className="flex-1 w-full flex flex-col rounded-xl border border-emerald-200 bg-white overflow-hidden shadow-sm">
+             {/* Context Header */}
+             <div className="bg-emerald-50/50 border-b border-emerald-100 px-4 py-2 flex items-center text-xs text-emerald-600 font-medium">
+               <div className="flex items-center gap-2">
+                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                 <span>{activeTab === 'summarize' ? 'Incamake' : activeTab === 'translate' ? 'Ubusobanuro' : 'Ikosora'}</span>
+                 <span className="text-emerald-300">|</span>
+                 <span className="uppercase text-[10px] tracking-wide">{toneOptions.find(t => t.value === tone)?.label}</span>
+               </div>
+             </div>
+
+             {/* Result Content */}
+             <div className="flex-1 p-4 overflow-y-auto min-h-[250px] bg-stone-50/30">
+               {renderFormattedResult(result)}
+             </div>
           </div>
         </div>
       </div>
