@@ -59,8 +59,8 @@ export default function App() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 relative">
-          {/* Imigongo Background Pattern for Main Content */}
-          <div className="absolute inset-0 imigongo-pattern-light opacity-60 pointer-events-none z-0"></div>
+          {/* Background Pattern for Main Content */}
+          <div className="absolute inset-0 rwanda-pattern-light opacity-60 pointer-events-none z-0"></div>
 
           {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between p-4 bg-black text-white border-b border-white/10 relative z-10">

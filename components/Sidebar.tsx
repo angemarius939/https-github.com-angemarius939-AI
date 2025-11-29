@@ -23,8 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
 
   return (
     <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-black text-white transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 overflow-hidden`}>
-      {/* Imigongo Background Layer */}
-      <div className="absolute inset-0 imigongo-pattern opacity-10 pointer-events-none"></div>
+      {/* Background Layer */}
+      <div className="absolute inset-0 rwanda-pattern opacity-10 pointer-events-none"></div>
       
       {/* Content Layer */}
       <div className="relative flex flex-col h-full z-10 bg-gradient-to-b from-black/90 to-emerald-950/90">
