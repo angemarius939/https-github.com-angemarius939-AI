@@ -574,7 +574,7 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({ initialText }) => {
                     ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
                     : 'bg-white text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 shadow-sm'
                   }`}
-                  title="Manura Audio"
+                  title="Manura Audio (MP3)"
                 >
                   {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 </button>
