@@ -2,24 +2,43 @@ import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/ge
 import { ImageAnalysisResult } from '../types';
 
 // Lazy initialization of the Gemini client
-// This prevents the app from crashing on load if process.env.API_KEY is missing momentarily
 let aiInstance: GoogleGenAI | null = null;
 
 const getApiKey = (): string => {
-  // Robustly check for API key in various global locations to prevent ReferenceError
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-    return process.env.API_KEY;
+  // 1. Try Vite standard (import.meta.env.VITE_API_KEY)
+  // We use 'as any' to avoid TS errors if types aren't set up
+  try {
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_KEY) {
+      return (import.meta as any).env.VITE_API_KEY;
+    }
+  } catch (e) {}
+
+  // 2. Try Node/CRA standard (process.env.API_KEY or process.env.REACT_APP_API_KEY)
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.API_KEY) return process.env.API_KEY;
+      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+    }
+  } catch (e) {}
+  
+  // 3. Try window fallback (injected via script tags or global vars)
+  if (typeof window !== 'undefined') {
+    const win = window as any;
+    if (win.process?.env?.API_KEY) return win.process.env.API_KEY;
+    if (win.VITE_API_KEY) return win.VITE_API_KEY;
+    if (win.API_KEY) return win.API_KEY;
   }
-  if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
-    return (window as any).process.env.API_KEY;
-  }
+
   return '';
 };
 
 const getAiClient = () => {
   if (!aiInstance) {
     const apiKey = getApiKey();
-    // We strictly use the key. If empty, the SDK might throw on calls, but we avoid crash on load.
+    if (!apiKey) {
+      console.error("CRITICAL ERROR: API Key is missing. Please set VITE_API_KEY in your environment variables.");
+    }
+    // We initialize anyway, but calls will fail if key is empty.
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -35,26 +54,31 @@ export const streamChatResponse = async (
   const model = "gemini-2.5-flash";
   const ai = getAiClient();
   
-  const chat = ai.chats.create({
-    model: model,
-    config: {
-      systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
-    },
-    history: history,
-  });
+  try {
+    const chat = ai.chats.create({
+      model: model,
+      config: {
+        systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
+      },
+      history: history,
+    });
 
-  const resultStream = await chat.sendMessageStream({ message: newMessage });
+    const resultStream = await chat.sendMessageStream({ message: newMessage });
 
-  let fullText = "";
-  for await (const chunk of resultStream) {
-    const c = chunk as GenerateContentResponse;
-    const text = c.text;
-    if (text) {
-      fullText += text;
-      onChunk(text);
+    let fullText = "";
+    for await (const chunk of resultStream) {
+      const c = chunk as GenerateContentResponse;
+      const text = c.text;
+      if (text) {
+        fullText += text;
+        onChunk(text);
+      }
     }
+    return fullText;
+  } catch (error) {
+    console.error("Gemini Stream Error:", error);
+    throw error;
   }
-  return fullText;
 };
 
 export const generateConversationResponse = async (
@@ -67,16 +91,21 @@ export const generateConversationResponse = async (
   // Optimized instruction for oral conversation: shorter, more natural
   const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short, natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists if possible, just natural speech text.";
 
-  const chat = ai.chats.create({
-    model: model,
-    config: {
-      systemInstruction: CONVERSATION_INSTRUCTION,
-    },
-    history: history,
-  });
+  try {
+    const chat = ai.chats.create({
+      model: model,
+      config: {
+        systemInstruction: CONVERSATION_INSTRUCTION,
+      },
+      history: history,
+    });
 
-  const response = await chat.sendMessage({ message: newMessage });
-  return response.text || "";
+    const response = await chat.sendMessage({ message: newMessage });
+    return response.text || "";
+  } catch (error) {
+    console.error("Gemini Conversation Error:", error);
+    throw error;
+  }
 };
 
 export const generateTextAnalysis = async (
@@ -111,15 +140,20 @@ export const generateTextAnalysis = async (
     finalPrompt = `Correct the grammar of the following Kinyarwanda text and ensure it uses ${toneInstruction}. Explain the changes briefly in Kinyarwanda: \n\n${prompt}`;
   }
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: finalPrompt,
-    config: {
-      systemInstruction: "You are a Kinyarwanda language expert named ai.rw.",
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: finalPrompt,
+      config: {
+        systemInstruction: "You are a Kinyarwanda language expert named ai.rw.",
+      }
+    });
 
-  return response.text || "Ntabwo bishobotse kubona igisubizo.";
+    return response.text || "Ntabwo bishobotse kubona igisubizo.";
+  } catch (error) {
+    console.error("Gemini Text Analysis Error:", error);
+    throw error;
+  }
 };
 
 // Updated Image Analysis to return structured data with confidence
@@ -127,66 +161,70 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
   const model = "gemini-2.5-flash";
   const ai = getAiClient();
   
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: base64Image
-          }
-        },
-        {
-          text: prompt || "Sobanura iyi foto mu Kinyarwanda."
-        }
-      ]
-    },
-    config: {
-      systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          description: {
-            type: Type.STRING,
-            description: "The main analysis or answer to the user's prompt in Kinyarwanda."
-          },
-          confidenceScore: {
-            type: Type.NUMBER,
-            description: "A confidence score from 0 to 100 representing how certain the model is about its analysis."
-          },
-          keyObservations: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "A list of 3-5 key visual elements or details observed in the image in Kinyarwanda."
-          },
-          imageType: {
-            type: Type.STRING,
-            description: "Classify the image type. Choose one best fit and return the Kinyarwanda term: 'Ifoto' (Photo), 'Inyandiko' (Document), 'Igishushanyo' (Diagram), 'Ecran' (Screenshot), 'Ubuhanzi' (Art), or 'Ibindi' (Other)."
-          }
-        },
-        required: ["description", "confidenceScore", "keyObservations", "imageType"]
-      }
-    }
-  });
-
-  const text = response.text;
-  if (!text) {
-    throw new Error("Nta gisubizo kibonetse");
-  }
-
   try {
-    return JSON.parse(text) as ImageAnalysisResult;
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: base64Image
+            }
+          },
+          {
+            text: prompt || "Sobanura iyi foto mu Kinyarwanda."
+          }
+        ]
+      },
+      config: {
+        systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            description: {
+              type: Type.STRING,
+              description: "The main analysis or answer to the user's prompt in Kinyarwanda."
+            },
+            confidenceScore: {
+              type: Type.NUMBER,
+              description: "A confidence score from 0 to 100 representing how certain the model is about its analysis."
+            },
+            keyObservations: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "A list of 3-5 key visual elements or details observed in the image in Kinyarwanda."
+            },
+            imageType: {
+              type: Type.STRING,
+              description: "Classify the image type. Choose one best fit and return the Kinyarwanda term: 'Ifoto' (Photo), 'Inyandiko' (Document), 'Igishushanyo' (Diagram), 'Ecran' (Screenshot), 'Ubuhanzi' (Art), or 'Ibindi' (Other)."
+            }
+          },
+          required: ["description", "confidenceScore", "keyObservations", "imageType"]
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("Nta gisubizo kibonetse");
+    }
+
+    try {
+      return JSON.parse(text) as ImageAnalysisResult;
+    } catch (error) {
+      console.error("Failed to parse JSON response:", error);
+      return {
+        description: text,
+        confidenceScore: 0,
+        keyObservations: [],
+        imageType: "Ibindi"
+      };
+    }
   } catch (error) {
-    console.error("Failed to parse JSON response:", error);
-    // Fallback if JSON parsing fails
-    return {
-      description: text,
-      confidenceScore: 0,
-      keyObservations: [],
-      imageType: "Ibindi"
-    };
+    console.error("Gemini Image Analysis Error:", error);
+    throw error;
   }
 };
 
@@ -197,17 +235,22 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
   // We want the raw text exactly as it appears.
   const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language (e.g., if it's English, keep it English). Do not summarize. Return ONLY the extracted text.";
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: {
-      parts: [
-        { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: prompt }
-      ]
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: {
+        parts: [
+          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+          { text: prompt }
+        ]
+      }
+    });
 
-  return response.text || "Nta nyandiko ibonetse.";
+    return response.text || "Nta nyandiko ibonetse.";
+  } catch (error) {
+    console.error("Gemini OCR Error:", error);
+    throw error;
+  }
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
@@ -237,7 +280,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
     }
     throw new Error("Nta foto yabonetse.");
   } catch (e) {
-    console.error(e);
+    console.error("Gemini Generate Image Error:", e);
     throw new Error("Habaye ikibazo mu guhanga ifoto.");
   }
 };
@@ -258,15 +301,20 @@ export const generateRuralAdvice = async (
     systemRole = "You are a helpful assistant for daily services in rural Rwanda. Answer in Kinyarwanda.";
   }
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: prompt,
-    config: {
-      systemInstruction: systemRole,
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: {
+        systemInstruction: systemRole,
+      }
+    });
 
-  return response.text || "Ntabwo bishobotse kubona inama.";
+    return response.text || "Ntabwo bishobotse kubona inama.";
+  } catch (error) {
+    console.error("Gemini Rural Advice Error:", error);
+    throw error;
+  }
 };
 
 export const generateCourse = async (
@@ -316,15 +364,20 @@ export const generateCourse = async (
     prompt += `\nPrerequisites: ${prerequisites}.`;
   }
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: prompt,
-    config: {
-      systemInstruction: systemInstruction,
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+      }
+    });
 
-  return response.text || "Ntabwo bishobotse gutegura isomo.";
+    return response.text || "Ntabwo bishobotse gutegura isomo.";
+  } catch (error) {
+    console.error("Gemini Course Gen Error:", error);
+    throw error;
+  }
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
@@ -337,18 +390,23 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
     apiVoice = 'Fenrir'; // Using Fenrir as a proxy for a promotional/deeper voice
   }
 
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: [{ parts: [{ text: text }] }],
-    config: {
-      responseModalities: [Modality.AUDIO], 
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: apiVoice },
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: [{ parts: [{ text: text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO], 
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: apiVoice },
+          },
         },
       },
-    },
-  });
+    });
 
-  return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+  } catch (error) {
+    console.error("Gemini TTS Error:", error);
+    throw error;
+  }
 };
