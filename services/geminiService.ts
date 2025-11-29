@@ -210,7 +210,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
   return response.text || "Nta nyandiko ibonetse.";
 };
 
-export const generateImage = async (prompt: string): Promise<string> => {
+export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
   const model = "gemini-2.5-flash-image";
   const ai = getAiClient();
 
@@ -220,6 +220,11 @@ export const generateImage = async (prompt: string): Promise<string> => {
       contents: {
         parts: [{ text: prompt }]
       },
+      config: {
+        imageConfig: {
+          aspectRatio: aspectRatio
+        }
+      }
     });
 
     const parts = response.candidates?.[0]?.content?.parts;

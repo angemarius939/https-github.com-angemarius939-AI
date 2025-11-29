@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio } from 'lucide-react';
 import { analyzeImage, generateImage, extractTextFromImage } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -32,6 +32,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   const [genPrompt, setGenPrompt] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
 
   useEffect(() => {
     return () => {
@@ -100,6 +101,32 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     }
   };
 
+  const captureAndRead = () => {
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 100);
+
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        
+        setTimeout(() => {
+          setSelectedImage(dataUrl);
+          stopCamera();
+          // Trigger OCR immediately
+          handleOCRInternal(dataUrl);
+        }, 400);
+      }
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -128,13 +155,17 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     }
   };
 
-  const handleOCR = async () => {
-    if (!selectedImage) return;
+  const handleOCR = () => {
+    if (selectedImage) {
+      handleOCRInternal(selectedImage);
+    }
+  };
+
+  const handleOCRInternal = async (imageDataUrl: string) => {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     try {
-      const base64Data = selectedImage.split(',')[1];
-      
+      const base64Data = imageDataUrl.split(',')[1];
       const extractedText = await extractTextFromImage(base64Data);
       
       const result: ImageAnalysisResult = {
@@ -158,13 +189,25 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     setIsGenerating(true);
     setGeneratedImageUrl(null);
     try {
-      const result = await generateImage(genPrompt);
+      const result = await generateImage(genPrompt, aspectRatio);
       setGeneratedImageUrl(result);
       showToast('Ifoto yakozwe neza!', 'success');
     } catch (error) {
       showToast('Habaye ikibazo guhanga ifoto.', 'error');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (generatedImageUrl) {
+      const link = document.createElement('a');
+      link.href = generatedImageUrl;
+      link.download = `ai_rw_generated_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Ifoto yamanuwe!', 'success');
     }
   };
 
@@ -188,6 +231,14 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     if (t.includes('ecran') || t.includes('screen')) return <Monitor className="w-4 h-4 mr-1.5" />;
     return <ImageIcon className="w-4 h-4 mr-1.5" />;
   };
+
+  const ratios = [
+    { label: "1:1", value: "1:1" },
+    { label: "16:9", value: "16:9" },
+    { label: "9:16", value: "9:16" },
+    { label: "4:3", value: "4:3" },
+    { label: "3:4", value: "3:4" },
+  ];
 
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full p-4 md:p-8 space-y-8 overflow-y-auto">
@@ -235,8 +286,35 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
               Hanga
             </Button>
           </div>
+          
+          {/* Aspect Ratio Selector */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+             <span className="text-xs font-medium text-emerald-800 flex items-center shrink-0">
+               <Ratio className="w-3 h-3 mr-1" />
+               Ingano:
+             </span>
+             {ratios.map(r => (
+               <button
+                 key={r.value}
+                 onClick={() => setAspectRatio(r.value)}
+                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
+                   aspectRatio === r.value 
+                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                     : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-200'
+                 }`}
+               >
+                 {r.label}
+               </button>
+             ))}
+          </div>
 
-          <div className="aspect-video w-full bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 border-dashed">
+          <div className={`relative w-full bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 border-dashed ${
+              aspectRatio === '16:9' ? 'aspect-video' : 
+              aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm mx-auto' : 
+              aspectRatio === '4:3' ? 'aspect-[4/3]' : 
+              aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm mx-auto' : 
+              'aspect-square max-w-lg mx-auto'
+          }`}>
             {isGenerating ? (
               <div className="text-center p-6">
                 <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
@@ -244,7 +322,27 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                 <p className="text-emerald-600 text-sm mt-1">Bishobora gufata amasegonda make</p>
               </div>
             ) : generatedImageUrl ? (
-              <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain bg-black" />
+              <div className="relative w-full h-full group">
+                <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain bg-black/5" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                  <button
+                    onClick={handleDownloadImage}
+                    className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                    title="Manura Ifoto (Download)"
+                  >
+                    <Download className="w-6 h-6" />
+                  </button>
+                  {onNavigateToTTS && (
+                     <button
+                       onClick={() => onNavigateToTTS("Iyi ni ifoto yakozwe na A.I. " + genPrompt)}
+                       className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                       title="Soma mu ijwi"
+                     >
+                       <Volume2 className="w-6 h-6" />
+                     </button>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="text-center text-emerald-400">
                 <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -274,7 +372,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                     
                     <div className={`absolute inset-0 bg-white z-50 pointer-events-none transition-opacity ${isFlashing ? 'duration-0 opacity-100' : 'duration-700 ease-out opacity-0'}`} />
 
-                    <div className="absolute bottom-4 flex gap-6 z-10 items-center">
+                    <div className="absolute bottom-4 flex gap-4 z-10 items-center justify-center w-full px-4">
                        <button 
                          onClick={stopCamera}
                          className="p-3 bg-red-500/80 rounded-full text-white hover:bg-red-600 transition-colors shadow-lg backdrop-blur-sm"
@@ -286,10 +384,20 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                        <button 
                          onClick={capturePhoto}
                          className="p-1 rounded-full border-4 border-white/50 hover:border-white transition-all shadow-xl"
+                         title="Fata Ifoto"
                        >
                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-colors">
                             <Camera className="w-8 h-8" />
                          </div>
+                       </button>
+
+                       <button 
+                         onClick={captureAndRead}
+                         className="p-3 bg-white/90 rounded-full text-emerald-700 hover:bg-white transition-colors shadow-lg backdrop-blur-sm flex items-center gap-1 font-bold text-xs"
+                         title="Fata & Soma (OCR)"
+                       >
+                         <ScanText className="w-5 h-5" />
+                         <span className="hidden sm:inline">Soma</span>
                        </button>
 
                        <button 
