@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, Play, Square, Loader2, Info, Gauge, Sliders, Download, ChevronDown, Check, Trash2, Megaphone } from 'lucide-react';
+import { Volume2, Play, Square, Loader2, Info, Gauge, Sliders, Download, ChevronDown, Check, Trash2, Megaphone, Volume1 } from 'lucide-react';
 import { Button } from './Button';
 import { generateSpeech } from '../services/geminiService';
 import { useToast } from './ToastProvider';
@@ -147,6 +147,7 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({ initialText }) => {
   const [hasAudio, setHasAudio] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   
   // Audio Params
   const [speed, setSpeed] = useState(1.0);
@@ -205,6 +206,38 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({ initialText }) => {
     setPitch(newPitch);
     if (sourceNodeRef.current) {
       sourceNodeRef.current.detune.value = newPitch;
+    }
+  };
+
+  const handlePreviewVoice = async () => {
+    if (isPreviewPlaying) return;
+    setIsPreviewPlaying(true);
+
+    try {
+      const sampleText = `Muraho, ubu ni ijwi rya ${selectedVoice === 'AdVoice' ? 'AdVoice' : selectedVoice}.`;
+      const base64Data = await generateSpeech(sampleText, selectedVoice);
+      
+      if (!base64Data) throw new Error("No data");
+
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+
+      const audioData = decode(base64Data);
+      const buffer = await decodeAudioData(audioData, audioContextRef.current, 24000, 1);
+      
+      const source = audioContextRef.current.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContextRef.current.destination);
+      source.onended = () => setIsPreviewPlaying(false);
+      source.start(0);
+    } catch (e) {
+      console.error(e);
+      setIsPreviewPlaying(false);
+      showToast("Habaye ikibazo cya preview.", "error");
     }
   };
 
@@ -407,49 +440,60 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({ initialText }) => {
               <Volume2 className="w-4 h-4 mr-2" />
               Hitamo Ijwi
             </label>
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-                className="w-full flex items-center justify-between p-3 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all hover:border-emerald-300 shadow-sm"
-              >
-                <div className="flex items-center">
-                  <span className={`w-2 h-2 rounded-full mr-2 ${selectedVoice === 'AdVoice' ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
-                  <span className="font-medium text-emerald-900">{selectedVoice}</span>
-                  {selectedVoice === 'AdVoice' && (
-                    <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium border border-amber-200">
-                      Promo
-                    </span>
-                  )}
-                </div>
-                <ChevronDown className={`w-4 h-4 text-emerald-500 transition-transform duration-200 ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
+            <div className="flex gap-2">
+              <div className="relative flex-1" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
+                  className="w-full flex items-center justify-between p-3 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all hover:border-emerald-300 shadow-sm"
+                >
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${selectedVoice === 'AdVoice' ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                    <span className="font-medium text-emerald-900">{selectedVoice}</span>
+                    {selectedVoice === 'AdVoice' && (
+                      <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium border border-amber-200">
+                        Promo
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-emerald-500 transition-transform duration-200 ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              {isVoiceDropdownOpen && (
-                <div className="absolute z-20 w-full mt-2 bg-white border border-emerald-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5">
-                  {voices.map((voice) => (
-                    <button
-                      key={voice}
-                      onClick={() => { setSelectedVoice(voice); setIsVoiceDropdownOpen(false); }}
-                      className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left group ${
-                        selectedVoice === voice 
-                        ? 'bg-emerald-50 text-emerald-900 font-semibold' 
-                        : 'text-stone-600 hover:bg-emerald-50/50 hover:text-emerald-800'
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        <span>{voice}</span>
-                        {voice === 'AdVoice' && (
-                          <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium border border-amber-200 flex items-center">
-                            <Megaphone className="w-3 h-3 mr-1" />
-                            Promo
-                          </span>
-                        )}
-                      </div>
-                      {selectedVoice === voice && <Check className="w-4 h-4 text-emerald-600" />}
-                    </button>
-                  ))}
-                </div>
-              )}
+                {isVoiceDropdownOpen && (
+                  <div className="absolute z-20 w-full mt-2 bg-white border border-emerald-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5">
+                    {voices.map((voice) => (
+                      <button
+                        key={voice}
+                        onClick={() => { setSelectedVoice(voice); setIsVoiceDropdownOpen(false); }}
+                        className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left group ${
+                          selectedVoice === voice 
+                          ? 'bg-emerald-50 text-emerald-900 font-semibold' 
+                          : 'text-stone-600 hover:bg-emerald-50/50 hover:text-emerald-800'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <span>{voice}</span>
+                          {voice === 'AdVoice' && (
+                            <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium border border-amber-200 flex items-center">
+                              <Megaphone className="w-3 h-3 mr-1" />
+                              Promo
+                            </span>
+                          )}
+                        </div>
+                        {selectedVoice === voice && <Check className="w-4 h-4 text-emerald-600" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <button
+                onClick={handlePreviewVoice}
+                disabled={isPreviewPlaying}
+                className="px-3 rounded-xl border border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50 focus:ring-2 focus:ring-emerald-500 transition-colors flex items-center justify-center shadow-sm"
+                title="Umva ijwi (Preview)"
+              >
+                {isPreviewPlaying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Volume1 className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
