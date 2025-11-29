@@ -1,0 +1,8 @@
+{
+  "name": "ai.rw",
+  "description": "Ubufasha bwa AI mu Kinyarwanda. Chat, gusesengura inyandiko, no guhanga amafoto.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
