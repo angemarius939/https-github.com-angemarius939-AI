@@ -55,7 +55,9 @@
   <script type="importmap">
 {
   "imports": {
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/jsx-runtime": "https://aistudiocdn.com/react@^19.2.0/jsx-runtime",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
@@ -66,6 +68,11 @@
 </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error("Global Error:", message, error);
+      };
+    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
