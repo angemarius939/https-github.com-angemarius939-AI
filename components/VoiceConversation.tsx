@@ -21,6 +21,11 @@ export const VoiceConversation: React.FC = () => {
   const { showToast } = useToast();
 
   useEffect(() => {
+    // Ensure audio context is unlocked
+    if (typeof window !== 'undefined') {
+       window.speechSynthesis.cancel();
+    }
+
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -33,8 +38,9 @@ export const VoiceConversation: React.FC = () => {
       recognitionRef.current.onend = () => {
         setIsListening(false);
         // Use ref to check transcript to avoid closure staleness
-        if (transcriptRef.current.trim()) {
-           processUserInput(transcriptRef.current);
+        const text = transcriptRef.current.trim();
+        if (text && text.length > 0) {
+           processUserInput(text);
         }
       };
 
@@ -95,9 +101,14 @@ export const VoiceConversation: React.FC = () => {
       // Auto-speak response
       speakText(response);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setLastResponse("Habaye ikibazo. Ongera ugerageze.");
+      if (error?.message === "MISSING_API_KEY") {
+         setLastResponse("Ikibazo: API Key ntabwo ibonetse muri Vercel Settings.");
+         showToast("API Key ntibonetse.", "error");
+      } else {
+         setLastResponse("Habaye ikibazo. Ongera ugerageze.");
+      }
     } finally {
       setIsProcessing(false);
       setTranscript('');

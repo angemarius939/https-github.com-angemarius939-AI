@@ -6,14 +6,13 @@ let aiInstance: GoogleGenAI | null = null;
 
 const getApiKey = (): string => {
   // 1. Try Vite standard (import.meta.env.VITE_API_KEY)
-  // We use 'as any' to avoid TS errors if types aren't set up
   try {
     if (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_KEY) {
       return (import.meta as any).env.VITE_API_KEY;
     }
   } catch (e) {}
 
-  // 2. Try Node/CRA standard (process.env.API_KEY or process.env.REACT_APP_API_KEY)
+  // 2. Try Node/CRA standard
   try {
     if (typeof process !== 'undefined' && process.env) {
       if (process.env.API_KEY) return process.env.API_KEY;
@@ -21,7 +20,7 @@ const getApiKey = (): string => {
     }
   } catch (e) {}
   
-  // 3. Try window fallback (injected via script tags or global vars)
+  // 3. Try window fallback
   if (typeof window !== 'undefined') {
     const win = window as any;
     if (win.process?.env?.API_KEY) return win.process.env.API_KEY;
@@ -36,9 +35,9 @@ const getAiClient = () => {
   if (!aiInstance) {
     const apiKey = getApiKey();
     if (!apiKey) {
-      console.error("CRITICAL ERROR: API Key is missing. Please set VITE_API_KEY in your environment variables.");
+      // Throw a specific string that UI components can check for
+      throw new Error("MISSING_API_KEY");
     }
-    // We initialize anyway, but calls will fail if key is empty.
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -52,9 +51,9 @@ export const streamChatResponse = async (
   onChunk: (text: string) => void
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
   
   try {
+    const ai = getAiClient(); // This will throw MISSING_API_KEY if needed
     const chat = ai.chats.create({
       model: model,
       config: {
@@ -75,7 +74,7 @@ export const streamChatResponse = async (
       }
     }
     return fullText;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Stream Error:", error);
     throw error;
   }
@@ -86,12 +85,12 @@ export const generateConversationResponse = async (
   newMessage: string
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
   
   // Optimized instruction for oral conversation: shorter, more natural
-  const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short, natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists if possible, just natural speech text.";
+  const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists, just natural speech text.";
 
   try {
+    const ai = getAiClient();
     const chat = ai.chats.create({
       model: model,
       config: {
@@ -114,7 +113,6 @@ export const generateTextAnalysis = async (
   tone: 'formal' | 'informal' | 'friendly' = 'formal'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
   
   let toneInstruction = "";
   switch (tone) {
@@ -141,6 +139,7 @@ export const generateTextAnalysis = async (
   }
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: finalPrompt,
@@ -159,9 +158,9 @@ export const generateTextAnalysis = async (
 // Updated Image Analysis to return structured data with confidence
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
   
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: {
@@ -230,12 +229,11 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
-  // We do NOT use the Kinyarwanda system instruction here to avoid forced translation.
-  // We want the raw text exactly as it appears.
+  
   const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language (e.g., if it's English, keep it English). Do not summarize. Return ONLY the extracted text.";
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: {
@@ -255,9 +253,9 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
   const model = "gemini-2.5-flash-image";
-  const ai = getAiClient();
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: {
@@ -281,7 +279,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
     throw new Error("Nta foto yabonetse.");
   } catch (e) {
     console.error("Gemini Generate Image Error:", e);
-    throw new Error("Habaye ikibazo mu guhanga ifoto.");
+    throw e;
   }
 };
 
@@ -290,7 +288,6 @@ export const generateRuralAdvice = async (
   sector: 'agriculture' | 'business' | 'services'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
 
   let systemRole = "";
   if (sector === 'agriculture') {
@@ -302,6 +299,7 @@ export const generateRuralAdvice = async (
   }
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
@@ -324,7 +322,6 @@ export const generateCourse = async (
   prerequisites?: string
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
-  const ai = getAiClient();
 
   const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
   
@@ -365,6 +362,7 @@ export const generateCourse = async (
   }
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
@@ -382,15 +380,15 @@ export const generateCourse = async (
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
   const model = "gemini-2.5-flash-preview-tts";
-  const ai = getAiClient();
   
   // Map custom UI voices to API valid voices
   let apiVoice = voiceName;
   if (voiceName === 'AdVoice') {
-    apiVoice = 'Fenrir'; // Using Fenrir as a proxy for a promotional/deeper voice
+    apiVoice = 'Fenrir'; 
   }
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
       contents: [{ parts: [{ text: text }] }],

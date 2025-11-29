@@ -205,12 +205,22 @@ export const ChatInterface: React.FC = () => {
           m.id === modelMsgId ? { ...m, text: currentText } : m
         ));
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
+      
+      let errorMessage = 'Habaye ikibazo. Ongera ugerageze.';
+      
+      // Improve error message based on the type
+      if (error?.message === "MISSING_API_KEY") {
+        errorMessage = "Ikibazo cya Tekinike: 'VITE_API_KEY' ntibonetse muri Vercel Settings. Nyamuneka shyiramo API Key yawe.";
+      } else if (error?.toString().includes("401") || error?.toString().includes("403")) {
+        errorMessage = "Ikibazo cya API Key: API Key yanyu ntabwo yemewe cyangwa nta burenganzira ifite.";
+      }
+
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: MessageRole.ERROR,
-        text: 'Habaye ikibazo. Ongera ugerageze.',
+        text: errorMessage,
         timestamp: Date.now()
       }]);
     } finally {
