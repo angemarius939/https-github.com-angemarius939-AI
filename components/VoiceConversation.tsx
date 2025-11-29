@@ -17,6 +17,7 @@ export const VoiceConversation: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef(''); // Ref to track transcript synchronously
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -28,22 +29,33 @@ export const VoiceConversation: React.FC = () => {
       recognitionRef.current.lang = 'rw-RW';
 
       recognitionRef.current.onstart = () => setIsListening(true);
-      recognitionRef.current.onend = () => setIsListening(false);
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        // Use ref to check transcript to avoid closure staleness
+        if (transcriptRef.current.trim()) {
+           processUserInput(transcriptRef.current);
+        }
+      };
+
       recognitionRef.current.onerror = (event: any) => {
         console.error("Speech error", event);
         setIsListening(false);
-        showToast("Habaye ikibazo cya mikoro.", "error");
+        if (event.error !== 'no-speech') {
+           showToast("Habaye ikibazo cya mikoro.", "error");
+        }
       };
 
       recognitionRef.current.onresult = (event: any) => {
         const current = event.resultIndex;
         const result = event.results[current][0].transcript;
         setTranscript(result);
+        transcriptRef.current = result; // Update ref
       };
     }
   }, [showToast]);
 
-  const toggleListening = async () => {
+  const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Browser yanyu ntabwo ishyigikiye kwandika ukoresheje ijwi.");
       return;
@@ -51,25 +63,19 @@ export const VoiceConversation: React.FC = () => {
 
     if (isListening) {
       recognitionRef.current.stop();
-      // Handle the input manually if stopped early
-      if (transcript.trim()) {
-        await processUserInput(transcript);
-      }
+      // Logic handled in onend
     } else {
       // Stop TTS if playing
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
       
       setTranscript('');
-      recognitionRef.current.start();
-      
-      // Hook into onend to trigger processing automatically when silence is detected
-      recognitionRef.current.onend = async () => {
-        setIsListening(false);
-        if (transcript.trim()) {
-           await processUserInput(transcript);
-        }
-      };
+      transcriptRef.current = '';
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        console.error("Failed to start recognition", e);
+      }
     }
   };
 
@@ -86,7 +92,7 @@ export const VoiceConversation: React.FC = () => {
       setLastResponse(response);
       setConversationHistory(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
       
-      // Auto-speak response (if possible)
+      // Auto-speak response
       speakText(response);
       
     } catch (error) {
@@ -95,6 +101,7 @@ export const VoiceConversation: React.FC = () => {
     } finally {
       setIsProcessing(false);
       setTranscript('');
+      transcriptRef.current = '';
     }
   };
 
@@ -102,10 +109,30 @@ export const VoiceConversation: React.FC = () => {
     window.speechSynthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
-    // Try to find a voice, though Kinyarwanda specific might not exist everywhere
-    // We fall back to default
-    utterance.rate = 0.9; 
-    utterance.pitch = 1;
+    
+    // Improved Voice Selection Strategy for Kinyarwanda
+    const voices = window.speechSynthesis.getVoices();
+    
+    // 1. Try to find an actual Kinyarwanda voice (rare)
+    let selectedVoice = voices.find(v => v.lang.toLowerCase().includes('rw'));
+    
+    // 2. Fallback to French (Français) - Vowels are very similar to Kinyarwanda (a, e, i, o, u)
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.lang.toLowerCase().includes('fr'));
+    }
+    
+    // 3. Fallback to a clear UK English voice (better than US for Bantu phonemes usually)
+    if (!selectedVoice) {
+      selectedVoice = voices.find(v => v.name.includes('Google UK English Female') || v.lang.includes('en-GB'));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    // Adjust rate and pitch for a more natural, explanatory tone
+    utterance.rate = 0.95; 
+    utterance.pitch = 1.05;
     
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
