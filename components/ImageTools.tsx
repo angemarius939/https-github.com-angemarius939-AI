@@ -315,35 +315,43 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto w-full p-4 md:p-8 space-y-8 overflow-y-auto">
-      <div className="flex flex-col md:flex-row justify-center gap-4 mb-4">
-        <button
-          onClick={() => setActiveMode('generate')}
-          className={`flex items-center justify-center px-6 py-3 rounded-xl border transition-all ${
-            activeMode === 'generate' 
-              ? 'bg-emerald-600 text-white border-transparent shadow-md' 
-              : 'bg-white text-emerald-700 border-emerald-100 hover:bg-emerald-50'
-          }`}
-        >
-          <Sparkles className="w-5 h-5 mr-2" />
-          <span className="font-medium">Hanga Ifoto</span>
-        </button>
-        <button
-          onClick={() => setActiveMode('analyze')}
-          className={`flex items-center justify-center px-6 py-3 rounded-xl border transition-all ${
-            activeMode === 'analyze' 
-              ? 'bg-emerald-600 text-white border-transparent shadow-md' 
-              : 'bg-white text-emerald-700 border-emerald-100 hover:bg-emerald-50'
-          }`}
-        >
-          <ImageIcon className="w-5 h-5 mr-2" />
-          <span className="font-medium">Sesengura Ifoto</span>
-        </button>
+    <div className="flex flex-col h-full max-w-5xl mx-auto w-full p-4 md:p-8 space-y-6 overflow-y-auto">
+      {/* Header & Tabs */}
+      <div className="space-y-6">
+        <div className="text-center md:text-left">
+          <h2 className="text-2xl font-bold text-emerald-900">Amafoto & Ishusho</h2>
+          <p className="text-emerald-700 mt-1">Hanga amafoto mashya cyangwa usesengure ayo ufite.</p>
+        </div>
+
+        <div className="flex border-b border-stone-200 bg-white rounded-t-xl overflow-hidden shadow-sm">
+          <button
+            onClick={() => setActiveMode('generate')}
+            className={`flex-1 py-4 flex items-center justify-center font-medium transition-all duration-200 ${
+              activeMode === 'generate' 
+                ? 'text-emerald-700 border-b-2 border-emerald-500 bg-emerald-50/50' 
+                : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
+            }`}
+          >
+            <Sparkles className={`w-5 h-5 mr-2 ${activeMode === 'generate' ? 'text-emerald-500' : 'text-stone-400'}`} />
+            Hanga Ifoto
+          </button>
+          <button
+            onClick={() => setActiveMode('analyze')}
+            className={`flex-1 py-4 flex items-center justify-center font-medium transition-all duration-200 ${
+              activeMode === 'analyze' 
+                ? 'text-emerald-700 border-b-2 border-emerald-500 bg-emerald-50/50' 
+                : 'text-stone-500 hover:text-stone-700 hover:bg-stone-50'
+            }`}
+          >
+            <ImageIcon className={`w-5 h-5 mr-2 ${activeMode === 'analyze' ? 'text-emerald-500' : 'text-stone-400'}`} />
+            Sesengura Ifoto
+          </button>
+        </div>
       </div>
 
       {activeMode === 'generate' ? (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-6">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-emerald-100 p-6 space-y-6 mt-0">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-emerald-900">Hanga ifoto ukoresheje amagambo</h3>
               <p className="text-stone-500 text-sm">Sobanura ifoto wifuza, ai.rw irayiguha.</p>
@@ -363,7 +371,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
             </div>
             
             {/* Aspect Ratio Selector */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <span className="text-xs font-medium text-emerald-800 flex items-center shrink-0">
                 <Ratio className="w-3 h-3 mr-1" />
                 Ingano:
@@ -480,7 +488,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-white rounded-b-xl rounded-tl-xl shadow-sm border border-emerald-100 p-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 mt-0">
            <div className="space-y-2">
             <h3 className="text-lg font-semibold text-emerald-900">Sesengura Ifoto</h3>
             <p className="text-stone-500 text-sm">Shyiramo ifoto ubaze ai.rw ibibazo kuri yo mu Kinyarwanda.</p>

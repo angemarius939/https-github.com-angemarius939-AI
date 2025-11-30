@@ -1,6 +1,9 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/genai";
 import { ImageAnalysisResult, BusinessAnalysisResult } from '../types';
 
+// Fix for "process is not defined" TS error
+declare var process: any;
+
 // Lazy initialization of the Gemini client
 let aiInstance: GoogleGenAI | null = null;
 
