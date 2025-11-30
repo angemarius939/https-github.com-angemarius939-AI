@@ -25,14 +25,14 @@ export const RuralAssistant: React.FC = () => {
       "Gusaba inguzanyo iciriritse"
     ],
     services: [
-      "Kwiyandikisha ku Irembo",
+      "Gusaba Icyangombwa cy'Amavuko",
       "Kwishyura Mituweli",
-      "Gufata icyangombwa cy'ubutaka",
-      "Serivisi z'ejo heza"
+      "Serivisi z'Ubutaka",
+      "Kwiyandikisha muri Ejo Heza"
     ],
     technology: [
       "Gukoresha Mobile Money",
-      "Kugura umuriro kuri telefoni",
+      "Kwishyura umuriro",
       "Gufungura konti ya Irembo",
       "Gukoresha internet kuri telefoni"
     ]

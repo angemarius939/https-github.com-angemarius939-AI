@@ -362,10 +362,10 @@ export const generateCourse = async (
   Provide real-world scenarios and practical applications suitable for Rwanda.
 
   ## 6. Imfashanyigisho & Ibitabo
-  List recommended books, articles, and resources for further reading.
+  List recommended books, articles, and resources for further reading. IMPORTANT: Prioritize resources available in Kinyarwanda or relevant to Rwanda.
 
   ## 7. Ibibazo & Imyitozo
-  Provide at least 5 assessment questions and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end.
+  Provide at least 5 assessment questions (Multiple choice or Open ended) and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end of this section.
 
   Language: Strictly Kinyarwanda.
   Tone: Professional, Educational, Encouraging.`;

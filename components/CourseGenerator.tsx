@@ -279,7 +279,8 @@ export const CourseGenerator: React.FC = () => {
                   <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibikubiye mu Isomo</li>
                   <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Incamake & Intangiriro</li>
                   <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ingingo z'Ingenzi (Birambuye)</li>
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Imyitozo & Ibibazo</li>
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Imfashanyigisho & Ibitabo</li>
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibibazo & Imyitozo</li>
                 </ul>
               </div>
             </div>
