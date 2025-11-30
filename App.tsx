@@ -8,6 +8,7 @@ import { RuralAssistant } from './components/RuralAssistant';
 import { CourseGenerator } from './components/CourseGenerator';
 import { VoiceConversation } from './components/VoiceConversation';
 import { TextToSpeech } from './components/TextToSpeech';
+import { DecisionAssistant } from './components/DecisionAssistant';
 import { ToastProvider } from './components/ToastProvider';
 import { AppView } from './types';
 
@@ -37,6 +38,8 @@ export default function App() {
         return <ImageTools onNavigateToTTS={handleNavigateToTTS} />;
       case AppView.RURAL_SUPPORT:
         return <RuralAssistant />;
+      case AppView.DECISION_ASSISTANT:
+        return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR:
         return <CourseGenerator />;
       default:

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, FileText, Image as ImageIcon, Sparkles, Sprout, GraduationCap, Mic, AudioLines, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { MessageSquare, FileText, Image as ImageIcon, Sparkles, Sprout, GraduationCap, Mic, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp } from 'lucide-react';
 import { AppView } from '../types';
 
 interface SidebarProps {
@@ -18,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
     { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
     { id: AppView.IMAGE_TOOLS, label: 'Amafoto', icon: <ImageIcon className="w-5 h-5" /> },
     { id: AppView.RURAL_SUPPORT, label: 'Iterambere', icon: <Sprout className="w-5 h-5" /> },
+    { id: AppView.DECISION_ASSISTANT, label: 'Umujyanama', icon: <TrendingUp className="w-5 h-5" /> },
     { id: AppView.COURSE_GENERATOR, label: 'Amasomo', icon: <GraduationCap className="w-5 h-5" /> },
   ];
 

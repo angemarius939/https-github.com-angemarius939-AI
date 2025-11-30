@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/genai";
-import { ImageAnalysisResult } from '../types';
+import { ImageAnalysisResult, BusinessAnalysisResult } from '../types';
 
 // Lazy initialization of the Gemini client
 let aiInstance: GoogleGenAI | null = null;
@@ -421,6 +421,73 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
   } catch (error) {
     console.error("Gemini TTS Error:", error);
+    throw error;
+  }
+};
+
+export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
+  const model = "gemini-2.5-flash";
+
+  const systemInstruction = `You are 'Umujyanama', an expert AI business analyst for Rwandan SMEs, farmers, and retailers. 
+  Your goal is to interpret unstructured daily operational text (sales, expenses, harvest, etc.) and convert it into a structured financial insight report in Kinyarwanda.
+  
+  Identify:
+  - Revenue (Amafaranga yinjijwe)
+  - Expenses (Amafaranga yasohotse)
+  - Profit (Inyungu = Revenue - Expenses)
+  - Key Risks or Warnings
+  - Actionable Advice
+  - Chart Data for visualization
+
+  If precise numbers aren't given, estimate reasonable placeholders or set to 0 if unknown. Always use Kinyarwanda for text fields.`;
+
+  try {
+    const ai = getAiClient();
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: input,
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+           type: Type.OBJECT,
+           properties: {
+             summary: { type: Type.STRING, description: "Brief summary of the situation in Kinyarwanda" },
+             financials: {
+               type: Type.OBJECT,
+               properties: {
+                 revenue: { type: Type.NUMBER },
+                 expense: { type: Type.NUMBER },
+                 profit: { type: Type.NUMBER },
+                 currency: { type: Type.STRING }
+               },
+               required: ["revenue", "expense", "profit", "currency"]
+             },
+             risks: { type: Type.ARRAY, items: { type: Type.STRING } },
+             advice: { type: Type.ARRAY, items: { type: Type.STRING } },
+             chartData: {
+               type: Type.ARRAY,
+               items: {
+                 type: Type.OBJECT,
+                 properties: {
+                   label: { type: Type.STRING },
+                   value: { type: Type.NUMBER },
+                   type: { type: Type.STRING, enum: ["revenue", "expense", "profit"] }
+                 }
+               }
+             }
+           },
+           required: ["summary", "financials", "risks", "advice", "chartData"]
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("Nta gisubizo kibonetse");
+    return JSON.parse(text) as BusinessAnalysisResult;
+
+  } catch (error) {
+    console.error("Gemini Business Analysis Error:", error);
     throw error;
   }
 };

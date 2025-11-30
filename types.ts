@@ -19,7 +19,8 @@ export enum AppView {
   RURAL_SUPPORT = 'rural_support',
   COURSE_GENERATOR = 'course_generator',
   VOICE_CONVERSATION = 'voice_conversation',
-  TEXT_TO_SPEECH = 'text_to_speech'
+  TEXT_TO_SPEECH = 'text_to_speech',
+  DECISION_ASSISTANT = 'decision_assistant'
 }
 
 export interface TextToolResult {
@@ -47,3 +48,22 @@ export interface ImageAnalysisResult {
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export interface ChartDataPoint {
+  label: string;
+  value: number;
+  type: 'revenue' | 'expense' | 'profit';
+}
+
+export interface BusinessAnalysisResult {
+  summary: string;
+  financials: {
+    revenue: number;
+    expense: number;
+    profit: number;
+    currency: string;
+  };
+  risks: string[];
+  advice: string[];
+  chartData: ChartDataPoint[];
+}
