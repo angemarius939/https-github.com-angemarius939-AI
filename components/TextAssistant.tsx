@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Code, Terminal } from 'lucide-react';
+import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Code, Terminal, Search } from 'lucide-react';
 import { generateTextAnalysis } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -13,7 +13,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
   const [inputText, setInputText] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'summarize' | 'translate' | 'grammar'>('summarize');
+  const [activeTab, setActiveTab] = useState<'summarize' | 'translate' | 'grammar' | 'detect'>('summarize');
   const [tone, setTone] = useState<'formal' | 'informal' | 'friendly'>('formal');
   const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
@@ -112,6 +112,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
     const toneLabel = toneOptions.find(t => t.value === tone)?.label;
     if (activeTab === 'summarize') return 'Kora Incamake';
     if (activeTab === 'translate') return 'Hindura mu Kinyarwanda';
+    if (activeTab === 'detect') return 'Vumbura Ururimi';
     return `Kosora Imyandikire (${toneLabel})`;
   };
 
@@ -123,10 +124,10 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 space-x-1 bg-emerald-50 rounded-xl border border-emerald-100">
+      <div className="flex p-1 space-x-1 bg-emerald-50 rounded-xl border border-emerald-100 overflow-x-auto">
         <button
           onClick={() => setActiveTab('summarize')}
-          className={`flex-1 flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
+          className={`flex-1 min-w-[100px] flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
             activeTab === 'summarize' ? 'bg-white text-emerald-700 shadow-sm' : 'text-emerald-500 hover:text-emerald-700'
           }`}
         >
@@ -135,7 +136,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
         </button>
         <button
           onClick={() => setActiveTab('translate')}
-          className={`flex-1 flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
+          className={`flex-1 min-w-[100px] flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
             activeTab === 'translate' ? 'bg-white text-emerald-700 shadow-sm' : 'text-emerald-500 hover:text-emerald-700'
           }`}
         >
@@ -144,12 +145,21 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
         </button>
         <button
           onClick={() => setActiveTab('grammar')}
-          className={`flex-1 flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
+          className={`flex-1 min-w-[100px] flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
             activeTab === 'grammar' ? 'bg-white text-emerald-700 shadow-sm' : 'text-emerald-500 hover:text-emerald-700'
           }`}
         >
           <Wand2 className="w-4 h-4 mr-2" />
           Kosora
+        </button>
+        <button
+          onClick={() => setActiveTab('detect')}
+          className={`flex-1 min-w-[100px] flex items-center justify-center py-2.5 text-sm font-medium rounded-lg transition-all ${
+            activeTab === 'detect' ? 'bg-white text-emerald-700 shadow-sm' : 'text-emerald-500 hover:text-emerald-700'
+          }`}
+        >
+          <Search className="w-4 h-4 mr-2" />
+          Vumbura
         </button>
       </div>
 
@@ -175,9 +185,12 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
                 <button
                   key={option.value}
                   onClick={() => setTone(option.value)}
+                  disabled={activeTab === 'detect'}
                   className={`flex-1 py-2 px-2 text-xs md:text-sm font-medium rounded-md transition-all duration-200 flex flex-col md:flex-row items-center justify-center gap-1 ${
-                    tone === option.value
+                    tone === option.value && activeTab !== 'detect'
                       ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100'
+                      : activeTab === 'detect' 
+                      ? 'text-stone-400 cursor-not-allowed opacity-50'
                       : 'text-stone-500 hover:text-emerald-600 hover:bg-emerald-50'
                   }`}
                 >
@@ -232,9 +245,18 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
              <div className="bg-emerald-50/50 border-b border-emerald-100 px-4 py-2 flex items-center text-xs text-emerald-600 font-medium">
                <div className="flex items-center gap-2">
                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                 <span>{activeTab === 'summarize' ? 'Incamake' : activeTab === 'translate' ? 'Ubusobanuro' : 'Ikosora'}</span>
-                 <span className="text-emerald-300">|</span>
-                 <span className="uppercase text-[10px] tracking-wide">{toneOptions.find(t => t.value === tone)?.label}</span>
+                 <span>
+                    {activeTab === 'summarize' ? 'Incamake' : 
+                     activeTab === 'translate' ? 'Ubusobanuro' : 
+                     activeTab === 'grammar' ? 'Ikosora' : 
+                     'Indimi'}
+                 </span>
+                 {activeTab !== 'detect' && (
+                    <>
+                      <span className="text-emerald-300">|</span>
+                      <span className="uppercase text-[10px] tracking-wide">{toneOptions.find(t => t.value === tone)?.label}</span>
+                    </>
+                 )}
                </div>
              </div>
 

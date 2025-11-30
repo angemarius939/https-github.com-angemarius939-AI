@@ -112,7 +112,7 @@ export const generateConversationResponse = async (
 
 export const generateTextAnalysis = async (
   prompt: string, 
-  type: 'summarize' | 'translate' | 'grammar',
+  type: 'summarize' | 'translate' | 'grammar' | 'detect',
   tone: 'formal' | 'informal' | 'friendly' = 'formal'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
@@ -139,6 +139,8 @@ export const generateTextAnalysis = async (
     finalPrompt = `Translate the following text into Kinyarwanda ${toneInstruction}: \n\n${prompt}`;
   } else if (type === 'grammar') {
     finalPrompt = `Correct the grammar of the following Kinyarwanda text and ensure it uses ${toneInstruction}. Explain the changes briefly in Kinyarwanda: \n\n${prompt}`;
+  } else if (type === 'detect') {
+    finalPrompt = `Identify the language of the following text. Answer in Kinyarwanda (e.g., "Ururimi ni Icyongereza"). Provide a very brief description of what the text says in Kinyarwanda: \n\n${prompt}`;
   }
 
   try {
@@ -273,6 +275,10 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
   const model = "gemini-2.5-flash-image";
 
+  // Validate aspect ratio to prevent API 400 errors
+  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+  const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
+
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -282,7 +288,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
       },
       config: {
         imageConfig: {
-          aspectRatio: aspectRatio
+          aspectRatio: safeRatio
         }
       }
     });
@@ -304,7 +310,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
 
 export const generateRuralAdvice = async (
   prompt: string,
-  sector: 'agriculture' | 'business' | 'services'
+  sector: 'agriculture' | 'business' | 'services' | 'technology' | 'climate'
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
 
@@ -313,6 +319,10 @@ export const generateRuralAdvice = async (
     systemRole = "You are an expert agricultural advisor for rural farmers in Rwanda. Provide practical, easy-to-understand advice in Kinyarwanda about crops, seasons, and farming techniques suitable for the region.";
   } else if (sector === 'business') {
     systemRole = "You are a small business consultant for rural entrepreneurs in Rwanda. Provide simple, actionable advice in Kinyarwanda about managing money, customers, and small shops.";
+  } else if (sector === 'technology') {
+    systemRole = "You are a tech guide for rural users in Rwanda. Explain how to use Mobile Money, Irembo, phones, and internet in simple Kinyarwanda steps.";
+  } else if (sector === 'climate') {
+    systemRole = "You are an expert in climate resilience and renewable energy for rural Rwanda. Provide advice on climate-smart agriculture, renewable energy (solar, biogas), and disaster preparedness (floods, landslides) in simple Kinyarwanda.";
   } else {
     systemRole = "You are a helpful assistant for daily services in rural Rwanda. Answer in Kinyarwanda.";
   }
