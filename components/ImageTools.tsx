@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio, History, Clock, ArrowUpRight, Info, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio, History, Clock, ArrowUpRight, Info, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
 import { analyzeImage, generateImage, extractTextFromImage } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -507,41 +508,46 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                     <video ref={videoRef} autoPlay playsInline className={`absolute inset-0 w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} />
                     
                     <div className={`absolute inset-0 bg-white z-50 pointer-events-none transition-opacity ${isFlashing ? 'duration-0 opacity-100' : 'duration-700 ease-out opacity-0'}`} />
+                    
+                    {/* Close Button Top Right */}
+                    <button 
+                      onClick={stopCamera}
+                      className="absolute top-4 right-4 p-2 bg-black/40 rounded-full text-white hover:bg-red-500/80 transition-colors backdrop-blur-md"
+                      title="Hagarika"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
 
-                    <div className="absolute bottom-4 flex gap-4 z-10 items-center justify-center w-full px-4">
-                       <button 
-                         onClick={stopCamera}
-                         className="p-3 bg-red-500/80 rounded-full text-white hover:bg-red-600 transition-colors shadow-lg backdrop-blur-sm"
-                         title="Hagarika"
-                       >
-                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                       </button>
-                       
-                       <button 
-                         onClick={capturePhoto}
-                         className="p-1 rounded-full border-4 border-white/50 hover:border-white transition-all shadow-xl"
-                         title="Fata Ifoto"
-                       >
-                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-emerald-600 hover:bg-emerald-50 transition-colors">
-                            <Camera className="w-8 h-8" />
-                         </div>
-                       </button>
-
-                       <button 
-                         onClick={captureAndRead}
-                         className="p-3 bg-emerald-600/90 rounded-full text-white hover:bg-emerald-700 transition-colors shadow-lg backdrop-blur-sm flex items-center gap-2 font-bold text-xs"
-                         title="Fata & Soma (OCR)"
-                       >
-                         <ScanText className="w-5 h-5" />
-                         <span>Soma</span>
-                       </button>
-
+                    {/* Camera Controls Bottom */}
+                    <div className="absolute bottom-6 left-0 right-0 flex items-center justify-evenly px-6 pb-2 safe-area-bottom">
+                       {/* Switch Camera */}
                        <button 
                          onClick={toggleCamera}
-                         className="p-3 bg-black/40 rounded-full text-white hover:bg-black/60 transition-colors shadow-lg backdrop-blur-sm"
+                         className="p-3 bg-black/40 rounded-full text-white hover:bg-black/60 backdrop-blur-md transition-all"
                          title="Hindura Kamera"
                        >
                          <SwitchCamera className="w-6 h-6" />
+                       </button>
+
+                       {/* Capture */}
+                       <button 
+                         onClick={capturePhoto}
+                         className="relative p-1 rounded-full border-4 border-white/80 transition-transform active:scale-95"
+                         title="Fata Ifoto"
+                       >
+                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-stone-300">
+                            <Camera className="w-8 h-8 opacity-50" />
+                         </div>
+                       </button>
+
+                       {/* OCR / Scan */}
+                       <button 
+                         onClick={captureAndRead}
+                         className="p-3 bg-emerald-500 rounded-full text-white hover:bg-emerald-600 backdrop-blur-md transition-all shadow-lg flex flex-col items-center justify-center gap-0.5"
+                         title="Fata & Soma (OCR)"
+                       >
+                         <ScanText className="w-6 h-6" />
+                         <span className="text-[9px] font-bold uppercase tracking-wide">Soma</span>
                        </button>
                     </div>
                   </>
