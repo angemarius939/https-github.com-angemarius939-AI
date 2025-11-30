@@ -3,6 +3,7 @@ import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Code, 
 import { generateTextAnalysis } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
+import { ProgressBar } from './ProgressBar';
 
 interface TextAssistantProps {
   onNavigateToTTS?: (text: string) => void;
@@ -107,8 +108,15 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
     });
   };
 
+  const getActionLabel = () => {
+    const toneLabel = toneOptions.find(t => t.value === tone)?.label;
+    if (activeTab === 'summarize') return 'Kora Incamake';
+    if (activeTab === 'translate') return 'Hindura mu Kinyarwanda';
+    return `Kosora Imyandikire (${toneLabel})`;
+  };
+
   return (
-    <div className="flex flex-col h-full p-6 space-y-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col h-full p-6 space-y-6 max-w-4xl mx-auto w-full overflow-y-auto">
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-emerald-900">Ibikoresho by'Umwandiko</h2>
         <p className="text-emerald-600 mt-2">Hitamo igikorwa ushaka gukora ku mwandiko wawe.</p>
@@ -179,14 +187,17 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
             </div>
           </div>
 
-          <Button 
-            onClick={handleAction} 
-            isLoading={isLoading} 
-            disabled={!inputText.trim()}
-            className="w-full mt-2"
-          >
-            {activeTab === 'summarize' ? 'Kora Incamake' : activeTab === 'translate' ? 'Hindura mu Kinyarwanda' : 'Kosora Imyandikire'}
-          </Button>
+          <div className="mt-2 space-y-2">
+             <Button 
+              onClick={handleAction} 
+              isLoading={isLoading} 
+              disabled={!inputText.trim()}
+              className="w-full"
+            >
+              {getActionLabel()}
+            </Button>
+            <ProgressBar isLoading={isLoading} label="Irimo gutunganya..." />
+          </div>
         </div>
 
         {/* Output Section */}

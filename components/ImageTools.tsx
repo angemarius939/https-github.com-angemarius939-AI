@@ -1,12 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio, History, Clock, ArrowUpRight, Info, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { analyzeImage, generateImage, extractTextFromImage } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { ImageAnalysisResult } from '../types';
+import { ProgressBar } from './ProgressBar';
 
 interface ImageToolsProps {
   onNavigateToTTS?: (text: string) => void;
+}
+
+interface GeneratedHistoryItem {
+  id: string;
+  url: string;
+  prompt: string;
+  timestamp: number;
 }
 
 export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
@@ -18,7 +26,9 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   const [analysisPrompt, setAnalysisPrompt] = useState('');
   const [analysisResult, setAnalysisResult] = useState<ImageAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showOverlays, setShowOverlays] = useState(true); // Toggle for detection boxes
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // Camera State
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -33,6 +43,9 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+  
+  // History State
+  const [genHistory, setGenHistory] = useState<GeneratedHistoryItem[]>([]);
 
   useEffect(() => {
     return () => {
@@ -46,6 +59,27 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
       startCamera();
     }
   }, [facingMode]);
+
+  // Auto-scroll to result when it appears
+  useEffect(() => {
+    if (analysisResult && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [analysisResult]);
+
+  const validateFile = (file: File): boolean => {
+    // Check if file is image
+    if (!file.type.startsWith('image/')) {
+      showToast("Nyamuneka hitamo ifoto (jpg, png).", "error");
+      return false;
+    }
+    // Check size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Ifoto iraremereye cyane. Arenze 5MB.", "error");
+      return false;
+    }
+    return true;
+  };
 
   const startCamera = async () => {
     try {
@@ -130,6 +164,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!validateFile(file)) return;
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
@@ -191,6 +227,16 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     try {
       const result = await generateImage(genPrompt, aspectRatio);
       setGeneratedImageUrl(result);
+      
+      // Add to history
+      const newItem: GeneratedHistoryItem = {
+        id: Date.now().toString(),
+        url: result,
+        prompt: genPrompt,
+        timestamp: Date.now()
+      };
+      setGenHistory(prev => [newItem, ...prev]);
+
       showToast('Ifoto yakozwe neza!', 'success');
     } catch (error) {
       showToast('Habaye ikibazo guhanga ifoto.', 'error');
@@ -199,16 +245,24 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     }
   };
 
-  const handleDownloadImage = () => {
-    if (generatedImageUrl) {
+  const handleDownloadImage = (url: string) => {
+    if (url) {
       const link = document.createElement('a');
-      link.href = generatedImageUrl;
+      link.href = url;
       link.download = `ai_rw_generated_${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       showToast('Ifoto yamanuwe!', 'success');
     }
+  };
+
+  const handleRestoreFromHistory = (item: GeneratedHistoryItem) => {
+    setGeneratedImageUrl(item.url);
+    setGenPrompt(item.prompt);
+    // Scroll to top to see main viewer
+    const viewer = document.getElementById('main-image-viewer');
+    if (viewer) viewer.scrollIntoView({ behavior: 'smooth' });
   };
 
   const getConfidenceColor = (score: number) => {
@@ -221,6 +275,12 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     if (score >= 80) return "Icyizere Gihanitse";
     if (score >= 50) return "Icyizere Ringaniye";
     return "Icyizere Gike";
+  };
+
+  const getConfidenceMessage = (score: number) => {
+    if (score >= 80) return "Icyizere ni cyose. Ibisubizo birizewe cyane.";
+    if (score >= 50) return "Icyizere kiraringaniye. Reba niba ifoto isobanutse neza.";
+    return "Icyizere ni gike. Nyamuneka gerageza ifoto igaragara neza kurushaho.";
   };
 
   const getImageTypeIcon = (type: string) => {
@@ -238,7 +298,21 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     { label: "9:16", value: "9:16" },
     { label: "4:3", value: "4:3" },
     { label: "3:4", value: "3:4" },
+    { label: "3:2", value: "3:2" },
+    { label: "2:3", value: "2:3" },
   ];
+
+  // Helper to calculate box styles
+  const getBoxStyle = (box2d: number[]) => {
+    // Gemini coordinates are [ymin, xmin, ymax, xmax] normalized 0-1000
+    const [ymin, xmin, ymax, xmax] = box2d;
+    return {
+      top: `${ymin / 10}%`,
+      left: `${xmin / 10}%`,
+      height: `${(ymax - ymin) / 10}%`,
+      width: `${(xmax - xmin) / 10}%`,
+    };
+  };
 
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto w-full p-4 md:p-8 space-y-8 overflow-y-auto">
@@ -268,88 +342,142 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
       </div>
 
       {activeMode === 'generate' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-emerald-900">Hanga ifoto ukoresheje amagambo</h3>
-            <p className="text-stone-500 text-sm">Sobanura ifoto wifuza, ai.rw irayiguha.</p>
-          </div>
-          
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={genPrompt}
-              onChange={(e) => setGenPrompt(e.target.value)}
-              placeholder="Urugero: Injangwe irimo gukina umupira..."
-              className="flex-1 p-3 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            />
-            <Button onClick={handleGenerate} isLoading={isGenerating} disabled={!genPrompt.trim()}>
-              Hanga
-            </Button>
-          </div>
-          
-          {/* Aspect Ratio Selector */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-             <span className="text-xs font-medium text-emerald-800 flex items-center shrink-0">
-               <Ratio className="w-3 h-3 mr-1" />
-               Ingano:
-             </span>
-             {ratios.map(r => (
-               <button
-                 key={r.value}
-                 onClick={() => setAspectRatio(r.value)}
-                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
-                   aspectRatio === r.value 
-                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
-                     : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-200'
-                 }`}
-               >
-                 {r.label}
-               </button>
-             ))}
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-emerald-900">Hanga ifoto ukoresheje amagambo</h3>
+              <p className="text-stone-500 text-sm">Sobanura ifoto wifuza, ai.rw irayiguha.</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={genPrompt}
+                onChange={(e) => setGenPrompt(e.target.value)}
+                placeholder="Urugero: Injangwe irimo gukina umupira..."
+                className="flex-1 p-3 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+              <Button onClick={handleGenerate} isLoading={isGenerating} disabled={!genPrompt.trim()}>
+                Hanga
+              </Button>
+            </div>
+            
+            {/* Aspect Ratio Selector */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+              <span className="text-xs font-medium text-emerald-800 flex items-center shrink-0">
+                <Ratio className="w-3 h-3 mr-1" />
+                Ingano:
+              </span>
+              {ratios.map(r => (
+                <button
+                  key={r.value}
+                  onClick={() => setAspectRatio(r.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
+                    aspectRatio === r.value 
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                      : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-200'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            
+            <ProgressBar isLoading={isGenerating} label="Irimo guhanga ifoto..." duration={5000} />
+
+            <div id="main-image-viewer" className={`relative w-full bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 border-dashed ${
+                aspectRatio === '16:9' ? 'aspect-video' : 
+                aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm mx-auto' : 
+                aspectRatio === '4:3' ? 'aspect-[4/3]' : 
+                aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm mx-auto' : 
+                aspectRatio === '3:2' ? 'aspect-[3/2]' : 
+                aspectRatio === '2:3' ? 'aspect-[2/3] max-w-sm mx-auto' : 
+                'aspect-square max-w-lg mx-auto'
+            }`}>
+              {isGenerating ? (
+                <div className="text-center p-6">
+                  <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
+                  <p className="text-emerald-800 font-medium">ai.rw irimo gukora ifoto...</p>
+                  <p className="text-emerald-600 text-sm mt-1">Bishobora gufata amasegonda make</p>
+                </div>
+              ) : generatedImageUrl ? (
+                <div className="relative w-full h-full group">
+                  <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain bg-black/5" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    <button
+                      onClick={() => handleDownloadImage(generatedImageUrl!)}
+                      className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                      title="Manura Ifoto (Download)"
+                    >
+                      <Download className="w-6 h-6" />
+                    </button>
+                    <button
+                      onClick={() => setGeneratedImageUrl(null)}
+                      className="p-3 bg-white text-red-600 rounded-full shadow-lg hover:bg-red-50 transition-colors transform hover:scale-105"
+                      title="Siba"
+                    >
+                      <span className="font-bold px-1">X</span>
+                    </button>
+                    {onNavigateToTTS && (
+                      <button
+                        onClick={() => onNavigateToTTS("Iyi ni ifoto yakozwe na A.I. " + genPrompt)}
+                        className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                        title="Soma mu ijwi"
+                      >
+                        <Volume2 className="w-6 h-6" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-emerald-400">
+                  <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Nta foto irakorwa</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className={`relative w-full bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 border-dashed ${
-              aspectRatio === '16:9' ? 'aspect-video' : 
-              aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm mx-auto' : 
-              aspectRatio === '4:3' ? 'aspect-[4/3]' : 
-              aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm mx-auto' : 
-              'aspect-square max-w-lg mx-auto'
-          }`}>
-            {isGenerating ? (
-              <div className="text-center p-6">
-                <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
-                <p className="text-emerald-800 font-medium">ai.rw irimo gukora ifoto...</p>
-                <p className="text-emerald-600 text-sm mt-1">Bishobora gufata amasegonda make</p>
+          {/* History Section */}
+          {genHistory.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-emerald-100">
+              <h3 className="text-sm font-bold text-emerald-900 flex items-center">
+                <History className="w-4 h-4 mr-2" />
+                Amateka y'Amafoto
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {genHistory.map((item) => (
+                  <div key={item.id} className="group relative rounded-lg overflow-hidden border border-emerald-100 bg-white hover:shadow-md transition-all">
+                    <div 
+                      className="aspect-square bg-stone-100 cursor-pointer overflow-hidden"
+                      onClick={() => handleRestoreFromHistory(item)}
+                    >
+                      <img src={item.url} alt="History" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                         <ArrowUpRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all" />
+                      </div>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <p className="text-[10px] text-stone-500 truncate" title={item.prompt}>{item.prompt}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-stone-400 flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                        <button 
+                          onClick={() => handleDownloadImage(item.url)}
+                          className="text-emerald-500 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded"
+                          title="Manura"
+                        >
+                          <Download className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : generatedImageUrl ? (
-              <div className="relative w-full h-full group">
-                <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain bg-black/5" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                  <button
-                    onClick={handleDownloadImage}
-                    className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
-                    title="Manura Ifoto (Download)"
-                  >
-                    <Download className="w-6 h-6" />
-                  </button>
-                  {onNavigateToTTS && (
-                     <button
-                       onClick={() => onNavigateToTTS("Iyi ni ifoto yakozwe na A.I. " + genPrompt)}
-                       className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
-                       title="Soma mu ijwi"
-                     >
-                       <Volume2 className="w-6 h-6" />
-                     </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-emerald-400">
-                <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Nta foto irakorwa</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -393,11 +521,11 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
 
                        <button 
                          onClick={captureAndRead}
-                         className="p-3 bg-white/90 rounded-full text-emerald-700 hover:bg-white transition-colors shadow-lg backdrop-blur-sm flex items-center gap-1 font-bold text-xs"
+                         className="p-3 bg-emerald-600/90 rounded-full text-white hover:bg-emerald-700 transition-colors shadow-lg backdrop-blur-sm flex items-center gap-2 font-bold text-xs"
                          title="Fata & Soma (OCR)"
                        >
                          <ScanText className="w-5 h-5" />
-                         <span className="hidden sm:inline">Soma</span>
+                         <span>Soma</span>
                        </button>
 
                        <button 
@@ -410,7 +538,32 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                     </div>
                   </>
                 ) : selectedImage ? (
-                  <img src={selectedImage} alt="Preview" className="w-full h-full object-contain rounded-lg p-2" />
+                  <div className="relative w-full h-full">
+                    <img src={selectedImage} alt="Preview" className="w-full h-full object-contain rounded-lg p-2" />
+                    
+                    {/* Bounding Box Overlays */}
+                    {showOverlays && analysisResult?.detectedObjects && analysisResult.detectedObjects.map((obj, idx) => (
+                      <div
+                        key={idx}
+                        className="absolute border-2 border-emerald-500 bg-emerald-500/10 rounded-sm hover:bg-emerald-500/20 transition-colors animate-in fade-in zoom-in-95 duration-500"
+                        style={getBoxStyle(obj.box_2d)}
+                      >
+                         <span className="absolute -top-6 left-0 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                           {obj.label}
+                         </span>
+                      </div>
+                    ))}
+                    
+                    {analysisResult?.detectedObjects && analysisResult.detectedObjects.length > 0 && (
+                      <button 
+                        onClick={() => setShowOverlays(!showOverlays)}
+                        className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 backdrop-blur-sm transition-colors z-10"
+                        title={showOverlays ? "Hisha ibyabonetse" : "Erekana ibyabonetse"}
+                      >
+                         {showOverlays ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center w-full h-full p-4 text-center">
                     <div 
@@ -481,7 +634,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                 </Button>
               </div>
 
-              <div className="flex-1 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 overflow-y-auto">
+              <div className="flex-1 p-4 bg-emerald-50/50 rounded-xl border border-emerald-100 overflow-y-auto" ref={resultRef}>
                 {analysisResult ? (
                   <div className="space-y-4 animate-in fade-in">
                     <div className="flex flex-col space-y-2">
@@ -529,15 +682,28 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                           {analysisResult.confidenceScore}%
                         </span>
                       </div>
-                      <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
+                      <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden mb-2">
                         <div 
                           className={`h-full transition-all duration-1000 ease-out ${getConfidenceColor(analysisResult.confidenceScore)}`}
                           style={{ width: `${analysisResult.confidenceScore}%` }}
                         />
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1 text-right">
-                        {getConfidenceLabel(analysisResult.confidenceScore)}
-                      </p>
+                      
+                      <div className="flex items-start gap-2 bg-stone-50 p-2 rounded-md">
+                         {analysisResult.confidenceScore < 50 ? (
+                           <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                         ) : (
+                           <Info className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                         )}
+                         <div className="flex flex-col">
+                            <p className="text-[10px] font-medium text-stone-600">
+                              {getConfidenceLabel(analysisResult.confidenceScore)}
+                            </p>
+                            <p className="text-[10px] text-stone-500 leading-tight mt-0.5">
+                              {getConfidenceMessage(analysisResult.confidenceScore)}
+                            </p>
+                         </div>
+                      </div>
                     </div>
 
                     {analysisResult.keyObservations && analysisResult.keyObservations.length > 0 && (
@@ -558,14 +724,29 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                         </div>
                       </div>
                     )}
+
+                    {analysisResult.detectedObjects && analysisResult.detectedObjects.length > 0 && (
+                       <div>
+                        <h4 className="text-xs font-semibold text-emerald-800 mb-2 flex items-center">
+                          <Target className="w-3.5 h-3.5 mr-1.5" />
+                          Ibyabonetse mu ifoto ({analysisResult.detectedObjects.length})
+                        </h4>
+                        <div className="text-xs text-stone-600">
+                           {analysisResult.detectedObjects.map(obj => obj.label).join(', ')}.
+                        </div>
+                       </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-stone-400 text-sm italic space-y-2">
                     {isAnalyzing ? (
-                      <>
-                        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
-                        <p>ai.rw irimo gusesengura...</p>
-                      </>
+                      <div className="w-full px-8">
+                         <div className="flex flex-col items-center mb-2">
+                            <Loader2 className="w-6 h-6 animate-spin text-emerald-500 mb-2" />
+                            <p>ai.rw irimo gusesengura...</p>
+                         </div>
+                         <ProgressBar isLoading={true} duration={4000} />
+                      </div>
                     ) : (
                       <p>Ibisubizo bizaza hano...</p>
                     )}

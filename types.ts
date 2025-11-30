@@ -33,11 +33,17 @@ export interface GeneratedImage {
   prompt: string;
 }
 
+export interface DetectedObject {
+  label: string;
+  box_2d: number[]; // [ymin, xmin, ymax, xmax]
+}
+
 export interface ImageAnalysisResult {
   description: string;
   confidenceScore: number;
   keyObservations: string[];
-  imageType: string; // New field for automatic classification
+  imageType: string;
+  detectedObjects?: DetectedObject[]; // New field for object detection
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';

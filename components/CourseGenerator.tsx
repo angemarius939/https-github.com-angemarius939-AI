@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { GraduationCap, BookOpen, Clock, BarChart, ListChecks, Lightbulb, Search, History, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GraduationCap, BookOpen, Clock, BarChart, ListChecks, Lightbulb, Search, History, Calendar, FileText, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
 import { CourseLevel } from '../types';
 import { useToast } from './ToastProvider';
+import { ProgressBar } from './ProgressBar';
 
 interface CourseHistoryItem {
   id: string;
@@ -14,6 +15,12 @@ interface CourseHistoryItem {
   timestamp: number;
 }
 
+interface ParsedSection {
+  title: string;
+  content: string;
+  id: string;
+}
+
 export const CourseGenerator: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState<CourseLevel>('beginner');
@@ -21,6 +28,8 @@ export const CourseGenerator: React.FC = () => {
   const [prerequisites, setPrerequisites] = useState('');
   const [courseContent, setCourseContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [parsedSections, setParsedSections] = useState<ParsedSection[]>([]);
+  const [activeSection, setActiveSection] = useState<string>('');
   
   // History and Search State
   const [history, setHistory] = useState<CourseHistoryItem[]>([]);
@@ -34,6 +43,36 @@ export const CourseGenerator: React.FC = () => {
     "Ikoranabuhanga ry'Ibanze", 
     "Kwiga Icyongereza"
   ];
+
+  // Parse course content when it updates
+  useEffect(() => {
+    if (!courseContent) {
+      setParsedSections([]);
+      return;
+    }
+
+    // Split by Markdown headers (## Number. Title)
+    // Regex matches "## " followed by any number/dot/space then the Title until newline
+    const rawSections = courseContent.split(/(?=## \d+\.|## )/g);
+    
+    const sections: ParsedSection[] = rawSections
+      .map(section => {
+        const match = section.match(/## (?:(\d+\.)\s*)?(.*?)\n([\s\S]*)/);
+        if (match) {
+          return {
+            title: match[2].trim(), // e.g., "Intangiriro"
+            content: match[3].trim(), // The body text
+            id: match[2].toLowerCase().replace(/[^a-z0-9]/g, '')
+          };
+        }
+        return null;
+      })
+      .filter((s): s is ParsedSection => s !== null);
+
+    setParsedSections(sections);
+    if (sections.length > 0) setActiveSection(sections[0].id);
+
+  }, [courseContent]);
 
   const handleCreateCourse = async () => {
     if (!topic.trim()) return;
@@ -68,207 +107,291 @@ export const CourseGenerator: React.FC = () => {
     item.level.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const getSectionIcon = (title: string) => {
+    const t = title.toLowerCase();
+    if (t.includes('ibikubiye') || t.includes('toc')) return <Layout className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('intangiriro') || t.includes('intro')) return <Target className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('incamake') || t.includes('outline')) return <ListChecks className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('birambuye') || t.includes('detailed')) return <FileText className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('ingero') || t.includes('example')) return <Layers className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('ibitabo') || t.includes('resource')) return <Book className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('ibibazo') || t.includes('quiz')) return <BrainCircuit className="w-5 h-5 text-emerald-600" />;
+    return <ArrowRight className="w-5 h-5 text-emerald-600" />;
+  };
+
   return (
-    <div className="flex flex-col h-full p-6 max-w-4xl mx-auto w-full space-y-6 overflow-y-auto">
-      <div className="text-center p-6 bg-white/90 backdrop-blur rounded-2xl shadow-sm border border-emerald-100">
-        <h2 className="text-2xl font-bold text-emerald-900">Tegura Amasomo</h2>
-        <p className="text-emerald-700 mt-2 mb-4">
-          Waba ushaka kwiga wowe ubwawe, cyangwa gutegura isomo ryo kwigisha abandi (facilitator)? 
-          <br/>
-          Koresha ai.rw utegure isomo ryuzuye.
-        </p>
-
-        <div className="mt-4 bg-emerald-50/50 rounded-xl p-4 border border-emerald-100 text-left max-w-2xl mx-auto">
-          <h3 className="text-sm font-bold text-emerald-800 flex items-center mb-3">
-            <ListChecks className="w-4 h-4 mr-2" />
-            Ibikubiye mu Isomo (Course Sections):
-          </h3>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm text-emerald-700">
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibikubiye mu Isomo (TOC)</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Intangiriro (Introduction)</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Incamake y'Isomo (Outline)</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ingingo z'Ingenzi (Birambuye)</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ingero Zifatika (Examples)</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Imfashanyigisho & Ibitabo</li>
-            <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibibazo & Imyitozo (Quiz)</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="bg-white/95 backdrop-blur p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-6">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Ingingo</label>
-              <input
-                type="text"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="Urugero: Kwizigamira, Kubaka..."
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Lightbulb className="w-3 h-3 text-emerald-500" />
-                <span className="text-xs text-emerald-600 font-medium">Gerageza:</span>
-                {exampleTopics.map((ex) => (
-                  <button
-                    key={ex}
-                    onClick={() => setTopic(ex)}
-                    className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 hover:bg-emerald-100 transition-colors"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
+    <div className="flex flex-col h-full max-w-7xl mx-auto w-full overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+        
+        {/* Left Column: Input & History (Scrollable) */}
+        <div className={`w-full md:w-[400px] lg:w-[450px] flex flex-col h-full bg-white border-r border-emerald-100 overflow-y-auto ${courseContent ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-6 space-y-6">
+            <div className="text-center md:text-left">
+              <h2 className="text-2xl font-bold text-emerald-900">Tegura Amasomo</h2>
+              <p className="text-emerald-700 mt-2 text-sm">
+                Tegura isomo ryuzuye, rirambuye kandi rifite imyitozo.
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Urwego</label>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setLevel('beginner')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm border transition-all ${
-                    level === 'beginner' ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600'
-                  }`}
-                >
-                  Intangiriro
-                </button>
-                <button
-                  onClick={() => setLevel('intermediate')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm border transition-all ${
-                    level === 'intermediate' ? 'bg-emerald-100 border-emerald-500 text-emerald-800' : 'bg-white border-slate-200 text-slate-600'
-                  }`}
-                >
-                  Hagati
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 flex items-center">
-                <Clock className="w-4 h-4 mr-1 text-slate-400" />
-                Igihe
-              </label>
-              <input
-                type="text"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                placeholder="Urugero: Iminota 30, Icyumweru 1..."
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 flex items-center">
-                <ListChecks className="w-4 h-4 mr-1 text-slate-400" />
-                Ibisabwa
-              </label>
-              <input
-                type="text"
-                value={prerequisites}
-                onChange={(e) => setPrerequisites(e.target.value)}
-                placeholder="Urugero: Kumenya gusoma..."
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <Button 
-          onClick={handleCreateCourse} 
-          isLoading={isLoading} 
-          disabled={!topic.trim()}
-          className="w-full"
-        >
-          <BookOpen className="w-4 h-4 mr-2" />
-          Tegura Isomo
-        </Button>
-      </div>
-      
-      {/* History / Search Section */}
-      {history.length > 0 && (
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-lg font-bold text-emerald-900 flex items-center">
-              <History className="w-5 h-5 mr-2" />
-              Amateka y'Amasomo ({history.length})
-            </h3>
-            <div className="relative w-full md:w-64">
-              <Search className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Shakisha isomo..."
-                className="w-full pl-9 pr-4 py-2 text-sm border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50/50"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredHistory.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setCourseContent(item.content);
-                  setTopic(item.topic);
-                  setLevel(item.level as CourseLevel);
-                  setDuration(item.duration || '');
-                  setPrerequisites(''); // Optional reset
-                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                }}
-                className={`text-left p-4 rounded-xl border transition-all relative group ${
-                  courseContent === item.content 
-                    ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500 shadow-sm' 
-                    : 'bg-white border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/30 hover:shadow-md'
-                }`}
-              >
-                <div className="font-bold text-emerald-900 truncate pr-2">{item.topic}</div>
-                <div className="flex justify-between items-center mt-2">
-                   <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                      item.level === 'beginner' ? 'bg-green-100 text-green-700' :
-                      item.level === 'intermediate' ? 'bg-blue-100 text-blue-700' :
-                      'bg-purple-100 text-purple-700'
-                   }`}>
-                     {item.level}
-                   </span>
-                   <div className="flex items-center text-[10px] text-stone-400">
-                     <Calendar className="w-3 h-3 mr-1" />
-                     {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                   </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Ingingo</label>
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Urugero: Ubuhinzi bwa Kijyambere..."
+                  className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {exampleTopics.map((ex) => (
+                    <button
+                      key={ex}
+                      onClick={() => setTopic(ex)}
+                      className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                    >
+                      {ex}
+                    </button>
+                  ))}
                 </div>
-              </button>
-            ))}
-            {filteredHistory.length === 0 && (
-              <div className="col-span-full text-center py-4 text-stone-400 text-sm border-2 border-dashed border-stone-100 rounded-xl">
-                Nta somo ribonetse rijyanye na "{searchQuery}".
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Urwego</label>
+                  <select 
+                    value={level} 
+                    onChange={(e) => setLevel(e.target.value as CourseLevel)}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                  >
+                    <option value="beginner">Intangiriro</option>
+                    <option value="intermediate">Hagati</option>
+                    <option value="advanced">Icyisumbuye</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-sm font-medium text-slate-700">Igihe</label>
+                   <input
+                    type="text"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    placeholder="Urugero: Icyumweru 1"
+                    className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-700">Ibisabwa</label>
+                  <input
+                  type="text"
+                  value={prerequisites}
+                  onChange={(e) => setPrerequisites(e.target.value)}
+                  placeholder="Urugero: Kumenya gusoma..."
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleCreateCourse} 
+                  isLoading={isLoading} 
+                  disabled={!topic.trim()}
+                  className="w-full"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Tegura Isomo
+                </Button>
+                <ProgressBar isLoading={isLoading} label="Irimo gutegura isomo... (Bishobora gutinda)" duration={8000} />
+              </div>
+            </div>
+
+            {/* History Section */}
+            {history.length > 0 && (
+              <div className="pt-6 border-t border-emerald-50">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-emerald-900 flex items-center">
+                    <History className="w-4 h-4 mr-2" />
+                    Amateka
+                  </h3>
+                  <div className="relative">
+                     <input 
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Shakisha..."
+                      className="w-32 px-2 py-1 text-xs border border-emerald-200 rounded-md focus:outline-none bg-emerald-50"
+                    />
+                    <Search className="w-3 h-3 text-emerald-400 absolute right-2 top-1/2 transform -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {filteredHistory.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setCourseContent(item.content);
+                        setTopic(item.topic);
+                        setLevel(item.level as CourseLevel);
+                        setDuration(item.duration || '');
+                      }}
+                      className={`w-full text-left p-3 rounded-lg border transition-all text-xs ${
+                        courseContent === item.content 
+                          ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500' 
+                          : 'bg-white border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/50'
+                      }`}
+                    >
+                      <div className="font-bold text-emerald-900 truncate">{item.topic}</div>
+                      <div className="flex justify-between items-center mt-1 text-stone-500">
+                        <span>{item.level}</span>
+                        <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
-      )}
 
-      {courseContent && (
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-lg border border-emerald-100 overflow-hidden animate-in slide-in-from-bottom-4">
-          <div className="bg-emerald-600 p-4 text-white flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <div className="flex items-center">
-              <GraduationCap className="w-6 h-6 mr-2" />
-              <h3 className="font-bold text-lg">{topic}</h3>
+        {/* Right Column: Course Content Display */}
+        <div className={`flex-1 flex flex-col h-full bg-stone-50 overflow-hidden ${!courseContent && 'hidden md:flex items-center justify-center'}`}>
+          {!courseContent ? (
+            <div className="text-center p-8 max-w-md opacity-60">
+              <GraduationCap className="w-20 h-20 text-emerald-200 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-emerald-900">Nta somo rirahari</h3>
+              <p className="text-stone-500 mt-2">
+                Uzuzanya ibisabwa ibumoso, maze ukande "Tegura Isomo" kugira ngo utangire.
+              </p>
+              
+              <div className="mt-8 bg-white p-4 rounded-xl border border-stone-200 shadow-sm text-left text-sm">
+                <h4 className="font-bold text-emerald-800 mb-2">Isomo ryose riba ririmo:</h4>
+                <ul className="space-y-1 text-stone-600">
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibikubiye mu Isomo</li>
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Incamake & Intangiriro</li>
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ingingo z'Ingenzi (Birambuye)</li>
+                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Imyitozo & Ibibazo</li>
+                </ul>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="bg-emerald-800 px-2 py-1 rounded-full uppercase tracking-wider">{level}</span>
-              {duration && <span className="bg-emerald-700 px-2 py-1 rounded-full">{duration}</span>}
-            </div>
-          </div>
-          <div className="p-6 bg-stone-50 prose prose-emerald max-w-none">
-            <div className="whitespace-pre-wrap text-slate-800 leading-relaxed">
-              {courseContent}
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="bg-white border-b border-emerald-100 p-4 flex justify-between items-center shadow-sm z-10">
+                 <div>
+                   <h1 className="text-xl font-bold text-emerald-950 line-clamp-1">{topic}</h1>
+                   <div className="flex gap-2 text-xs mt-1">
+                     <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{level}</span>
+                     {duration && <span className="text-stone-500 flex items-center"><Clock className="w-3 h-3 mr-1"/> {duration}</span>}
+                   </div>
+                 </div>
+                 <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                         const printContent = document.getElementById('printable-course');
+                         if(printContent) {
+                            const win = window.open('', '', 'height=700,width=800');
+                            if(win) {
+                              win.document.write('<html><head><title>Isomo</title>');
+                              win.document.write('<style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; } h2 { color: #064e3b; border-bottom: 2px solid #ecfdf5; padding-bottom: 5px; margin-top: 30px; } </style>');
+                              win.document.write('</head><body>');
+                              win.document.write(printContent.innerHTML);
+                              win.document.write('</body></html>');
+                              win.document.close();
+                              win.print();
+                            }
+                         }
+                      }}
+                      className="p-2 text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Print / PDF"
+                    >
+                      <Printer className="w-5 h-5" />
+                    </button>
+                    {/* Mobile Back Button */}
+                    <button 
+                       className="md:hidden p-2 text-stone-500 hover:text-emerald-700 bg-stone-100 rounded-lg"
+                       onClick={() => setCourseContent('')}
+                    >
+                       Funga
+                    </button>
+                 </div>
+              </div>
+
+              <div className="flex-1 flex overflow-hidden">
+                {/* TOC Sidebar (Desktop) */}
+                <div className="hidden lg:block w-64 bg-white border-r border-stone-100 overflow-y-auto p-4">
+                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">Ibikubiye mu Isomo</h4>
+                  <nav className="space-y-1">
+                    {parsedSections.map((section) => (
+                      <button
+                        key={section.id}
+                        onClick={() => scrollToSection(section.id)}
+                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center gap-2 ${
+                          activeSection === section.id 
+                            ? 'bg-emerald-50 text-emerald-700 font-medium' 
+                            : 'text-stone-600 hover:bg-stone-50'
+                        }`}
+                      >
+                         {getSectionIcon(section.title)}
+                         <span className="truncate">{section.title}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                {/* Content Area */}
+                <div id="printable-course" className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth bg-stone-50/50">
+                  <div className="max-w-3xl mx-auto space-y-8 pb-20">
+                    {parsedSections.length > 0 ? (
+                      parsedSections.map((section) => (
+                        <div 
+                          key={section.id} 
+                          id={section.id} 
+                          className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden scroll-mt-6"
+                        >
+                          <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-600">
+                              {getSectionIcon(section.title)}
+                            </div>
+                            <h2 className="text-lg font-bold text-emerald-900">{section.title}</h2>
+                          </div>
+                          <div className="p-6 text-slate-800 leading-relaxed whitespace-pre-wrap">
+                            {/* Simple formatting for bold and lists */}
+                            {section.content.split('\n').map((line, i) => {
+                               if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                                 return <li key={i} className="ml-4 list-disc marker:text-emerald-400 pl-2 mb-1">{line.trim().substring(2)}</li>
+                               }
+                               if (line.trim().match(/^\d+\./)) {
+                                 return <div key={i} className="font-semibold text-emerald-800 mt-4 mb-2">{line}</div>
+                               }
+                               if (line.trim() === '') return <br key={i}/>;
+                               return <p key={i} className="mb-2">{line}</p>
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      // Fallback for unparsed content
+                      <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-8 text-slate-800 leading-relaxed whitespace-pre-wrap">
+                        {courseContent}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
-}
+};

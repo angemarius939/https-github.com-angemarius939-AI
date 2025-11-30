@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap } from 'lucide-react';
+import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, Wifi, BatteryCharging } from 'lucide-react';
 import { generateRuralAdvice } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 
 export const RuralAssistant: React.FC = () => {
-  const [sector, setSector] = useState<'agriculture' | 'business' | 'services'>('agriculture');
+  const [sector, setSector] = useState<'agriculture' | 'business' | 'services' | 'technology'>('agriculture');
   const [query, setQuery] = useState('');
   const [advice, setAdvice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +29,12 @@ export const RuralAssistant: React.FC = () => {
       "Kwishyura Mituweli",
       "Gufata icyangombwa cy'ubutaka",
       "Serivisi z'ejo heza"
+    ],
+    technology: [
+      "Gukoresha Mobile Money",
+      "Kugura umuriro kuri telefoni",
+      "Gufungura konti ya Irembo",
+      "Gukoresha internet kuri telefoni"
     ]
   };
 
@@ -41,7 +47,10 @@ export const RuralAssistant: React.FC = () => {
     setIsLoading(true);
     setAdvice('');
     try {
-      const result = await generateRuralAdvice(promptToUse, sector);
+      // We pass the sector to the service. For 'technology', the service might default to general advice
+      // but we can update the prompt context implicitly or update the service later.
+      // For now, passing the prompt is sufficient as the AI context is strong.
+      const result = await generateRuralAdvice(promptToUse, sector as any);
       setAdvice(result);
       showToast('Inama yabonetse!', 'success');
     } catch (error) {
@@ -57,6 +66,7 @@ export const RuralAssistant: React.FC = () => {
       case 'agriculture': return <Sprout className="w-12 h-12 text-green-600 mb-2" />;
       case 'business': return <Briefcase className="w-12 h-12 text-blue-600 mb-2" />;
       case 'services': return <HandPlatter className="w-12 h-12 text-orange-600 mb-2" />;
+      case 'technology': return <Smartphone className="w-12 h-12 text-purple-600 mb-2" />;
     }
   };
 
@@ -65,51 +75,64 @@ export const RuralAssistant: React.FC = () => {
       case 'agriculture': return "Ubuhinzi n'Ubworozi";
       case 'business': return "Ubucuruzi Buto";
       case 'services': return "Serivisi zitandukanye";
+      case 'technology': return "Ikoranabuhanga";
     }
   };
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-8 max-w-5xl mx-auto w-full space-y-6">
+    <div className="flex flex-col h-full p-4 md:p-8 max-w-5xl mx-auto w-full space-y-6 overflow-y-auto">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-emerald-900">Iterambere ry'Icyaro</h2>
-        <p className="text-emerald-700 mt-2">Inama z'ubuhinzi, ubucuruzi, na serivisi.</p>
+        <h2 className="text-2xl font-bold text-emerald-900">Iterambere</h2>
+        <p className="text-emerald-700 mt-2">Inama z'ubuhinzi, ubucuruzi, serivisi n'ikoranabuhanga.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <button
           onClick={() => { setSector('agriculture'); setAdvice(''); }}
-          className={`p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
             sector === 'agriculture'
               ? 'border-green-500 bg-green-50 shadow-md transform scale-105'
               : 'border-slate-200 bg-white hover:border-green-300 hover:bg-green-50/50'
           }`}
         >
-          <Sprout className={`w-8 h-8 mb-2 ${sector === 'agriculture' ? 'text-green-600' : 'text-slate-400'}`} />
-          <span className={`font-semibold ${sector === 'agriculture' ? 'text-green-800' : 'text-slate-600'}`}>Ubuhinzi</span>
+          <Sprout className={`w-6 h-6 md:w-8 md:h-8 mb-2 ${sector === 'agriculture' ? 'text-green-600' : 'text-slate-400'}`} />
+          <span className={`text-xs md:text-sm font-semibold ${sector === 'agriculture' ? 'text-green-800' : 'text-slate-600'}`}>Ubuhinzi</span>
         </button>
 
         <button
           onClick={() => { setSector('business'); setAdvice(''); }}
-          className={`p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
             sector === 'business'
               ? 'border-blue-500 bg-blue-50 shadow-md transform scale-105'
               : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
           }`}
         >
-          <Briefcase className={`w-8 h-8 mb-2 ${sector === 'business' ? 'text-blue-600' : 'text-slate-400'}`} />
-          <span className={`font-semibold ${sector === 'business' ? 'text-blue-800' : 'text-slate-600'}`}>Ubucuruzi</span>
+          <Briefcase className={`w-6 h-6 md:w-8 md:h-8 mb-2 ${sector === 'business' ? 'text-blue-600' : 'text-slate-400'}`} />
+          <span className={`text-xs md:text-sm font-semibold ${sector === 'business' ? 'text-blue-800' : 'text-slate-600'}`}>Ubucuruzi</span>
         </button>
 
         <button
           onClick={() => { setSector('services'); setAdvice(''); }}
-          className={`p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
             sector === 'services'
               ? 'border-orange-500 bg-orange-50 shadow-md transform scale-105'
               : 'border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/50'
           }`}
         >
-          <HandPlatter className={`w-8 h-8 mb-2 ${sector === 'services' ? 'text-orange-600' : 'text-slate-400'}`} />
-          <span className={`font-semibold ${sector === 'services' ? 'text-orange-800' : 'text-slate-600'}`}>Serivisi</span>
+          <HandPlatter className={`w-6 h-6 md:w-8 md:h-8 mb-2 ${sector === 'services' ? 'text-orange-600' : 'text-slate-400'}`} />
+          <span className={`text-xs md:text-sm font-semibold ${sector === 'services' ? 'text-orange-800' : 'text-slate-600'}`}>Serivisi</span>
+        </button>
+
+        <button
+          onClick={() => { setSector('technology'); setAdvice(''); }}
+          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+            sector === 'technology'
+              ? 'border-purple-500 bg-purple-50 shadow-md transform scale-105'
+              : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50/50'
+          }`}
+        >
+          <Smartphone className={`w-6 h-6 md:w-8 md:h-8 mb-2 ${sector === 'technology' ? 'text-purple-600' : 'text-slate-400'}`} />
+          <span className={`text-xs md:text-sm font-semibold ${sector === 'technology' ? 'text-purple-800' : 'text-slate-600'}`}>Ikoranabuhanga</span>
         </button>
       </div>
 
@@ -147,7 +170,11 @@ export const RuralAssistant: React.FC = () => {
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Urugero: ${sector === 'agriculture' ? 'Ni ryari bahinga ibigori?' : sector === 'business' ? 'Nakongera nte inyungu?' : 'Ese nabona nte serivisi z\'irembo?'}`}
+            placeholder={`Urugero: ${
+              sector === 'agriculture' ? 'Ni ryari bahinga ibigori?' : 
+              sector === 'business' ? 'Nakongera nte inyungu?' : 
+              sector === 'technology' ? 'Nakoresha nte Mobile Money?' :
+              'Ese nabona nte serivisi z\'irembo?'}`}
             className="flex-1 p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 resize-none h-24 bg-slate-50 focus:bg-white transition-colors"
           />
           <Button 
@@ -160,10 +187,10 @@ export const RuralAssistant: React.FC = () => {
           </Button>
         </div>
 
-        <div className="flex-1 min-h-[200px] p-4 bg-stone-50 rounded-xl border border-stone-200 overflow-y-auto whitespace-pre-wrap">
+        <div className="flex-1 min-h-[300px] p-4 bg-stone-50 rounded-xl border border-stone-200 overflow-y-auto whitespace-pre-wrap">
           {advice ? (
-            <div className="text-slate-800 leading-relaxed animate-in fade-in duration-500">
-              <h4 className="font-semibold text-emerald-800 mb-2 flex items-center">
+            <div className="text-slate-800 leading-relaxed animate-in fade-in duration-500 pb-4">
+              <h4 className="font-semibold text-emerald-800 mb-2 flex items-center sticky top-0 bg-stone-50 py-2 border-b border-stone-200">
                 <Sprout className="w-4 h-4 mr-2" />
                 Inama ya ai.rw:
               </h4>

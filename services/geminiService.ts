@@ -172,7 +172,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
             }
           },
           {
-            text: prompt || "Sobanura iyi foto mu Kinyarwanda."
+            text: prompt || "Analyze this image. Identify main objects and return their bounding boxes in 'detectedObjects' with coordinates on a 0-1000 scale [ymin, xmin, ymax, xmax]. Provide the description in Kinyarwanda."
           }
         ]
       },
@@ -198,6 +198,21 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
             imageType: {
               type: Type.STRING,
               description: "Classify the image type. Choose one best fit and return the Kinyarwanda term: 'Ifoto' (Photo), 'Inyandiko' (Document), 'Igishushanyo' (Diagram), 'Ecran' (Screenshot), 'Ubuhanzi' (Art), or 'Ibindi' (Other)."
+            },
+            detectedObjects: {
+              type: Type.ARRAY,
+              description: "List of detected objects with their bounding boxes.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING, description: "Name of the object in Kinyarwanda" },
+                  box_2d: {
+                    type: Type.ARRAY,
+                    description: "Bounding box coordinates [ymin, xmin, ymax, xmax] on a 0-1000 scale.",
+                    items: { type: Type.NUMBER }
+                  }
+                }
+              }
             }
           },
           required: ["description", "confidenceScore", "keyObservations", "imageType"]
@@ -247,7 +262,8 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     return response.text || "Nta nyandiko ibonetse.";
   } catch (error) {
     console.error("Gemini OCR Error:", error);
-    throw error;
+    // If we return empty/null here, the UI might crash or look broken. Return a safe message.
+    return "Ntabwo byashobotse gukuramo inyandiko cyangwa nta nyandiko igaragara.";
   }
 };
 
@@ -325,27 +341,27 @@ export const generateCourse = async (
 
   const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
   
-  YOU MUST FOLLOW THIS EXACT STRUCTURE FOR EVERY COURSE GENERATED (Use Markdown ## for titles):
+  YOU MUST FOLLOW THIS EXACT STRUCTURE AND USE THESE EXACT HEADERS (Markdown ##) FOR EVERY COURSE:
 
-  ## 1. Ibikubiye mu Isomo (Course Structure)
+  ## 1. Ibikubiye mu Isomo
   List the sections of this course here as a Table of Contents.
 
-  ## 2. Intangiriro (Introduction)
+  ## 2. Intangiriro
   Explain the context, importance, estimated duration, and prerequisites.
 
-  ## 3. Incamake y'Isomo (Outline)
+  ## 3. Incamake y'Isomo
   Provide a brief overview of the modules/chapters.
 
   ## 4. Ingingo z'Ingenzi (Birambuye)
-  This is the main content. Provide DETAILED explanations, deep dives into sub-topics, and clear concepts. Do not just list points, explain them in full paragraphs.
+  This is the main content. Provide DETAILED explanations, deep dives into sub-topics, and clear concepts. Use full paragraphs, lists, and bold text for key terms.
 
-  ## 5. Ingero Zifatika (Examples)
+  ## 5. Ingero Zifatika
   Provide real-world scenarios and practical applications suitable for Rwanda.
 
   ## 6. Imfashanyigisho & Ibitabo
   List recommended books, articles, and resources for further reading.
 
-  ## 7. Ibibazo & Imyitozo (Quiz)
+  ## 7. Ibibazo & Imyitozo
   Provide at least 5 assessment questions and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end.
 
   Language: Strictly Kinyarwanda.
