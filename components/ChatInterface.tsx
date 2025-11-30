@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, Plus } from 'lucide-react';
 import { Message, MessageRole } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
@@ -32,8 +33,15 @@ export const ChatInterface: React.FC = () => {
   // Copy State
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
+  // Emoji State
+  const [showInputEmoji, setShowInputEmoji] = useState(false);
+  const [activeReactionId, setActiveReactionId] = useState<string | null>(null);
+
   // Sound state tracker
   const hasPlayedReceiveSound = useRef(false);
+
+  const emojiList = ['👍', '👎', '❤️', '🔥', '🎉', '🤔', '😂', '👋', '🤖', '✅', '✨', '🚀'];
+  const reactionList = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -166,6 +174,7 @@ export const ChatInterface: React.FC = () => {
       setSearchQuery('');
       setIsSearchOpen(false);
     }
+    setShowInputEmoji(false);
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -210,7 +219,6 @@ export const ChatInterface: React.FC = () => {
       
       let errorMessage = 'Habaye ikibazo. Ongera ugerageze.';
       
-      // Improve error message based on the type
       if (error?.message === "MISSING_API_KEY") {
         errorMessage = "Ikibazo cya Tekinike: 'VITE_API_KEY' ntibonetse muri Vercel Settings. Nyamuneka shyiramo API Key yawe.";
       } else if (error?.toString().includes("401") || error?.toString().includes("403")) {
@@ -246,6 +254,19 @@ export const ChatInterface: React.FC = () => {
     setCopiedMessageId(id);
     playUISound('click');
     setTimeout(() => setCopiedMessageId(null), 2000);
+  };
+
+  const handleReaction = (msgId: string, emoji: string) => {
+    playUISound('click');
+    setMessages(prev => prev.map(msg => 
+      msg.id === msgId ? { ...msg, reaction: msg.reaction === emoji ? undefined : emoji } : msg
+    ));
+    setActiveReactionId(null);
+  };
+
+  const handleAddInputEmoji = (emoji: string) => {
+    setInputValue(prev => prev + emoji);
+    playUISound('click');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -355,7 +376,7 @@ export const ChatInterface: React.FC = () => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50 relative" onClick={() => setActiveReactionId(null)}>
         {filteredMessages.length === 0 && searchQuery && (
           <div className="flex flex-col items-center justify-center h-full text-stone-400 space-y-2">
             <Search className="w-8 h-8 opacity-20" />
@@ -376,60 +397,100 @@ export const ChatInterface: React.FC = () => {
                 {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />}
               </div>
               
-              <div className={`p-3 rounded-2xl shadow-sm min-w-[80px] group ${
-                msg.role === MessageRole.USER 
-                  ? 'bg-emerald-600 text-white rounded-tr-none' 
-                  : msg.role === MessageRole.ERROR
-                  ? 'bg-red-50 text-red-600 border border-red-200 rounded-tl-none'
-                  : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'
-              }`}>
-                <div className="whitespace-pre-wrap leading-relaxed min-h-[1.5em] text-sm md:text-base">
-                  {searchQuery && msg.text.toLowerCase().includes(searchQuery.toLowerCase()) ? (
-                     <span>
-                        {msg.text.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
-                          part.toLowerCase() === searchQuery.toLowerCase() ? 
-                          <span key={i} className="bg-yellow-200 text-black font-semibold rounded px-0.5">{part}</span> : part
-                        )}
-                     </span>
-                  ) : (
-                    msg.text
-                  )}
-                  
-                  {!msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
-                    <div className="py-2 px-1">
-                      <div className="flex space-x-1.5 items-center bg-emerald-50/80 rounded-full px-2 py-1 w-fit">
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
+              <div className="flex flex-col">
+                <div className={`p-3 rounded-2xl shadow-sm min-w-[80px] group relative ${
+                  msg.role === MessageRole.USER 
+                    ? 'bg-emerald-600 text-white rounded-tr-none' 
+                    : msg.role === MessageRole.ERROR
+                    ? 'bg-red-50 text-red-600 border border-red-200 rounded-tl-none'
+                    : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'
+                }`}>
+                  <div className="whitespace-pre-wrap leading-relaxed min-h-[1.5em] text-sm md:text-base">
+                    {searchQuery && msg.text.toLowerCase().includes(searchQuery.toLowerCase()) ? (
+                       <span>
+                          {msg.text.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
+                            part.toLowerCase() === searchQuery.toLowerCase() ? 
+                            <span key={i} className="bg-yellow-200 text-black font-semibold rounded px-0.5">{part}</span> : part
+                          )}
+                       </span>
+                    ) : (
+                      msg.text
+                    )}
+                    
+                    {!msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
+                      <div className="py-2 px-1">
+                        <div className="flex space-x-1.5 items-center bg-emerald-50/80 rounded-full px-2 py-1 w-fit">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
+                      <span className="inline-block w-1.5 h-4 ml-1 align-middle bg-emerald-400 animate-pulse rounded-full"></span>
+                    )}
+                  </div>
+                  
+                  {/* Reaction Logic */}
+                  {msg.reaction && (
+                     <div 
+                       onClick={() => handleReaction(msg.id, msg.reaction!)}
+                       className={`absolute -bottom-3 ${msg.role === MessageRole.USER ? 'left-0' : 'right-0'} bg-white border border-stone-200 rounded-full px-1.5 py-0.5 text-xs shadow-sm cursor-pointer hover:bg-stone-50 transition-transform hover:scale-110 flex items-center z-10`}
+                       title="Kura reaction"
+                     >
+                       {msg.reaction}
+                     </div>
                   )}
 
-                  {msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
-                    <span className="inline-block w-1.5 h-4 ml-1 align-middle bg-emerald-400 animate-pulse rounded-full"></span>
-                  )}
-                </div>
-                
-                <div className={`flex items-center justify-end gap-2 mt-1 ${
-                  msg.role === MessageRole.USER 
-                    ? 'text-emerald-100/80' 
-                    : msg.role === MessageRole.ERROR 
-                    ? 'text-red-300' 
-                    : 'text-stone-400'
-                }`}>
-                  {msg.role === MessageRole.MODEL && msg.text && (
-                    <button 
-                      onClick={() => handleCopyMessage(msg.text, msg.id)}
-                      className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                        copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-300 hover:text-emerald-600'
-                      }`}
-                      title="Koporora"
-                      aria-label="Koporora ubutumwa"
-                    >
-                      {copiedMessageId === msg.id ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  )}
-                  <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
+                  <div className={`flex items-center justify-end gap-2 mt-1 ${
+                    msg.role === MessageRole.USER 
+                      ? 'text-emerald-100/80' 
+                      : msg.role === MessageRole.ERROR 
+                      ? 'text-red-300' 
+                      : 'text-stone-400'
+                  }`}>
+                    {msg.role === MessageRole.MODEL && msg.text && !msg.reaction && (
+                      <div className="relative">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setActiveReactionId(activeReactionId === msg.id ? null : msg.id); }}
+                          className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none ${
+                            activeReactionId === msg.id ? 'text-emerald-600 bg-emerald-50' : 'text-stone-300 hover:text-emerald-600'
+                          }`}
+                          title="Tanga Reaction"
+                        >
+                          <Smile size={14} />
+                        </button>
+                        {activeReactionId === msg.id && (
+                          <div className="absolute bottom-6 left-0 bg-white border border-stone-200 rounded-lg shadow-lg p-1.5 flex gap-1 z-20 animate-in fade-in zoom-in-95 duration-150">
+                             {reactionList.map(emoji => (
+                               <button
+                                 key={emoji}
+                                 onClick={() => handleReaction(msg.id, emoji)}
+                                 className="hover:bg-stone-100 rounded p-1 text-base transition-transform hover:scale-110"
+                               >
+                                 {emoji}
+                               </button>
+                             ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {msg.role === MessageRole.MODEL && msg.text && (
+                      <button 
+                        onClick={() => handleCopyMessage(msg.text, msg.id)}
+                        className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-300 hover:text-emerald-600'
+                        }`}
+                        title="Koporora"
+                        aria-label="Koporora ubutumwa"
+                      >
+                        {copiedMessageId === msg.id ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    )}
+                    <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -439,15 +500,43 @@ export const ChatInterface: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white border-t border-emerald-100">
+      <div className="p-4 bg-white border-t border-emerald-100 relative">
+        {/* Emoji Picker Popup */}
+        {showInputEmoji && (
+          <div className="absolute bottom-20 left-4 bg-white border border-emerald-100 rounded-xl shadow-xl p-3 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200 w-64">
+             <div className="flex justify-between items-center mb-2 pb-2 border-b border-stone-100">
+               <span className="text-xs font-bold text-stone-500">Emojis</span>
+               <button onClick={() => setShowInputEmoji(false)} className="text-stone-400 hover:text-stone-600"><X size={14}/></button>
+             </div>
+             <div className="grid grid-cols-6 gap-1">
+               {emojiList.map(emoji => (
+                 <button
+                   key={emoji}
+                   onClick={() => handleAddInputEmoji(emoji)}
+                   className="p-1.5 hover:bg-emerald-50 rounded text-lg transition-transform hover:scale-110"
+                 >
+                   {emoji}
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
+
         <div className="flex items-end gap-2 max-w-4xl mx-auto">
           <div className="relative flex-1">
+             <button
+               onClick={() => setShowInputEmoji(!showInputEmoji)}
+               className={`absolute left-3 top-3 text-stone-400 hover:text-emerald-500 transition-colors p-1 rounded-md hover:bg-emerald-50 ${showInputEmoji ? 'text-emerald-500 bg-emerald-50' : ''}`}
+               title="Shyiramo Emoji"
+             >
+               <Smile size={18} />
+             </button>
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isListening ? "Ndakumva..." : "Andika ubutumwa hano..."}
-              className={`w-full p-3 pr-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none h-14 max-h-32 overflow-y-auto ${isListening ? 'bg-emerald-50' : ''}`}
+              className={`w-full p-3 pl-12 pr-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none h-14 max-h-32 overflow-y-auto ${isListening ? 'bg-emerald-50' : ''}`}
               disabled={isStreaming || isListening}
             />
           </div>

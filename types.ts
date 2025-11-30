@@ -1,3 +1,4 @@
+
 export enum MessageRole {
   USER = 'user',
   MODEL = 'model',
@@ -10,6 +11,7 @@ export interface Message {
   text: string;
   image?: string; // Base64 string for displayed images
   timestamp: number;
+  reaction?: string; // New field for storing emoji reactions
 }
 
 export enum AppView {
