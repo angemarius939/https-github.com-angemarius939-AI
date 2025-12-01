@@ -5,6 +5,7 @@ import { ProgressBar } from './ProgressBar';
 import { useToast } from './ToastProvider';
 import { generateBusinessAnalysis } from '../services/geminiService';
 import { BusinessAnalysisResult } from '../types';
+import { FormattedText } from './FormattedText';
 
 export const DecisionAssistant: React.FC = () => {
   const [input, setInput] = useState('');
@@ -121,9 +122,9 @@ export const DecisionAssistant: React.FC = () => {
                   <Lightbulb className="w-5 h-5 mr-2 text-yellow-400" />
                   Incamake
                 </h3>
-                <p className="text-emerald-100 leading-relaxed">
-                  {result.summary}
-                </p>
+                <div className="text-emerald-100 leading-relaxed">
+                  <FormattedText text={result.summary} className="text-emerald-100" />
+                </div>
               </div>
 
               {/* KPI Cards */}

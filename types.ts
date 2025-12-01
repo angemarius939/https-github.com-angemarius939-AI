@@ -5,6 +5,11 @@ export enum MessageRole {
   ERROR = 'error'
 }
 
+export interface Source {
+  title: string;
+  uri: string;
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
@@ -12,6 +17,8 @@ export interface Message {
   image?: string; // Base64 string for displayed images
   timestamp: number;
   reaction?: string; // New field for storing emoji reactions
+  sources?: Source[];
+  isSourcesVisible?: boolean;
 }
 
 export enum AppView {

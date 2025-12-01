@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio, History, Clock, ArrowUpRight, Info, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
 import { analyzeImage, generateImage, extractTextFromImage } from '../services/geminiService';
@@ -6,6 +5,7 @@ import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { ImageAnalysisResult } from '../types';
 import { ProgressBar } from './ProgressBar';
+import { FormattedText } from './FormattedText';
 
 interface ImageToolsProps {
   onNavigateToTTS?: (text: string) => void;
@@ -299,8 +299,6 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     { label: "9:16", value: "9:16" },
     { label: "4:3", value: "4:3" },
     { label: "3:4", value: "3:4" },
-    { label: "3:2", value: "3:2" },
-    { label: "2:3", value: "2:3" },
   ];
 
   // Helper to calculate box styles
@@ -399,8 +397,6 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                 aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm mx-auto' : 
                 aspectRatio === '4:3' ? 'aspect-[4/3]' : 
                 aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm mx-auto' : 
-                aspectRatio === '3:2' ? 'aspect-[3/2]' : 
-                aspectRatio === '2:3' ? 'aspect-[2/3] max-w-sm mx-auto' : 
                 'aspect-square max-w-lg mx-auto'
             }`}>
               {isGenerating ? (
@@ -678,9 +674,9 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                        </div>
                     </div>
                     
-                    <p className="text-stone-800 whitespace-pre-wrap leading-relaxed text-sm">
-                      {analysisResult.description}
-                    </p>
+                    <div className="text-stone-800 leading-relaxed text-sm">
+                      <FormattedText text={analysisResult.description} />
+                    </div>
 
                     <div className="bg-white p-3 rounded-lg border border-emerald-100">
                       <div className="flex justify-between items-center mb-1.5">

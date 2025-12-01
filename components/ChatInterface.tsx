@@ -1,9 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, Plus } from 'lucide-react';
-import { Message, MessageRole } from '../types';
+import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, Plus, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Message, MessageRole, Source } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
+import { FormattedText } from './FormattedText';
 
 export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -198,22 +198,38 @@ export const ChatInterface: React.FC = () => {
       id: modelMsgId,
       role: MessageRole.MODEL,
       text: '', 
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      sources: []
     }]);
 
     try {
       let currentText = '';
-      await streamChatResponse(history, userMsg.text, (chunk) => {
-        if (!hasPlayedReceiveSound.current && chunk.trim()) {
-          playUISound('receive');
-          hasPlayedReceiveSound.current = true;
-        }
+      const uniqueSources = new Map<string, Source>();
 
-        currentText += chunk;
-        setMessages(prev => prev.map(m => 
-          m.id === modelMsgId ? { ...m, text: currentText } : m
-        ));
-      });
+      await streamChatResponse(
+        history, 
+        userMsg.text, 
+        (chunk) => {
+          if (!hasPlayedReceiveSound.current && chunk.trim()) {
+            playUISound('receive');
+            hasPlayedReceiveSound.current = true;
+          }
+
+          currentText += chunk;
+          setMessages(prev => prev.map(m => 
+            m.id === modelMsgId ? { ...m, text: currentText } : m
+          ));
+        },
+        (newSources) => {
+           // Accumulate unique sources
+           newSources.forEach(s => uniqueSources.set(s.uri, s));
+           const sourceArray = Array.from(uniqueSources.values());
+           
+           setMessages(prev => prev.map(m => 
+             m.id === modelMsgId ? { ...m, sources: sourceArray } : m
+           ));
+        }
+      );
     } catch (error: any) {
       console.error("Chat error:", error);
       
@@ -262,6 +278,13 @@ export const ChatInterface: React.FC = () => {
       msg.id === msgId ? { ...msg, reaction: msg.reaction === emoji ? undefined : emoji } : msg
     ));
     setActiveReactionId(null);
+  };
+
+  const handleToggleSources = (msgId: string) => {
+    playUISound('click');
+    setMessages(prev => prev.map(msg => 
+      msg.id === msgId ? { ...msg, isSourcesVisible: !msg.isSourcesVisible } : msg
+    ));
   };
 
   const handleAddInputEmoji = (emoji: string) => {
@@ -389,7 +412,7 @@ export const ChatInterface: React.FC = () => {
             key={msg.id} 
             className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`flex max-w-[85%] md:max-w-[75%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center mx-2 ${
                 msg.role === MessageRole.USER ? 'bg-emerald-600' : 
                 msg.role === MessageRole.ERROR ? 'bg-red-500' : 'bg-teal-600'
@@ -405,16 +428,11 @@ export const ChatInterface: React.FC = () => {
                     ? 'bg-red-50 text-red-600 border border-red-200 rounded-tl-none'
                     : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'
                 }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed min-h-[1.5em] text-sm md:text-base">
-                    {searchQuery && msg.text.toLowerCase().includes(searchQuery.toLowerCase()) ? (
-                       <span>
-                          {msg.text.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
-                            part.toLowerCase() === searchQuery.toLowerCase() ? 
-                            <span key={i} className="bg-yellow-200 text-black font-semibold rounded px-0.5">{part}</span> : part
-                          )}
-                       </span>
+                  <div className="min-h-[1.5em] text-sm md:text-base">
+                    {msg.role === MessageRole.USER ? (
+                      <span className="whitespace-pre-wrap">{msg.text}</span>
                     ) : (
-                      msg.text
+                      <FormattedText text={msg.text} searchQuery={searchQuery} />
                     )}
                     
                     {!msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
@@ -425,10 +443,6 @@ export const ChatInterface: React.FC = () => {
                           <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
                         </div>
                       </div>
-                    )}
-
-                    {msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
-                      <span className="inline-block w-1.5 h-4 ml-1 align-middle bg-emerald-400 animate-pulse rounded-full"></span>
                     )}
                   </div>
                   
@@ -491,6 +505,46 @@ export const ChatInterface: React.FC = () => {
                     )}
                     <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
                   </div>
+
+                  {/* Sources Section */}
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className={`mt-3 pt-2 border-t ${msg.role === MessageRole.USER ? 'border-emerald-500/20' : 'border-emerald-100'}`}>
+                      <button 
+                        onClick={() => handleToggleSources(msg.id)}
+                        className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full transition-colors ${
+                          msg.role === MessageRole.USER 
+                            ? 'bg-emerald-700 text-emerald-100 hover:bg-emerald-800' 
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        }`}
+                      >
+                         <Globe className="w-3 h-3" />
+                         <span>Inkomoko ({msg.sources.length})</span>
+                         {msg.isSourcesVisible ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+                      
+                      {msg.isSourcesVisible && (
+                        <div className={`mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 ${
+                          msg.role === MessageRole.USER ? 'text-emerald-100' : 'text-stone-600'
+                        }`}>
+                          {msg.sources.map((source, idx) => (
+                            <a 
+                              key={idx}
+                              href={source.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-start text-[11px] leading-tight hover:underline gap-1.5 ${
+                                msg.role === MessageRole.USER ? 'hover:text-white' : 'hover:text-emerald-600'
+                              }`}
+                            >
+                              <ExternalLink className="w-3 h-3 mt-0.5 shrink-0" />
+                              <span className="break-all">{source.title || source.uri}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>

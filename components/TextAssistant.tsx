@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Code, Terminal, Search } from 'lucide-react';
+import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Search } from 'lucide-react';
 import { generateTextAnalysis } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { ProgressBar } from './ProgressBar';
+import { FormattedText } from './FormattedText';
 
 interface TextAssistantProps {
   onNavigateToTTS?: (text: string) => void;
@@ -42,71 +43,11 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const copyCodeSnippet = (code: string) => {
-    navigator.clipboard.writeText(code);
-    showToast('Code yakoporowe!', 'info');
-  };
-
   const toneOptions = [
     { value: 'formal', label: 'Byiyubashye' },
     { value: 'informal', label: 'Bisanzwe' },
     { value: 'friendly', label: 'Gicuti' },
   ] as const;
-
-  // Function to render text with syntax highlighting for code blocks
-  const renderFormattedResult = (text: string) => {
-    if (!text) return <span className="text-stone-400 italic">Igisubizo kizaza hano...</span>;
-
-    // Split text by markdown code blocks: ```lang ... ```
-    const parts = text.split(/(```[\w-]*\n[\s\S]*?```)/g);
-
-    return parts.map((part, index) => {
-      // Check if this part is a code block
-      if (part.startsWith('```')) {
-        const match = part.match(/```([\w-]*)\n([\s\S]*?)```/);
-        if (match) {
-          const language = match[1] || 'Code';
-          const codeContent = match[2];
-          return (
-            <div key={index} className="my-4 rounded-lg overflow-hidden border border-emerald-900/10 shadow-sm group">
-              <div className="bg-stone-800 text-stone-300 px-4 py-1.5 text-xs font-mono flex justify-between items-center border-b border-stone-700">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-3 h-3" />
-                  <span className="uppercase tracking-wider text-[10px]">{language || 'TEXT'}</span>
-                </div>
-                <button
-                  onClick={() => copyCodeSnippet(codeContent)}
-                  className="hover:text-white transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-200"
-                  title="Koporora Code"
-                >
-                  <Copy className="w-3 h-3" />
-                  <span className="text-[10px]">Koporora</span>
-                </button>
-              </div>
-              <pre className="bg-[#1e1e1e] text-emerald-50 p-4 overflow-x-auto text-sm font-mono leading-relaxed">
-                <code>{codeContent}</code>
-              </pre>
-            </div>
-          );
-        }
-      }
-
-      // Handle regular text paragraphs and bold formatting
-      return (
-        <div key={index} className="whitespace-pre-wrap mb-2 leading-relaxed text-stone-800">
-          {part.split(/(\*\*.*?\*\*)/g).map((subPart, subIndex) => 
-            subPart.startsWith('**') && subPart.endsWith('**') ? (
-              <strong key={subIndex} className="font-bold text-emerald-900">
-                {subPart.slice(2, -2)}
-              </strong>
-            ) : (
-              subPart
-            )
-          )}
-        </div>
-      );
-    });
-  };
 
   const getActionLabel = () => {
     const toneLabel = toneOptions.find(t => t.value === tone)?.label;
@@ -262,7 +203,11 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
 
              {/* Result Content */}
              <div className="flex-1 p-4 overflow-y-auto min-h-[250px] bg-stone-50/30">
-               {renderFormattedResult(result)}
+               {result ? (
+                 <FormattedText text={result} />
+               ) : (
+                 <span className="text-stone-400 italic">Igisubizo kizaza hano...</span>
+               )}
              </div>
           </div>
         </div>

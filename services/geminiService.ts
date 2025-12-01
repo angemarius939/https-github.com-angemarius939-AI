@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/genai";
-import { ImageAnalysisResult, BusinessAnalysisResult } from '../types';
+import { ImageAnalysisResult, BusinessAnalysisResult, Source } from '../types';
 
 // Fix for "process is not defined" TS error
 declare var process: any;
@@ -51,7 +51,8 @@ const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, a helpful, intelligent AI
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
   newMessage: string,
-  onChunk: (text: string) => void
+  onChunk: (text: string) => void,
+  onSources?: (sources: Source[]) => void
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
   
@@ -61,6 +62,7 @@ export const streamChatResponse = async (
       model: model,
       config: {
         systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
+        tools: [{ googleSearch: {} }], // Enable Google Search Grounding
       },
       history: history,
     });
@@ -74,6 +76,23 @@ export const streamChatResponse = async (
       if (text) {
         fullText += text;
         onChunk(text);
+      }
+      
+      // Extract grounding metadata (sources)
+      const groundingMetadata = c.candidates?.[0]?.groundingMetadata;
+      if (groundingMetadata?.groundingChunks && onSources) {
+        const sources: Source[] = groundingMetadata.groundingChunks
+          .map((chunk: any) => {
+            if (chunk.web) {
+              return { title: chunk.web.title, uri: chunk.web.uri };
+            }
+            return null;
+          })
+          .filter((s: any) => s !== null);
+        
+        if (sources.length > 0) {
+          onSources(sources);
+        }
       }
     }
     return fullText;

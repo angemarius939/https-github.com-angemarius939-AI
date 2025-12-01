@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { CourseLevel } from '../types';
 import { useToast } from './ToastProvider';
 import { ProgressBar } from './ProgressBar';
+import { FormattedText } from './FormattedText';
 
 interface CourseHistoryItem {
   id: string;
@@ -303,7 +304,7 @@ export const CourseGenerator: React.FC = () => {
                             const win = window.open('', '', 'height=700,width=800');
                             if(win) {
                               win.document.write('<html><head><title>Isomo</title>');
-                              win.document.write('<style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; } h2 { color: #064e3b; border-bottom: 2px solid #ecfdf5; padding-bottom: 5px; margin-top: 30px; } </style>');
+                              win.document.write('<style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; } h2 { color: #064e3b; border-bottom: 2px solid #ecfdf5; padding-bottom: 5px; margin-top: 30px; } ul { margin-left: 20px; } </style>');
                               win.document.write('</head><body>');
                               win.document.write(printContent.innerHTML);
                               win.document.write('</body></html>');
@@ -365,25 +366,15 @@ export const CourseGenerator: React.FC = () => {
                             </div>
                             <h2 className="text-lg font-bold text-emerald-900">{section.title}</h2>
                           </div>
-                          <div className="p-6 text-slate-800 leading-relaxed whitespace-pre-wrap">
-                            {/* Simple formatting for bold and lists */}
-                            {section.content.split('\n').map((line, i) => {
-                               if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-                                 return <li key={i} className="ml-4 list-disc marker:text-emerald-400 pl-2 mb-1">{line.trim().substring(2)}</li>
-                               }
-                               if (line.trim().match(/^\d+\./)) {
-                                 return <div key={i} className="font-semibold text-emerald-800 mt-4 mb-2">{line}</div>
-                               }
-                               if (line.trim() === '') return <br key={i}/>;
-                               return <p key={i} className="mb-2">{line}</p>
-                            })}
+                          <div className="p-6">
+                            <FormattedText text={section.content} />
                           </div>
                         </div>
                       ))
                     ) : (
                       // Fallback for unparsed content
                       <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-8 text-slate-800 leading-relaxed whitespace-pre-wrap">
-                        {courseContent}
+                        <FormattedText text={courseContent} />
                       </div>
                     )}
                   </div>
