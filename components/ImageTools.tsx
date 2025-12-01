@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Image as ImageIcon, Sparkles, Upload, Loader2, Target, BarChart, Tag, Volume2, Camera, SwitchCamera, FileText, PenTool, LayoutTemplate, Monitor, ScanText, Download, Ratio, History, Clock, ArrowUpRight, Info, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
 import { analyzeImage, generateImage, extractTextFromImage } from '../services/geminiService';
@@ -350,139 +351,164 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
 
       {activeMode === 'generate' ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="bg-white rounded-b-xl rounded-tr-xl shadow-sm border border-emerald-100 p-6 space-y-6 mt-0">
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-emerald-900">Hanga ifoto ukoresheje amagambo</h3>
-              <p className="text-stone-500 text-sm">Sobanura ifoto wifuza, ai.rw irayiguha.</p>
+          
+          {/* SECTION 1: CREATION STUDIO */}
+          <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 space-y-6">
+            <div className="border-b border-emerald-50 pb-4">
+               <h3 className="text-lg font-bold text-emerald-900 flex items-center">
+                 <Sparkles className="w-5 h-5 mr-2 text-emerald-500" />
+                 Studio (Aho guhangira)
+               </h3>
+               <p className="text-stone-500 text-sm mt-1">Sobanura ifoto wifuza, hanyuma uhitemo ingano yayo.</p>
             </div>
-            
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={genPrompt}
-                onChange={(e) => setGenPrompt(e.target.value)}
-                placeholder="Urugero: Injangwe irimo gukina umupira..."
-                className="flex-1 p-3 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-              <Button onClick={handleGenerate} isLoading={isGenerating} disabled={!genPrompt.trim()}>
-                Hanga
-              </Button>
-            </div>
-            
-            {/* Aspect Ratio Selector */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-xs font-medium text-emerald-800 flex items-center shrink-0">
-                <Ratio className="w-3 h-3 mr-1" />
-                Ingano:
-              </span>
-              {ratios.map(r => (
-                <button
-                  key={r.value}
-                  onClick={() => setAspectRatio(r.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap ${
-                    aspectRatio === r.value 
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
-                      : 'bg-stone-50 text-stone-600 border-stone-200 hover:border-emerald-200'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            
-            <ProgressBar isLoading={isGenerating} label="Irimo guhanga ifoto..." duration={5000} />
 
-            <div id="main-image-viewer" className={`relative w-full bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 border-dashed ${
-                aspectRatio === '16:9' ? 'aspect-video' : 
-                aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm mx-auto' : 
-                aspectRatio === '4:3' ? 'aspect-[4/3]' : 
-                aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm mx-auto' : 
-                'aspect-square max-w-lg mx-auto'
-            }`}>
-              {isGenerating ? (
-                <div className="text-center p-6">
-                  <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
-                  <p className="text-emerald-800 font-medium">ai.rw irimo gukora ifoto...</p>
-                  <p className="text-emerald-600 text-sm mt-1">Bishobora gufata amasegonda make</p>
-                </div>
-              ) : generatedImageUrl ? (
-                <div className="relative w-full h-full group">
-                  <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain bg-black/5" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    <button
-                      onClick={() => handleDownloadImage(generatedImageUrl!)}
-                      className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
-                      title="Manura Ifoto (Download)"
-                    >
-                      <Download className="w-6 h-6" />
-                    </button>
-                    <button
-                      onClick={() => setGeneratedImageUrl(null)}
-                      className="p-3 bg-white text-red-600 rounded-full shadow-lg hover:bg-red-50 transition-colors transform hover:scale-105"
-                      title="Siba"
-                    >
-                      <span className="font-bold px-1">X</span>
-                    </button>
-                    {onNavigateToTTS && (
-                      <button
-                        onClick={() => onNavigateToTTS("Iyi ni ifoto yakozwe na A.I. " + genPrompt)}
-                        className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
-                        title="Soma mu ijwi"
-                      >
-                        <Volume2 className="w-6 h-6" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-emerald-400">
-                  <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Nta foto irakorwa</p>
-                </div>
-              )}
+            <div className="space-y-4">
+              {/* Prompt Input */}
+              <div className="space-y-2">
+                 <label className="text-sm font-medium text-emerald-800">Ubusobanuro (Prompt)</label>
+                 <textarea
+                   value={genPrompt}
+                   onChange={(e) => setGenPrompt(e.target.value)}
+                   placeholder="Urugero: Injangwe irimo gukina umupira mu busitani bwiza..."
+                   className="w-full p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none h-24 resize-none bg-emerald-50/20 text-stone-800"
+                 />
+              </div>
+
+              {/* Aspect Ratio & Action Row */}
+              <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-end">
+                 <div className="space-y-2 w-full md:w-auto">
+                    <label className="text-sm font-medium text-emerald-800 flex items-center">
+                      <Ratio className="w-4 h-4 mr-2" />
+                      Ingano (Ratio)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ratios.map(r => (
+                        <button
+                          key={r.value}
+                          onClick={() => setAspectRatio(r.value)}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                            aspectRatio === r.value 
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md transform scale-105' 
+                              : 'bg-white text-stone-600 border-stone-200 hover:border-emerald-300 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+
+                 <Button 
+                   onClick={handleGenerate} 
+                   isLoading={isGenerating} 
+                   disabled={!genPrompt.trim()}
+                   className="w-full md:w-auto px-8 h-11"
+                 >
+                   Hanga Ifoto
+                 </Button>
+              </div>
+
+              <ProgressBar isLoading={isGenerating} label="Irimo guhanga ifoto..." duration={5000} />
             </div>
           </div>
 
-          {/* History Section */}
-          {genHistory.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-emerald-100">
-              <h3 className="text-sm font-bold text-emerald-900 flex items-center">
-                <History className="w-4 h-4 mr-2" />
-                Amateka y'Amafoto
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {genHistory.map((item) => (
-                  <div key={item.id} className="group relative rounded-lg overflow-hidden border border-emerald-100 bg-white hover:shadow-md transition-all">
-                    <div 
-                      className="aspect-square bg-stone-100 cursor-pointer overflow-hidden"
-                      onClick={() => handleRestoreFromHistory(item)}
-                    >
-                      <img src={item.url} alt="History" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                         <ArrowUpRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all" />
+          {/* SECTION 2: MY CREATIONS & PREVIEW */}
+          <div className="bg-stone-50/50 rounded-xl border border-stone-200 p-6 space-y-6">
+             <h3 className="text-lg font-bold text-emerald-900 flex items-center">
+                <History className="w-5 h-5 mr-2 text-emerald-600" />
+                Ibyakozwe (My Creations)
+             </h3>
+
+             {/* Main Viewer - Only shown if generating or result exists */}
+             {(isGenerating || generatedImageUrl) && (
+               <div id="main-image-viewer" className={`relative w-full bg-white rounded-xl flex items-center justify-center overflow-hidden border border-emerald-200 shadow-sm mx-auto transition-all duration-500 ${
+                   aspectRatio === '16:9' ? 'aspect-video' : 
+                   aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm' : 
+                   aspectRatio === '4:3' ? 'aspect-[4/3]' : 
+                   aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm' : 
+                   'aspect-square max-w-lg'
+               }`}>
+                 {isGenerating ? (
+                   <div className="text-center p-6">
+                     <Loader2 className="w-10 h-10 text-emerald-600 animate-spin mx-auto mb-3" />
+                     <p className="text-emerald-800 font-medium">ai.rw irimo gukora ifoto...</p>
+                     <p className="text-emerald-600 text-sm mt-1">Bishobora gufata amasegonda make</p>
+                   </div>
+                 ) : generatedImageUrl ? (
+                   <div className="relative w-full h-full group">
+                     <img src={generatedImageUrl} alt="Generated" className="w-full h-full object-contain" />
+                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                       <button
+                         onClick={() => handleDownloadImage(generatedImageUrl!)}
+                         className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                         title="Manura Ifoto (Download)"
+                       >
+                         <Download className="w-6 h-6" />
+                       </button>
+                       <button
+                         onClick={() => setGeneratedImageUrl(null)}
+                         className="p-3 bg-white text-red-600 rounded-full shadow-lg hover:bg-red-50 transition-colors transform hover:scale-105"
+                         title="Funga"
+                       >
+                         <X className="w-6 h-6" />
+                       </button>
+                       {onNavigateToTTS && (
+                         <button
+                           onClick={() => onNavigateToTTS("Iyi ni ifoto yakozwe na A.I. " + genPrompt)}
+                           className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:bg-emerald-50 transition-colors transform hover:scale-105"
+                           title="Soma mu ijwi"
+                         >
+                           <Volume2 className="w-6 h-6" />
+                         </button>
+                       )}
+                     </div>
+                   </div>
+                 ) : null}
+               </div>
+             )}
+
+             {/* History Grid */}
+             {genHistory.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {genHistory.map((item) => (
+                    <div key={item.id} className="group relative rounded-lg overflow-hidden border border-emerald-100 bg-white hover:shadow-md transition-all">
+                      <div 
+                        className="aspect-square bg-stone-100 cursor-pointer overflow-hidden relative"
+                        onClick={() => handleRestoreFromHistory(item)}
+                      >
+                        <img src={item.url} alt="History" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                           <ArrowUpRight className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all" />
+                        </div>
+                      </div>
+                      <div className="p-2 space-y-1">
+                        <p className="text-[10px] text-stone-500 truncate font-medium" title={item.prompt}>{item.prompt}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-stone-400 flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </span>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDownloadImage(item.url); }}
+                            className="text-emerald-500 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded"
+                            title="Manura"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="p-2 space-y-1">
-                      <p className="text-[10px] text-stone-500 truncate" title={item.prompt}>{item.prompt}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-stone-400 flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </span>
-                        <button 
-                          onClick={() => handleDownloadImage(item.url)}
-                          className="text-emerald-500 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded"
-                          title="Manura"
-                        >
-                          <Download className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
+                  ))}
+                </div>
+             ) : (
+                !isGenerating && !generatedImageUrl && (
+                  <div className="text-center py-12 text-stone-400 bg-white rounded-xl border border-dashed border-stone-200">
+                     <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                     <p className="text-sm font-medium">Nta mafoto urakora. Koresha Studio hejuru!</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                )
+             )}
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-b-xl rounded-tl-xl shadow-sm border border-emerald-100 p-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 mt-0">
