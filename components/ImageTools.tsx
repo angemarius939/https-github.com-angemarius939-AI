@@ -300,6 +300,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     { label: "9:16", value: "9:16" },
     { label: "4:3", value: "4:3" },
     { label: "3:4", value: "3:4" },
+    { label: "3:2", value: "3:2" },
+    { label: "2:3", value: "2:3" },
   ];
 
   // Helper to calculate box styles
@@ -426,6 +428,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                    aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm' : 
                    aspectRatio === '4:3' ? 'aspect-[4/3]' : 
                    aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm' : 
+                   aspectRatio === '3:2' ? 'aspect-[3/2]' : 
+                   aspectRatio === '2:3' ? 'aspect-[2/3] max-w-sm' :
                    'aspect-square max-w-lg'
                }`}>
                  {isGenerating ? (
