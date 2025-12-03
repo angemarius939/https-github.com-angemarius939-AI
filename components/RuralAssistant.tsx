@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, Wifi, BatteryCharging, CloudSun } from 'lucide-react';
+import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, CloudSun } from 'lucide-react';
 import { generateRuralAdvice } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { FormattedText } from './FormattedText';
+import { SourcesToggle } from './SourcesToggle';
+import { Source } from '../types';
 
 export const RuralAssistant: React.FC = () => {
   const [sector, setSector] = useState<'agriculture' | 'business' | 'services' | 'technology' | 'climate'>('agriculture');
   const [query, setQuery] = useState('');
   const [advice, setAdvice] = useState('');
+  const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { showToast } = useToast();
 
@@ -53,9 +56,11 @@ export const RuralAssistant: React.FC = () => {
 
     setIsLoading(true);
     setAdvice('');
+    setSources([]);
     try {
-      const result = await generateRuralAdvice(promptToUse, sector as any);
-      setAdvice(result);
+      const result = await generateRuralAdvice(promptToUse, sector);
+      setAdvice(result.text);
+      setSources(result.sources);
       showToast('Inama yabonetse!', 'success');
     } catch (error) {
       setAdvice("Habaye ikibazo kubona inama.");
@@ -102,7 +107,7 @@ export const RuralAssistant: React.FC = () => {
         ].map((item) => (
            <button
             key={item.id}
-            onClick={() => { setSector(item.id as any); setAdvice(''); }}
+            onClick={() => { setSector(item.id as any); setAdvice(''); setSources([]); }}
             className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
               sector === item.id
                 ? `border-${item.color}-500 bg-${item.color}-50 shadow-md transform scale-105`
@@ -174,6 +179,9 @@ export const RuralAssistant: React.FC = () => {
                 Inama ya ai.rw:
               </h4>
               <FormattedText text={advice} />
+              
+              {/* Show Sources Toggle */}
+              <SourcesToggle sources={sources} />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-slate-400 italic space-y-2">

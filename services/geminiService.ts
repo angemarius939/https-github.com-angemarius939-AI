@@ -46,6 +46,29 @@ const getAiClient = () => {
   return aiInstance;
 };
 
+// Helper to extract sources from grounding metadata
+const extractSources = (response: any): Source[] => {
+  const sources: Source[] = [];
+  const candidates = response.candidates || [];
+  
+  for (const candidate of candidates) {
+    const chunks = candidate.groundingMetadata?.groundingChunks || [];
+    for (const chunk of chunks) {
+      if (chunk.web) {
+        sources.push({
+          title: chunk.web.title || "Web Source",
+          uri: chunk.web.uri
+        });
+      }
+    }
+  }
+  
+  // Remove duplicates based on URI
+  const uniqueSources = new Map<string, Source>();
+  sources.forEach(s => uniqueSources.set(s.uri, s));
+  return Array.from(uniqueSources.values());
+};
+
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, a helpful, intelligent AI assistant specialized in Kinyarwanda. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, concise, and helpful. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists.";
 
 export const streamChatResponse = async (
@@ -57,7 +80,7 @@ export const streamChatResponse = async (
   const model = "gemini-2.5-flash";
   
   try {
-    const ai = getAiClient(); // This will throw MISSING_API_KEY if needed
+    const ai = getAiClient(); 
     const chat = ai.chats.create({
       model: model,
       config: {
@@ -79,20 +102,11 @@ export const streamChatResponse = async (
       }
       
       // Extract grounding metadata (sources)
-      const groundingMetadata = c.candidates?.[0]?.groundingMetadata;
-      if (groundingMetadata?.groundingChunks && onSources) {
-        const sources: Source[] = groundingMetadata.groundingChunks
-          .map((chunk: any) => {
-            if (chunk.web) {
-              return { title: chunk.web.title, uri: chunk.web.uri };
-            }
-            return null;
-          })
-          .filter((s: any) => s !== null);
-        
-        if (sources.length > 0) {
-          onSources(sources);
-        }
+      if (onSources) {
+         const sources = extractSources(c);
+         if (sources.length > 0) {
+           onSources(sources);
+         }
       }
     }
     return fullText;
@@ -108,7 +122,6 @@ export const generateConversationResponse = async (
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
   
-  // Optimized instruction for oral conversation: shorter, more natural
   const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists, just natural speech text.";
 
   try {
@@ -179,7 +192,6 @@ export const generateTextAnalysis = async (
   }
 };
 
-// Updated Image Analysis to return structured data with confidence
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
   const model = "gemini-2.5-flash";
   
@@ -206,35 +218,17 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            description: {
-              type: Type.STRING,
-              description: "The main analysis or answer to the user's prompt in Kinyarwanda."
-            },
-            confidenceScore: {
-              type: Type.NUMBER,
-              description: "A confidence score from 0 to 100 representing how certain the model is about its analysis."
-            },
-            keyObservations: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: "A list of 3-5 key visual elements or details observed in the image in Kinyarwanda."
-            },
-            imageType: {
-              type: Type.STRING,
-              description: "Classify the image type. Choose one best fit and return the Kinyarwanda term: 'Ifoto' (Photo), 'Inyandiko' (Document), 'Igishushanyo' (Diagram), 'Ecran' (Screenshot), 'Ubuhanzi' (Art), or 'Ibindi' (Other)."
-            },
+            description: { type: Type.STRING },
+            confidenceScore: { type: Type.NUMBER },
+            keyObservations: { type: Type.ARRAY, items: { type: Type.STRING } },
+            imageType: { type: Type.STRING },
             detectedObjects: {
               type: Type.ARRAY,
-              description: "List of detected objects with their bounding boxes.",
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  label: { type: Type.STRING, description: "Name of the object in Kinyarwanda" },
-                  box_2d: {
-                    type: Type.ARRAY,
-                    description: "Bounding box coordinates [ymin, xmin, ymax, xmax] on a 0-1000 scale.",
-                    items: { type: Type.NUMBER }
-                  }
+                  label: { type: Type.STRING },
+                  box_2d: { type: Type.ARRAY, items: { type: Type.NUMBER } }
                 }
               }
             }
@@ -268,8 +262,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
   const model = "gemini-2.5-flash";
-  
-  const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language (e.g., if it's English, keep it English). Do not summarize. Return ONLY the extracted text.";
+  const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language. Do not summarize. Return ONLY the extracted text.";
 
   try {
     const ai = getAiClient();
@@ -286,43 +279,46 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     return response.text || "Nta nyandiko ibonetse.";
   } catch (error) {
     console.error("Gemini OCR Error:", error);
-    // If we return empty/null here, the UI might crash or look broken. Return a safe message.
-    return "Ntabwo byashobotse gukuramo inyandiko cyangwa nta nyandiko igaragara.";
+    return "Ntabwo byashobotse gukuramo inyandiko.";
   }
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
   const model = "gemini-2.5-flash-image";
-
-  // Validate aspect ratio to prevent API 400 errors
   const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
+  const fullPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
+
   try {
     const ai = getAiClient();
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: {
-        parts: [{ text: prompt }]
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: safeRatio
-        }
+    try {
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: { parts: [{ text: fullPrompt }] },
+        config: { imageConfig: { aspectRatio: safeRatio } }
+      });
+      
+      const part = response.candidates?.[0]?.content?.parts?.[0];
+      if (part?.inlineData) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
       }
-    });
-
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
+      throw new Error("Flash generation failed");
+    } catch (flashError) {
+      console.log("Falling back to Imagen 3...");
+      const response = await ai.models.generateImages({
+        model: 'imagen-3.0-generate-001',
+        prompt: fullPrompt,
+        config: { numberOfImages: 1, aspectRatio: safeRatio }
+      });
+      const img = response.generatedImages?.[0]?.image;
+      if (img?.imageBytes) {
+        return `data:${img.mimeType || 'image/png'};base64,${img.imageBytes}`;
       }
+      throw new Error("Imagen generation failed");
     }
-    throw new Error("Nta foto yabonetse.");
   } catch (e) {
-    console.error("Gemini Generate Image Error:", e);
+    console.error("Generate Image Error:", e);
     throw e;
   }
 };
@@ -330,33 +326,41 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
 export const generateRuralAdvice = async (
   prompt: string,
   sector: 'agriculture' | 'business' | 'services' | 'technology' | 'climate'
-): Promise<string> => {
+): Promise<{ text: string, sources: Source[] }> => {
   const model = "gemini-2.5-flash";
 
   let systemRole = "";
   if (sector === 'agriculture') {
-    systemRole = "You are an expert agricultural advisor for rural farmers in Rwanda. Provide practical, easy-to-understand advice in Kinyarwanda about crops, seasons, and farming techniques suitable for the region.";
+    systemRole = "You are an expert agricultural advisor for rural farmers in Rwanda.";
   } else if (sector === 'business') {
-    systemRole = "You are a small business consultant for rural entrepreneurs in Rwanda. Provide simple, actionable advice in Kinyarwanda about managing money, customers, and small shops.";
+    systemRole = "You are a small business consultant for rural entrepreneurs in Rwanda.";
   } else if (sector === 'technology') {
-    systemRole = "You are a tech guide for rural users in Rwanda. Explain how to use Mobile Money, Irembo, phones, and internet in simple Kinyarwanda steps.";
+    systemRole = "You are a tech guide for rural users in Rwanda.";
   } else if (sector === 'climate') {
-    systemRole = "You are an expert in climate resilience and renewable energy for rural Rwanda. Provide advice on climate-smart agriculture, renewable energy (solar, biogas), and disaster preparedness (floods, landslides) in simple Kinyarwanda.";
+    systemRole = "You are an expert in climate resilience and renewable energy for rural Rwanda.";
   } else {
-    systemRole = "You are a helpful assistant for daily services in rural Rwanda. Answer in Kinyarwanda.";
+    systemRole = "You are a helpful assistant for daily services in rural Rwanda.";
   }
+
+  // Force grounding to Rwandan sites
+  const searchPrompt = `${prompt} (Search using site:.rw OR site:.gov.rw OR site:.ac.rw OR site:.org.rw)`;
 
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: model,
-      contents: prompt,
+      contents: searchPrompt,
       config: {
-        systemInstruction: systemRole,
+        systemInstruction: systemRole + " Answer in Kinyarwanda.",
+        tools: [{ googleSearch: {} }] // Enable Grounding
       }
     });
 
-    return response.text || "Ntabwo bishobotse kubona inama.";
+    const sources = extractSources(response);
+    return { 
+      text: response.text || "Ntabwo bishobotse kubona inama.",
+      sources: sources
+    };
   } catch (error) {
     console.error("Gemini Rural Advice Error:", error);
     throw error;
@@ -368,7 +372,7 @@ export const generateCourse = async (
   level: string,
   duration?: string,
   prerequisites?: string
-): Promise<string> => {
+): Promise<{ text: string, sources: Source[] }> => {
   const model = "gemini-2.5-flash";
 
   const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
@@ -396,18 +400,14 @@ export const generateCourse = async (
   ## 7. Ibibazo & Imyitozo
   Provide at least 5 assessment questions (Multiple choice or Open ended) and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end of this section.
 
-  Language: Strictly Kinyarwanda.
-  Tone: Professional, Educational, Encouraging.`;
+  Language: Strictly Kinyarwanda.`;
 
   let prompt = `Create a ${level} level course about: ${topic}.`;
-  
-  if (duration) {
-    prompt += `\nEstimated Duration: ${duration}.`;
-  }
-  
-  if (prerequisites) {
-    prompt += `\nPrerequisites: ${prerequisites}.`;
-  }
+  if (duration) prompt += `\nEstimated Duration: ${duration}.`;
+  if (prerequisites) prompt += `\nPrerequisites: ${prerequisites}.`;
+
+  // Force grounding
+  prompt += ` (Verify with academic sources site:.ac.rw or educational sites)`;
 
   try {
     const ai = getAiClient();
@@ -416,10 +416,16 @@ export const generateCourse = async (
       contents: prompt,
       config: {
         systemInstruction: systemInstruction,
+        tools: [{ googleSearch: {} }] // Enable Grounding
       }
     });
 
-    return response.text || "Ntabwo bishobotse gutegura isomo.";
+    const sources = extractSources(response);
+
+    return { 
+      text: response.text || "Ntabwo bishobotse gutegura isomo.",
+      sources: sources
+    };
   } catch (error) {
     console.error("Gemini Course Gen Error:", error);
     throw error;
@@ -429,11 +435,8 @@ export const generateCourse = async (
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
   const model = "gemini-2.5-flash-preview-tts";
   
-  // Map custom UI voices to API valid voices
   let apiVoice = voiceName;
-  if (voiceName === 'AdVoice') {
-    apiVoice = 'Fenrir'; 
-  }
+  if (voiceName === 'AdVoice') apiVoice = 'Fenrir'; 
 
   try {
     const ai = getAiClient();
@@ -462,16 +465,8 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
 
   const systemInstruction = `You are 'Umujyanama', an expert AI business analyst for Rwandan SMEs, farmers, and retailers. 
   Your goal is to interpret unstructured daily operational text (sales, expenses, harvest, etc.) and convert it into a structured financial insight report in Kinyarwanda.
-  
-  Identify:
-  - Revenue (Amafaranga yinjijwe)
-  - Expenses (Amafaranga yasohotse)
-  - Profit (Inyungu = Revenue - Expenses)
-  - Key Risks or Warnings
-  - Actionable Advice
-  - Chart Data for visualization
-
-  If precise numbers aren't given, estimate reasonable placeholders or set to 0 if unknown. Always use Kinyarwanda for text fields.`;
+  Identify: Revenue, Expenses, Profit, Risks, Advice, Chart Data.
+  Align advice with RRA and RDB guidelines where applicable.`;
 
   try {
     const ai = getAiClient();
@@ -484,7 +479,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
         responseSchema: {
            type: Type.OBJECT,
            properties: {
-             summary: { type: Type.STRING, description: "Brief summary of the situation in Kinyarwanda" },
+             summary: { type: Type.STRING },
              financials: {
                type: Type.OBJECT,
                properties: {
@@ -504,7 +499,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
                  properties: {
                    label: { type: Type.STRING },
                    value: { type: Type.NUMBER },
-                   type: { type: Type.STRING, enum: ["revenue", "expense", "profit"] }
+                   type: { type: Type.STRING }
                  }
                }
              }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, BookOpen, Clock, BarChart, ListChecks, Lightbulb, Search, History, Calendar, FileText, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
-import { CourseLevel } from '../types';
+import { CourseLevel, Source } from '../types';
 import { useToast } from './ToastProvider';
 import { ProgressBar } from './ProgressBar';
 import { FormattedText } from './FormattedText';
+import { SourcesToggle } from './SourcesToggle';
 
 interface CourseHistoryItem {
   id: string;
@@ -13,6 +14,7 @@ interface CourseHistoryItem {
   level: string;
   duration: string;
   content: string;
+  sources?: Source[];
   timestamp: number;
 }
 
@@ -28,6 +30,7 @@ export const CourseGenerator: React.FC = () => {
   const [duration, setDuration] = useState('');
   const [prerequisites, setPrerequisites] = useState('');
   const [courseContent, setCourseContent] = useState('');
+  const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [parsedSections, setParsedSections] = useState<ParsedSection[]>([]);
   const [activeSection, setActiveSection] = useState<string>('');
@@ -52,8 +55,6 @@ export const CourseGenerator: React.FC = () => {
       return;
     }
 
-    // Split by Markdown headers (## Number. Title)
-    // Regex matches "## " followed by any number/dot/space then the Title until newline
     const rawSections = courseContent.split(/(?=## \d+\.|## )/g);
     
     const sections: ParsedSection[] = rawSections
@@ -61,8 +62,8 @@ export const CourseGenerator: React.FC = () => {
         const match = section.match(/## (?:(\d+\.)\s*)?(.*?)\n([\s\S]*)/);
         if (match) {
           return {
-            title: match[2].trim(), // e.g., "Intangiriro"
-            content: match[3].trim(), // The body text
+            title: match[2].trim(),
+            content: match[3].trim(),
             id: match[2].toLowerCase().replace(/[^a-z0-9]/g, '')
           };
         }
@@ -78,18 +79,19 @@ export const CourseGenerator: React.FC = () => {
   const handleCreateCourse = async () => {
     if (!topic.trim()) return;
     setIsLoading(true);
-    // Don't clear content immediately so user can see previous while loading if they want
+    setSources([]);
     try {
       const result = await generateCourse(topic, level, duration, prerequisites);
-      setCourseContent(result);
+      setCourseContent(result.text);
+      setSources(result.sources);
       
-      // Add to history
       const newItem: CourseHistoryItem = {
         id: Date.now().toString(),
         topic,
         level,
         duration,
-        content: result,
+        content: result.text,
+        sources: result.sources,
         timestamp: Date.now()
       };
       setHistory(prev => [newItem, ...prev]);
@@ -241,6 +243,7 @@ export const CourseGenerator: React.FC = () => {
                       key={item.id}
                       onClick={() => {
                         setCourseContent(item.content);
+                        setSources(item.sources || []);
                         setTopic(item.topic);
                         setLevel(item.level as CourseLevel);
                         setDuration(item.duration || '');
@@ -273,17 +276,6 @@ export const CourseGenerator: React.FC = () => {
               <p className="text-stone-500 mt-2">
                 Uzuzanya ibisabwa ibumoso, maze ukande "Tegura Isomo" kugira ngo utangire.
               </p>
-              
-              <div className="mt-8 bg-white p-4 rounded-xl border border-stone-200 shadow-sm text-left text-sm">
-                <h4 className="font-bold text-emerald-800 mb-2">Isomo ryose riba ririmo:</h4>
-                <ul className="space-y-1 text-stone-600">
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibikubiye mu Isomo</li>
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Incamake & Intangiriro</li>
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ingingo z'Ingenzi (Birambuye)</li>
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Imfashanyigisho & Ibitabo</li>
-                  <li className="flex items-center"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2"></span>Ibibazo & Imyitozo</li>
-                </ul>
-              </div>
             </div>
           ) : (
             <>
@@ -353,6 +345,14 @@ export const CourseGenerator: React.FC = () => {
                 {/* Content Area */}
                 <div id="printable-course" className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth bg-stone-50/50">
                   <div className="max-w-3xl mx-auto space-y-8 pb-20">
+                    
+                    {/* Sources (if any) displayed at the top or can be bottom */}
+                    {sources && sources.length > 0 && (
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100 mb-6">
+                        <SourcesToggle sources={sources} />
+                      </div>
+                    )}
+
                     {parsedSections.length > 0 ? (
                       parsedSections.map((section) => (
                         <div 

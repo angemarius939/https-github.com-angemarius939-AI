@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, Plus, Globe, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile } from 'lucide-react';
 import { Message, MessageRole, Source } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
 import { FormattedText } from './FormattedText';
+import { SourcesToggle } from './SourcesToggle';
 
 export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -48,13 +49,11 @@ export const ChatInterface: React.FC = () => {
   };
 
   useEffect(() => {
-    // Only scroll to bottom if not searching, or if searching but no query typed yet
     if (!searchQuery) {
       scrollToBottom();
     }
   }, [messages, searchQuery, isSearchOpen]);
 
-  // Sound Effect Utility
   const playUISound = (type: 'send' | 'receive' | 'click' | 'delete') => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -108,7 +107,6 @@ export const ChatInterface: React.FC = () => {
     }
   };
 
-  // Initialize Speech Recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -221,7 +219,6 @@ export const ChatInterface: React.FC = () => {
           ));
         },
         (newSources) => {
-           // Accumulate unique sources
            newSources.forEach(s => uniqueSources.set(s.uri, s));
            const sourceArray = Array.from(uniqueSources.values());
            
@@ -278,13 +275,6 @@ export const ChatInterface: React.FC = () => {
       msg.id === msgId ? { ...msg, reaction: msg.reaction === emoji ? undefined : emoji } : msg
     ));
     setActiveReactionId(null);
-  };
-
-  const handleToggleSources = (msgId: string) => {
-    playUISound('click');
-    setMessages(prev => prev.map(msg => 
-      msg.id === msgId ? { ...msg, isSourcesVisible: !msg.isSourcesVisible } : msg
-    ));
   };
 
   const handleAddInputEmoji = (emoji: string) => {
@@ -506,43 +496,9 @@ export const ChatInterface: React.FC = () => {
                     <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
                   </div>
 
-                  {/* Sources Section */}
+                  {/* Sources Display */}
                   {msg.sources && msg.sources.length > 0 && (
-                    <div className={`mt-3 pt-2 border-t ${msg.role === MessageRole.USER ? 'border-emerald-500/20' : 'border-emerald-100'}`}>
-                      <button 
-                        onClick={() => handleToggleSources(msg.id)}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full transition-colors ${
-                          msg.role === MessageRole.USER 
-                            ? 'bg-emerald-700 text-emerald-100 hover:bg-emerald-800' 
-                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        }`}
-                      >
-                         <Globe className="w-3 h-3" />
-                         <span>Inkomoko ({msg.sources.length})</span>
-                         {msg.isSourcesVisible ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      </button>
-                      
-                      {msg.isSourcesVisible && (
-                        <div className={`mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 ${
-                          msg.role === MessageRole.USER ? 'text-emerald-100' : 'text-stone-600'
-                        }`}>
-                          {msg.sources.map((source, idx) => (
-                            <a 
-                              key={idx}
-                              href={source.uri}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`flex items-start text-[11px] leading-tight hover:underline gap-1.5 ${
-                                msg.role === MessageRole.USER ? 'hover:text-white' : 'hover:text-emerald-600'
-                              }`}
-                            >
-                              <ExternalLink className="w-3 h-3 mt-0.5 shrink-0" />
-                              <span className="break-all">{source.title || source.uri}</span>
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                     <SourcesToggle sources={msg.sources} />
                   )}
 
                 </div>
