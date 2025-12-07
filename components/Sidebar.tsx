@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { MessageSquare, FileText, Image as ImageIcon, Sparkles, Sprout, GraduationCap, Mic, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp } from 'lucide-react';
+import { MessageSquare, FileText, Image as ImageIcon, Sparkles, Sprout, GraduationCap, Mic, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings } from 'lucide-react';
 import { AppView } from '../types';
 
 interface SidebarProps {
@@ -78,13 +79,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
             </button>
             
             {showDisclaimer && (
-              <p className="mt-2 text-[9px] text-gray-400 leading-relaxed text-justify opacity-80 animate-in fade-in slide-in-from-top-1 duration-200">
-                Iyi AI ikora ishingiye ku makuru akomoka ahantu hatandukanye. Itsinda ryacu riracyiga kandi rinoza imikorere kugira ngo ritange ibisubizo nyabyo kandi bifite ireme. Turasaba imbabazi ku makosa cyangwa ibisubizo bishobora kuba bituzuye. Ubufasha n’ibitekerezo byanyu bidufasha gukomeza gutera imbere no kubaha serivisi nziza kurushaho.
-              </p>
+              <div className="mt-2 text-[9px] text-gray-400 leading-relaxed text-justify opacity-80 animate-in fade-in slide-in-from-top-1 duration-200">
+                <p>
+                  Iyi AI ikora ishingiye ku makuru akomoka ahantu hatandukanye. Itsinda ryacu riracyiga kandi rinoza imikorere kugira ngo ritange ibisubizo nyabyo kandi bifite ireme. Turasaba imbabazi ku makosa cyangwa ibisubizo bishobora kuba bituzuye. Ubufasha n’ibitekerezo byanyu bidufasha gukomeza gutera imbere no kubaha serivisi nziza kurushaho.
+                </p>
+                <button className="mt-2 text-emerald-400 hover:text-emerald-300 hover:underline">
+                  Soma Amabwiriza
+                </button>
+              </div>
             )}
           </div>
+
+          <button
+            onClick={() => onChangeView(AppView.ADMIN)}
+            className={`flex items-center w-full px-4 py-2 mt-2 rounded-lg transition-all duration-200 text-xs ${
+               currentView === AppView.ADMIN
+                ? 'bg-emerald-900/50 text-emerald-200 border border-emerald-800'
+                : 'text-gray-500 hover:bg-white/5 hover:text-emerald-300'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 mr-2" />
+            <span>Gukorera (Admin)</span>
+          </button>
           
-          <div className="text-center pt-2 border-t border-white/10">
+          <div className="text-center pt-3 mt-2 border-t border-white/10">
              <p className="text-[10px] text-gray-400 leading-tight">
                Copyright by:
              </p>

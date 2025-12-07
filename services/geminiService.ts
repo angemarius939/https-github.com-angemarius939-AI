@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/genai";
 import { ImageAnalysisResult, BusinessAnalysisResult, Source } from '../types';
+import { getContextForView } from './knowledgeService';
 
 // Fix for "process is not defined" TS error
 declare var process: any;
@@ -39,7 +40,6 @@ const getAiClient = () => {
   if (!aiInstance) {
     const apiKey = getApiKey();
     if (!apiKey) {
-      // Throw a specific string that UI components can check for
       throw new Error("MISSING_API_KEY");
     }
     aiInstance = new GoogleGenAI({ apiKey });
@@ -82,10 +82,15 @@ export const streamChatResponse = async (
   
   try {
     const ai = getAiClient(); 
+    
+    // Inject Admin Knowledge
+    const adminContext = getContextForView('CHAT');
+    const systemInstruction = KINYARWANDA_SYSTEM_INSTRUCTION + adminContext;
+
     const chat = ai.chats.create({
       model: model,
       config: {
-        systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
+        systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }], // Enable Google Search Grounding
       },
       history: history,
@@ -343,6 +348,10 @@ export const generateRuralAdvice = async (
     systemRole = "You are a helpful assistant for daily services in rural Rwanda.";
   }
 
+  // Inject Admin Knowledge
+  const adminContext = getContextForView('RURAL');
+  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda.";
+
   // Force grounding to Rwandan sites
   const searchPrompt = `${prompt} (Search using site:.rw OR site:.gov.rw OR site:.ac.rw OR site:.org.rw)`;
 
@@ -352,7 +361,7 @@ export const generateRuralAdvice = async (
       model: model,
       contents: searchPrompt,
       config: {
-        systemInstruction: systemRole + " Answer in Kinyarwanda.",
+        systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }] // Enable Grounding
       }
     });
@@ -375,6 +384,8 @@ export const generateCourse = async (
   prerequisites?: string
 ): Promise<{ text: string, sources: Source[] }> => {
   const model = "gemini-2.5-flash";
+
+  const adminContext = getContextForView('COURSE');
 
   const systemInstruction = `You are an educational expert creating comprehensive, detailed custom courses in Kinyarwanda. 
   
@@ -401,7 +412,8 @@ export const generateCourse = async (
   ## 7. Ibibazo & Imyitozo
   Provide at least 5 assessment questions (Multiple choice or Open ended) and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end of this section.
 
-  Language: Strictly Kinyarwanda.`;
+  Language: Strictly Kinyarwanda.
+  ${adminContext}`;
 
   let prompt = `Create a ${level} level course about: ${topic}.`;
   if (duration) prompt += `\nEstimated Duration: ${duration}.`;
@@ -464,10 +476,13 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
   const model = "gemini-2.5-flash";
 
+  const adminContext = getContextForView('BUSINESS');
+
   const systemInstruction = `You are 'Umujyanama', an expert AI business analyst for Rwandan SMEs, farmers, and retailers. 
   Your goal is to interpret unstructured daily operational text (sales, expenses, harvest, etc.) and convert it into a structured financial insight report in Kinyarwanda.
   Identify: Revenue, Expenses, Profit, Risks, Advice, Chart Data.
-  Align advice with RRA and RDB guidelines where applicable.`;
+  Align advice with RRA and RDB guidelines where applicable.
+  ${adminContext}`;
 
   try {
     const ai = getAiClient();

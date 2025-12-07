@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
@@ -9,6 +10,7 @@ import { CourseGenerator } from './components/CourseGenerator';
 import { VoiceConversation } from './components/VoiceConversation';
 import { TextToSpeech } from './components/TextToSpeech';
 import { DecisionAssistant } from './components/DecisionAssistant';
+import { AdminDashboard } from './components/AdminDashboard';
 import { ToastProvider } from './components/ToastProvider';
 import { AppView } from './types';
 
@@ -42,6 +44,8 @@ export default function App() {
         return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR:
         return <CourseGenerator />;
+      case AppView.ADMIN:
+        return <AdminDashboard />;
       default:
         return <ChatInterface />;
     }

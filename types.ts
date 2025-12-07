@@ -29,7 +29,18 @@ export enum AppView {
   COURSE_GENERATOR = 'course_generator',
   VOICE_CONVERSATION = 'voice_conversation',
   TEXT_TO_SPEECH = 'text_to_speech',
-  DECISION_ASSISTANT = 'decision_assistant'
+  DECISION_ASSISTANT = 'decision_assistant',
+  ADMIN = 'admin'
+}
+
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT';
+
+export interface KnowledgeItem {
+  id: string;
+  title: string;
+  content: string;
+  scope: KnowledgeScope;
+  dateAdded: number;
 }
 
 export interface TextToolResult {
