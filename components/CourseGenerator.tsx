@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link, ChevronRight, HelpCircle, Download } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
 import { CourseLevel, Source } from '../types';
@@ -23,6 +23,7 @@ interface ParsedSection {
   title: string;
   content: string;
   id: string;
+  theme: 'emerald' | 'blue' | 'amber' | 'indigo';
 }
 
 export const CourseGenerator: React.FC = () => {
@@ -49,6 +50,14 @@ export const CourseGenerator: React.FC = () => {
     "Kwiga Icyongereza"
   ];
 
+  const getSectionTheme = (title: string): 'emerald' | 'blue' | 'amber' | 'indigo' => {
+    const t = title.toLowerCase();
+    if (t.includes('ibibazo') || t.includes('quiz') || t.includes('imyitozo')) return 'amber';
+    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('ibitabo') || t.includes('books')) return 'blue';
+    if (t.includes('intangiriro') || t.includes('intro')) return 'indigo';
+    return 'emerald';
+  };
+
   // Parse course content when it updates
   useEffect(() => {
     if (!courseContent) {
@@ -62,10 +71,12 @@ export const CourseGenerator: React.FC = () => {
       .map(section => {
         const match = section.match(/## (?:(\d+\.)\s*)?(.*?)\n([\s\S]*)/);
         if (match) {
+          const title = match[2].trim();
           return {
-            title: match[2].trim(),
+            title: title,
             content: match[3].trim(),
-            id: match[2].toLowerCase().replace(/[^a-z0-9]/g, '')
+            id: title.toLowerCase().replace(/[^a-z0-9]/g, ''),
+            theme: getSectionTheme(title)
           };
         }
         return null;
@@ -119,17 +130,17 @@ export const CourseGenerator: React.FC = () => {
     }
   };
 
-  const getSectionIcon = (title: string) => {
+  const getSectionIcon = (title: string, className: string = "w-5 h-5") => {
     const t = title.toLowerCase();
-    if (t.includes('ibikubiye') || t.includes('toc')) return <Layout className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('intangiriro') || t.includes('intro')) return <Target className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('incamake') || t.includes('outline')) return <ListChecks className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('birambuye') || t.includes('detailed')) return <FileText className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('ingero') || t.includes('example')) return <Layers className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('ibitabo') || t.includes('book')) return <Book className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('amakuru')) return <Link className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('ibibazo') || t.includes('quiz')) return <BrainCircuit className="w-5 h-5 text-emerald-600" />;
-    return <ArrowRight className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('ibikubiye') || t.includes('toc')) return <Layout className={className} />;
+    if (t.includes('intangiriro') || t.includes('intro')) return <Target className={className} />;
+    if (t.includes('incamake') || t.includes('outline')) return <ListChecks className={className} />;
+    if (t.includes('birambuye') || t.includes('detailed')) return <BookOpen className={className} />;
+    if (t.includes('ingero') || t.includes('example')) return <Layers className={className} />;
+    if (t.includes('ibitabo') || t.includes('book')) return <Book className={className} />;
+    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('amakuru')) return <Link className={className} />;
+    if (t.includes('ibibazo') || t.includes('quiz')) return <HelpCircle className={className} />;
+    return <ArrowRight className={className} />;
   };
 
   return (
@@ -210,9 +221,9 @@ export const CourseGenerator: React.FC = () => {
                   onClick={handleCreateCourse} 
                   isLoading={isLoading} 
                   disabled={!topic.trim()}
-                  className="w-full"
+                  className="w-full h-12"
                 >
-                  <BookOpen className="w-4 h-4 mr-2" />
+                  <GraduationCap className="w-5 h-5 mr-2" />
                   Tegura Isomo
                 </Button>
                 <ProgressBar isLoading={isLoading} label="Irimo gutegura isomo... (Bishobora gutinda)" duration={8000} />
@@ -239,7 +250,7 @@ export const CourseGenerator: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                   {filteredHistory.map((item) => (
                     <button
                       key={item.id}
@@ -250,13 +261,16 @@ export const CourseGenerator: React.FC = () => {
                         setLevel(item.level as CourseLevel);
                         setDuration(item.duration || '');
                       }}
-                      className={`w-full text-left p-3 rounded-lg border transition-all text-xs ${
+                      className={`w-full text-left p-3 rounded-lg border transition-all text-xs group ${
                         courseContent === item.content 
                           ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500' 
                           : 'bg-white border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/50'
                       }`}
                     >
-                      <div className="font-bold text-emerald-900 truncate">{item.topic}</div>
+                      <div className="font-bold text-emerald-900 truncate flex items-center justify-between">
+                        {item.topic}
+                        {courseContent === item.content && <div className="w-2 h-2 rounded-full bg-emerald-500"></div>}
+                      </div>
                       <div className="flex justify-between items-center mt-1 text-stone-500">
                         <span>{item.level}</span>
                         <span>{new Date(item.timestamp).toLocaleDateString()}</span>
@@ -273,21 +287,30 @@ export const CourseGenerator: React.FC = () => {
         <div className={`flex-1 flex flex-col h-full bg-stone-50 overflow-hidden ${!courseContent && 'hidden md:flex items-center justify-center'}`}>
           {!courseContent ? (
             <div className="text-center p-8 max-w-md opacity-60">
-              <GraduationCap className="w-20 h-20 text-emerald-200 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-emerald-900">Nta somo rirahari</h3>
-              <p className="text-stone-500 mt-2">
-                Uzuzanya ibisabwa ibumoso, maze ukande "Tegura Isomo" kugira ngo utangire.
+              <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-12 h-12 text-emerald-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-emerald-900">Nta somo rirahari</h3>
+              <p className="text-stone-500 mt-3 text-lg">
+                Uzuzanya ibisabwa ibumoso, maze ukande "Tegura Isomo" kugira ngo utangire urugendo rwo kwiga.
               </p>
             </div>
           ) : (
             <>
               {/* Header */}
-              <div className="bg-white border-b border-emerald-100 p-4 flex justify-between items-center shadow-sm z-10">
+              <div className="bg-white border-b border-emerald-100 p-4 px-6 flex justify-between items-center shadow-sm z-10 shrink-0">
                  <div>
-                   <h1 className="text-xl font-bold text-emerald-950 line-clamp-1">{topic}</h1>
-                   <div className="flex gap-2 text-xs mt-1">
-                     <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{level}</span>
-                     {duration && <span className="text-stone-500 flex items-center"><Clock className="w-3 h-3 mr-1"/> {duration}</span>}
+                   <h1 className="text-xl md:text-2xl font-bold text-emerald-950 line-clamp-1">{topic}</h1>
+                   <div className="flex flex-wrap gap-2 text-xs mt-1.5">
+                     <span className="bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-medium border border-emerald-200 uppercase tracking-wide text-[10px]">
+                       {level}
+                     </span>
+                     {duration && (
+                       <span className="bg-stone-100 text-stone-600 px-2.5 py-0.5 rounded-full font-medium border border-stone-200 flex items-center">
+                         <Clock className="w-3 h-3 mr-1" /> 
+                         {duration}
+                       </span>
+                     )}
                    </div>
                  </div>
                  <div className="flex gap-2">
@@ -297,24 +320,29 @@ export const CourseGenerator: React.FC = () => {
                          if(printContent) {
                             const win = window.open('', '', 'height=700,width=800');
                             if(win) {
-                              win.document.write('<html><head><title>Isomo</title>');
-                              win.document.write('<style>body { font-family: sans-serif; padding: 20px; line-height: 1.6; } h2 { color: #064e3b; border-bottom: 2px solid #ecfdf5; padding-bottom: 5px; margin-top: 30px; } ul { margin-left: 20px; } </style>');
+                              win.document.write('<html><head><title>Isomo - ' + topic + '</title>');
+                              win.document.write('<style>body { font-family: sans-serif; padding: 40px; line-height: 1.6; color: #333; } h1 { text-align: center; color: #064e3b; margin-bottom: 20px; } .section { margin-bottom: 30px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; } .header { background: #f0fdf4; padding: 10px 20px; font-weight: bold; color: #065f46; border-bottom: 1px solid #eee; } .content { padding: 20px; } ul { margin-left: 20px; } </style>');
                               win.document.write('</head><body>');
+                              win.document.write('<h1>' + topic + '</h1>');
+                              
+                              // Extract content manually to strip React artifacts if possible, 
+                              // or just dump HTML. For simplicity:
                               win.document.write(printContent.innerHTML);
+                              
                               win.document.write('</body></html>');
                               win.document.close();
                               win.print();
                             }
                          }
                       }}
-                      className="p-2 text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                      className="p-2.5 text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
                       title="Print / PDF"
                     >
                       <Printer className="w-5 h-5" />
                     </button>
                     {/* Mobile Back Button */}
                     <button 
-                       className="md:hidden p-2 text-stone-500 hover:text-emerald-700 bg-stone-100 rounded-lg"
+                       className="md:hidden p-2.5 text-stone-500 hover:text-emerald-700 bg-stone-100 rounded-lg"
                        onClick={() => setCourseContent('')}
                     >
                        Funga
@@ -324,58 +352,113 @@ export const CourseGenerator: React.FC = () => {
 
               <div className="flex-1 flex overflow-hidden">
                 {/* TOC Sidebar (Desktop) */}
-                <div className="hidden lg:block w-64 bg-white border-r border-stone-100 overflow-y-auto p-4">
-                  <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">Ibikubiye mu Isomo</h4>
-                  <nav className="space-y-1">
-                    {parsedSections.map((section) => (
-                      <button
-                        key={section.id}
-                        onClick={() => scrollToSection(section.id)}
-                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center gap-2 ${
-                          activeSection === section.id 
-                            ? 'bg-emerald-50 text-emerald-700 font-medium' 
-                            : 'text-stone-600 hover:bg-stone-50'
-                        }`}
-                      >
-                         {getSectionIcon(section.title)}
-                         <span className="truncate">{section.title}</span>
-                      </button>
-                    ))}
+                <div className="hidden lg:flex w-72 bg-white border-r border-stone-100 flex-col overflow-hidden">
+                  <div className="p-4 border-b border-stone-50 bg-stone-50/30">
+                    <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">Ibikubiye mu Isomo</h4>
+                  </div>
+                  <nav className="flex-1 overflow-y-auto p-4 space-y-1 relative">
+                    {/* Vertical line track */}
+                    <div className="absolute left-[26px] top-6 bottom-6 w-0.5 bg-stone-100 -z-10"></div>
+                    
+                    {parsedSections.map((section, idx) => {
+                      const isActive = activeSection === section.id;
+                      // Determine accent color for sidebar items
+                      const accentColor = section.theme === 'amber' ? 'text-amber-500' : section.theme === 'blue' ? 'text-blue-500' : 'text-emerald-500';
+                      const activeBg = section.theme === 'amber' ? 'bg-amber-50 text-amber-900' : section.theme === 'blue' ? 'bg-blue-50 text-blue-900' : 'bg-emerald-50 text-emerald-900';
+                      
+                      return (
+                        <button
+                          key={section.id}
+                          onClick={() => scrollToSection(section.id)}
+                          className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all flex items-center gap-3 group relative ${
+                            isActive ? `${activeBg} font-semibold shadow-sm` : 'text-stone-600 hover:bg-stone-50'
+                          }`}
+                        >
+                           <div className={`flex items-center justify-center w-6 h-6 rounded-md bg-white border shadow-sm shrink-0 transition-colors ${isActive ? 'border-transparent' : 'border-stone-200'}`}>
+                              {getSectionIcon(section.title, `w-3.5 h-3.5 ${isActive ? accentColor : 'text-stone-400'}`)}
+                           </div>
+                           <span className="truncate">{section.title}</span>
+                           {isActive && <div className={`absolute right-2 w-1.5 h-1.5 rounded-full ${section.theme === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>}
+                        </button>
+                      );
+                    })}
                   </nav>
                 </div>
 
                 {/* Content Area */}
                 <div id="printable-course" className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth bg-stone-50/50">
-                  <div className="max-w-3xl mx-auto space-y-8 pb-20">
+                  <div className="max-w-4xl mx-auto space-y-8 pb-24">
                     
-                    {/* Sources (if any) displayed at the top or can be bottom */}
-                    {sources && sources.length > 0 && (
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100 mb-6">
-                        <SourcesToggle sources={sources} />
+                    {/* Intro Banner with Sources */}
+                    <div className="bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-2xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-32 bg-white opacity-5 rounded-full transform translate-x-10 -translate-y-10 blur-3xl"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-2 opacity-80">
+                          <GraduationCap className="w-5 h-5" />
+                          <span className="text-sm font-medium uppercase tracking-wide">Isomo Ryateguwe</span>
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold mb-4">{topic}</h2>
+                        <div className="flex flex-wrap gap-4 text-emerald-100 text-sm">
+                           <div className="flex items-center"><Layers className="w-4 h-4 mr-2" /> {parsedSections.length} Sections</div>
+                           {duration && <div className="flex items-center"><Clock className="w-4 h-4 mr-2" /> {duration}</div>}
+                        </div>
+                        
+                        {sources && sources.length > 0 && (
+                          <div className="mt-6 pt-4 border-t border-emerald-700/50">
+                            <SourcesToggle sources={sources} variant="dark" />
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     {parsedSections.length > 0 ? (
-                      parsedSections.map((section) => (
-                        <div 
-                          key={section.id} 
-                          id={section.id} 
-                          className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden scroll-mt-6"
-                        >
-                          <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center gap-3">
-                            <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-600">
-                              {getSectionIcon(section.title)}
+                      parsedSections.map((section) => {
+                        // Section Styling based on Theme
+                        const theme = section.theme;
+                        let borderColor = 'border-emerald-100';
+                        let headerBg = 'bg-emerald-50/50';
+                        let iconBg = 'text-emerald-600';
+                        let ringColor = 'focus-within:ring-emerald-500';
+
+                        if (theme === 'amber') {
+                          borderColor = 'border-amber-200';
+                          headerBg = 'bg-amber-50';
+                          iconBg = 'text-amber-600';
+                          ringColor = 'focus-within:ring-amber-500';
+                        } else if (theme === 'blue') {
+                          borderColor = 'border-blue-200';
+                          headerBg = 'bg-blue-50';
+                          iconBg = 'text-blue-600';
+                          ringColor = 'focus-within:ring-blue-500';
+                        } else if (theme === 'indigo') {
+                          borderColor = 'border-indigo-100';
+                          headerBg = 'bg-indigo-50/50';
+                          iconBg = 'text-indigo-600';
+                        }
+
+                        return (
+                          <div 
+                            key={section.id} 
+                            id={section.id} 
+                            className={`bg-white rounded-2xl shadow-sm border ${borderColor} overflow-hidden scroll-mt-6 transition-all duration-300 hover:shadow-md group`}
+                          >
+                            <div className={`${headerBg} px-6 py-5 border-b ${borderColor} flex items-center gap-4`}>
+                              <div className={`p-2.5 bg-white rounded-xl shadow-sm ${iconBg} border border-white/50 group-hover:scale-110 transition-transform`}>
+                                {getSectionIcon(section.title)}
+                              </div>
+                              <h2 className={`text-xl font-bold ${theme === 'amber' ? 'text-amber-900' : theme === 'blue' ? 'text-blue-900' : 'text-emerald-900'}`}>
+                                {section.title}
+                              </h2>
                             </div>
-                            <h2 className="text-lg font-bold text-emerald-900">{section.title}</h2>
+                            <div className="p-6 md:p-8 text-lg">
+                              <FormattedText text={section.content} className={theme === 'amber' ? 'text-stone-800' : ''} />
+                            </div>
                           </div>
-                          <div className="p-6">
-                            <FormattedText text={section.content} />
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       // Fallback for unparsed content
-                      <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-8 text-slate-800 leading-relaxed whitespace-pre-wrap">
+                      <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-8 text-slate-800 leading-relaxed whitespace-pre-wrap text-lg">
                         <FormattedText text={courseContent} />
                       </div>
                     )}

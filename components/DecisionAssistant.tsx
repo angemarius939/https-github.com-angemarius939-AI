@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase } from 'lucide-react';
 import { Button } from './Button';
 import { ProgressBar } from './ProgressBar';
 import { useToast } from './ToastProvider';
@@ -127,35 +128,53 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               </div>
 
-              {/* KPI Cards */}
+              {/* KPI Cards with Visual Appeal */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100">
-                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-sm font-medium text-stone-500">Yinjijwe</span>
-                     <TrendingUp className="w-4 h-4 text-emerald-500" />
+                {/* Revenue */}
+                <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                   <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+                      <Wallet className="w-16 h-16 text-emerald-600" />
                    </div>
-                   <div className="text-2xl font-bold text-emerald-700">
-                     {result.financials.revenue.toLocaleString()} <span className="text-sm font-normal text-stone-500">{result.financials.currency}</span>
+                   <div className="flex flex-col relative z-10">
+                     <span className="text-sm font-medium text-emerald-600 mb-1 flex items-center gap-1">
+                        <TrendingUp className="w-4 h-4" /> Yinjijwe (Revenue)
+                     </span>
+                     <div className="text-2xl font-extrabold text-emerald-800 tracking-tight">
+                       {result.financials.revenue.toLocaleString()} 
+                       <span className="text-xs font-medium text-emerald-600 ml-1">{result.financials.currency}</span>
+                     </div>
                    </div>
                 </div>
                 
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100">
-                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-sm font-medium text-stone-500">Yasohotse</span>
-                     <TrendingDown className="w-4 h-4 text-red-500" />
+                {/* Expense */}
+                <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                   <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+                      <Briefcase className="w-16 h-16 text-rose-600" />
                    </div>
-                   <div className="text-2xl font-bold text-red-700">
-                     {result.financials.expense.toLocaleString()} <span className="text-sm font-normal text-stone-500">{result.financials.currency}</span>
+                   <div className="flex flex-col relative z-10">
+                     <span className="text-sm font-medium text-rose-600 mb-1 flex items-center gap-1">
+                        <TrendingDown className="w-4 h-4" /> Yasohotse (Expense)
+                     </span>
+                     <div className="text-2xl font-extrabold text-rose-800 tracking-tight">
+                       {result.financials.expense.toLocaleString()} 
+                       <span className="text-xs font-medium text-rose-600 ml-1">{result.financials.currency}</span>
+                     </div>
                    </div>
                 </div>
 
-                <div className={`p-4 rounded-xl shadow-sm border ${result.financials.profit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                   <div className="flex items-center justify-between mb-2">
-                     <span className={`text-sm font-medium ${result.financials.profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>Inyungu / Igihombo</span>
-                     <DollarSign className={`w-4 h-4 ${result.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+                {/* Profit */}
+                <div className={`p-5 rounded-2xl border relative overflow-hidden group hover:shadow-md transition-shadow ${result.financials.profit >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
+                   <div className={`absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform`}>
+                      <PiggyBank className={`w-16 h-16 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
                    </div>
-                   <div className={`text-2xl font-bold ${result.financials.profit >= 0 ? 'text-emerald-800' : 'text-red-800'}`}>
-                     {result.financials.profit.toLocaleString()} <span className={`text-sm font-normal ${result.financials.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{result.financials.currency}</span>
+                   <div className="flex flex-col relative z-10">
+                     <span className={`text-sm font-medium mb-1 flex items-center gap-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        <DollarSign className="w-4 h-4" /> Inyungu (Profit)
+                     </span>
+                     <div className={`text-2xl font-extrabold tracking-tight ${result.financials.profit >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>
+                       {result.financials.profit.toLocaleString()} 
+                       <span className={`text-xs font-medium ml-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{result.financials.currency}</span>
+                     </div>
                    </div>
                 </div>
               </div>
@@ -181,7 +200,7 @@ export const DecisionAssistant: React.FC = () => {
                           <div 
                             className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out hover:opacity-90 ${
                               data.type === 'revenue' ? 'bg-emerald-500' : 
-                              data.type === 'expense' ? 'bg-red-400' : 
+                              data.type === 'expense' ? 'bg-rose-400' : 
                               'bg-blue-500'
                             }`}
                             style={{ height: `${Math.max(heightPercent, 5)}%` }}
@@ -195,43 +214,51 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
                 <div className="flex justify-center gap-4 mt-4 text-xs text-stone-500">
                   <div className="flex items-center"><div className="w-3 h-3 bg-emerald-500 rounded mr-1"></div> Yinjijwe</div>
-                  <div className="flex items-center"><div className="w-3 h-3 bg-red-400 rounded mr-1"></div> Yasohotse</div>
+                  <div className="flex items-center"><div className="w-3 h-3 bg-rose-400 rounded mr-1"></div> Yasohotse</div>
                   <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded mr-1"></div> Inyungu</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {/* Risks */}
-                 <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-l-amber-400 border border-stone-100">
-                    <h3 className="font-bold text-stone-800 mb-4 flex items-center">
-                       <AlertTriangle className="w-5 h-5 mr-2 text-amber-500" />
-                       Imbogamizi & Ibyago
-                    </h3>
-                    <ul className="space-y-3">
-                      {result.risks.map((risk, idx) => (
-                        <li key={idx} className="flex items-start text-sm text-stone-600">
-                          <span className="text-amber-500 mr-2 mt-0.5">•</span>
-                          {risk}
-                        </li>
-                      ))}
-                      {result.risks.length === 0 && <li className="text-sm text-stone-400 italic">Nta mbogamizi zigaragara zabonetse.</li>}
-                    </ul>
+                 <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
+                    <div className="bg-amber-50/50 px-6 py-4 border-b border-amber-100 flex items-center gap-2">
+                       <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                         <AlertTriangle className="w-5 h-5" />
+                       </div>
+                       <h3 className="font-bold text-stone-800">Imbogamizi & Ibyago</h3>
+                    </div>
+                    <div className="p-6">
+                        <ul className="space-y-3">
+                        {result.risks.map((risk, idx) => (
+                            <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-stone-50 border border-stone-100 text-sm text-stone-600 hover:bg-amber-50/30 transition-colors">
+                            <span className="text-amber-500 mt-0.5 shrink-0">•</span>
+                            {risk}
+                            </li>
+                        ))}
+                        {result.risks.length === 0 && <li className="text-sm text-stone-400 italic">Nta mbogamizi zigaragara zabonetse.</li>}
+                        </ul>
+                    </div>
                  </div>
 
                  {/* Advice */}
-                 <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-l-emerald-500 border border-stone-100">
-                    <h3 className="font-bold text-stone-800 mb-4 flex items-center">
-                       <Lightbulb className="w-5 h-5 mr-2 text-emerald-500" />
-                       Inama z'Umujyanama
-                    </h3>
-                    <ul className="space-y-3">
-                      {result.advice.map((tip, idx) => (
-                        <li key={idx} className="flex items-start text-sm text-stone-600">
-                          <ArrowRight className="w-4 h-4 text-emerald-500 mr-2 mt-0.5 shrink-0" />
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
+                 <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
+                    <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center gap-2">
+                       <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                         <Lightbulb className="w-5 h-5" />
+                       </div>
+                       <h3 className="font-bold text-stone-800">Inama z'Umujyanama</h3>
+                    </div>
+                    <div className="p-6">
+                        <ul className="space-y-3">
+                        {result.advice.map((tip, idx) => (
+                            <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-stone-50 border border-stone-100 text-sm text-stone-600 hover:bg-emerald-50/30 transition-colors">
+                            <ArrowRight className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                            {tip}
+                            </li>
+                        ))}
+                        </ul>
+                    </div>
                  </div>
               </div>
 
