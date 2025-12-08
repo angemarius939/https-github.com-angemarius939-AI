@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, FileText, MousePointer2, X, AlertCircle, BarChart } from 'lucide-react';
+import { Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, CloudRain } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { saveKnowledgeItem, getKnowledgeItems, deleteKnowledgeItem } from '../services/knowledgeService';
@@ -80,6 +80,25 @@ export const AdminDashboard: React.FC = () => {
     setContent('');
     loadItems();
     showToast('Amakuru yabitswe!', 'success');
+  };
+
+  const handleLoadAgriTemplates = () => {
+    // Template 1: Flood Prevention
+    saveKnowledgeItem({
+      title: "Ingamba zo Kurwanya Imyuzure mu Buhinzi",
+      scope: "RURAL",
+      content: "1. Guca imirwanyasuri n'amaterasi yikora ku misozi ihanamye kugira ngo amazi atamanuka n'umuvuduko.\n2. Gucukura ibyobo bifata amazi (soak pits) mu mirima.\n3. Gutera ibiti n'ibyatsi bifata ubutaka ku nkengero z'imigezi (Buffer Zones) byibura metero 10 uvuye ku mugezi.\n4. Gusibura imiyoboro y'amazi kugira ngo adasenyera imyaka."
+    });
+
+    // Template 2: Climate Resilience
+    saveKnowledgeItem({
+      title: "Ubwishingizi no Kwitegura Ibiza",
+      scope: "RURAL",
+      content: "1. Abahinzi bagomba kwitabira gahunda ya Nkunganire mu Bwishingizi bw'imyaka (Tekana) kugira ngo imyuzure cyangwa amapfa nibiba bazagobokwe.\n2. Gukurikira buri munsi amakuru y'Iteganyagihe atangwa na Meteo Rwanda mbere yo gutera.\n3. Guhinga imbuto zihanganira imihindagurikire y'ikirere (urugero: ibigori byihanganira izuba)."
+    });
+
+    loadItems();
+    showToast("Amakuru y'ubuhinzi yinjijwe!", "success");
   };
 
   const handleDelete = (id: string) => {
@@ -405,10 +424,22 @@ export const AdminDashboard: React.FC = () => {
                     <div className="lg:col-span-1 space-y-6">
                         {activeTab === 'text' ? (
                             <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 animate-in fade-in">
-                                <h3 className="text-lg font-bold text-emerald-900 mb-4 flex items-center">
-                                    <Plus className="w-5 h-5 mr-2" />
-                                    Ongeramo Amakuru
-                                </h3>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold text-emerald-900 flex items-center">
+                                        <Plus className="w-5 h-5 mr-2" />
+                                        Ongeramo
+                                    </h3>
+                                    <Button 
+                                      variant="secondary" 
+                                      size="sm" 
+                                      onClick={handleLoadAgriTemplates} 
+                                      className="text-xs px-2 h-7 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-none"
+                                      title="Injiza amakuru y'ubuhinzi n'ibiza"
+                                    >
+                                       <Sprout className="w-3 h-3 mr-1" />
+                                       Templates z'Ubuhinzi
+                                    </Button>
+                                </div>
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-sm font-medium text-stone-700">Umutwe (Title)</label>
