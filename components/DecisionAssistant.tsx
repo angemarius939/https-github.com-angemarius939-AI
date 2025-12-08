@@ -29,14 +29,18 @@ export const DecisionAssistant: React.FC = () => {
     }
   };
 
-  const fillExample = (type: 'retail' | 'farm' | 'livestock') => {
+  const fillExample = (type: 'retail' | 'farm' | 'livestock' | 'monthly' | 'complex') => {
     let text = "";
     if (type === 'retail') {
       text = "Uyu munsi ncuruje ibicuruzwa by'ibihumbi 50,000 RWF. Naguze inyongera y'ibicuruzwa by'ibihumbi 30,000 RWF. Nishyuye umuriro 5,000 RWF. Ndashaka kumenya inyungu yanjye n'inama z'uko nakongera abakiriya.";
     } else if (type === 'farm') {
       text = "Nasaruye ibigori ibiro 200, buri kiro nakigurishije 500 RWF. Nashoye imbuto n'ifumbire by'ibihumbi 40,000 RWF. Abakozi nabahaye 15,000 RWF. Ese mpagaze ute mu buhinzi bwanjye?";
-    } else {
+    } else if (type === 'livestock') {
       text = "Ngurishije amata litiro 50 kuri 400 RWF litiro imwe. Nguze ubwatsi bw'ibihumbi 10,000 RWF n'imiti y'ibihumbi 5,000 RWF. Inka imwe irarwaye. Mungire inama.";
+    } else if (type === 'monthly') {
+      text = "Muri uku kwezi gushize, twinjije miliyoni 5 z'amafaranga y'u Rwanda mu bucuruzi bw'ibikoresho by'ubwubatsi. Twishyuye abakozi ibihumbi 800, umuriro n'amazi ibihumbi 100, n'imisoro ya RRA ibihumbi 200. Twaguze stock nshya ya miliyoni 3. Nyamuneka dukorere isesengura ry'ukwezi kandi utungire inama z'uburyo twagabanya amafaranga asohoka umwaka utaha.";
+    } else if (type === 'complex') {
+      text = "Dufite imishinga ibiri: Ubuhinzi n'Ubwikorezi. \n1. Ubuhinzi: Twagurishije toni 5 z'ibirayi kuri 300Frw/kg. Ifumbire yatwaye 500,000 Frw.\n2. Ubwikorezi: Moto yinjije 150,000 Frw, essence yatwaye 40,000 Frw, panne yatwaye 20,000 Frw.\nEse muri rusange twungutse angahe? Ni uwuhe mushinga uduha inyungu nyinshi? Ni izihe ngamba twafata?";
     }
     setInput(text);
   };
@@ -50,7 +54,7 @@ export const DecisionAssistant: React.FC = () => {
         </h2>
         <p className="text-emerald-700 mt-2 max-w-2xl mx-auto">
           Umufasha mu gufata ibyemezo by'ubucuruzi, ubuhinzi, n'ubworozi. 
-          Andika ibyo wakoze, tubiguhemo imibare n'inama.
+          Andika ibyo wakoze (umunsi, ukwezi, cyangwa umwaka), tubiguhemo imibare n'inama.
         </p>
       </div>
 
@@ -63,7 +67,7 @@ export const DecisionAssistant: React.FC = () => {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Urugero: Uyu munsi nagurishije..."
+              placeholder="Urugero: Uyu munsi nagurishije... Cyangwa: Muri uku kwezi..."
               className="w-full h-48 p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 resize-none text-stone-800 text-sm leading-relaxed mb-4"
             />
             
@@ -98,6 +102,18 @@ export const DecisionAssistant: React.FC = () => {
                   className="text-left text-xs p-2 rounded-lg bg-stone-50 hover:bg-emerald-50 text-stone-600 hover:text-emerald-700 transition-colors border border-stone-100 hover:border-emerald-200"
                 >
                   🐄 Ubworozi (Livestock)
+                </button>
+                <button 
+                  onClick={() => fillExample('monthly')}
+                  className="text-left text-xs p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 transition-colors border border-blue-100 hover:border-blue-200 font-medium"
+                >
+                  📅 Raporo y'Ukwezi (Monthly)
+                </button>
+                <button 
+                  onClick={() => fillExample('complex')}
+                  className="text-left text-xs p-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 transition-colors border border-purple-100 hover:border-purple-200 font-medium"
+                >
+                  🔄 Imishinga Ivangavanze (Complex)
                 </button>
               </div>
             </div>

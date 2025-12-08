@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link, ChevronRight, HelpCircle, Download } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link, ChevronRight, HelpCircle, Download, Lightbulb, Bookmark } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
 import { CourseLevel, Source } from '../types';
@@ -23,7 +23,7 @@ interface ParsedSection {
   title: string;
   content: string;
   id: string;
-  theme: 'emerald' | 'blue' | 'amber' | 'indigo';
+  theme: 'emerald' | 'blue' | 'amber' | 'indigo' | 'violet' | 'rose';
 }
 
 export const CourseGenerator: React.FC = () => {
@@ -50,12 +50,79 @@ export const CourseGenerator: React.FC = () => {
     "Kwiga Icyongereza"
   ];
 
-  const getSectionTheme = (title: string): 'emerald' | 'blue' | 'amber' | 'indigo' => {
+  const getSectionTheme = (title: string): ParsedSection['theme'] => {
     const t = title.toLowerCase();
     if (t.includes('ibibazo') || t.includes('quiz') || t.includes('imyitozo')) return 'amber';
     if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('ibitabo') || t.includes('books')) return 'blue';
     if (t.includes('intangiriro') || t.includes('intro')) return 'indigo';
+    if (t.includes('incamake') || t.includes('outline')) return 'violet';
+    if (t.includes('ingero') || t.includes('example')) return 'rose';
     return 'emerald';
+  };
+
+  const getThemeStyles = (theme: ParsedSection['theme']) => {
+    switch (theme) {
+      case 'amber':
+        return {
+          border: 'border-amber-200',
+          headerBg: 'bg-gradient-to-r from-amber-50 to-white',
+          iconBg: 'bg-amber-100 text-amber-700',
+          title: 'text-amber-900',
+          accent: 'bg-amber-500',
+          sidebarHover: 'hover:bg-amber-50',
+          sidebarActive: 'bg-amber-50 text-amber-900 border-amber-200'
+        };
+      case 'blue':
+        return {
+          border: 'border-blue-200',
+          headerBg: 'bg-gradient-to-r from-blue-50 to-white',
+          iconBg: 'bg-blue-100 text-blue-700',
+          title: 'text-blue-900',
+          accent: 'bg-blue-500',
+          sidebarHover: 'hover:bg-blue-50',
+          sidebarActive: 'bg-blue-50 text-blue-900 border-blue-200'
+        };
+      case 'indigo':
+        return {
+          border: 'border-indigo-200',
+          headerBg: 'bg-gradient-to-r from-indigo-50 to-white',
+          iconBg: 'bg-indigo-100 text-indigo-700',
+          title: 'text-indigo-900',
+          accent: 'bg-indigo-500',
+          sidebarHover: 'hover:bg-indigo-50',
+          sidebarActive: 'bg-indigo-50 text-indigo-900 border-indigo-200'
+        };
+      case 'violet':
+        return {
+          border: 'border-violet-200',
+          headerBg: 'bg-gradient-to-r from-violet-50 to-white',
+          iconBg: 'bg-violet-100 text-violet-700',
+          title: 'text-violet-900',
+          accent: 'bg-violet-500',
+          sidebarHover: 'hover:bg-violet-50',
+          sidebarActive: 'bg-violet-50 text-violet-900 border-violet-200'
+        };
+      case 'rose':
+        return {
+          border: 'border-rose-200',
+          headerBg: 'bg-gradient-to-r from-rose-50 to-white',
+          iconBg: 'bg-rose-100 text-rose-700',
+          title: 'text-rose-900',
+          accent: 'bg-rose-500',
+          sidebarHover: 'hover:bg-rose-50',
+          sidebarActive: 'bg-rose-50 text-rose-900 border-rose-200'
+        };
+      default: // emerald
+        return {
+          border: 'border-emerald-200',
+          headerBg: 'bg-gradient-to-r from-emerald-50 to-white',
+          iconBg: 'bg-emerald-100 text-emerald-700',
+          title: 'text-emerald-900',
+          accent: 'bg-emerald-500',
+          sidebarHover: 'hover:bg-emerald-50',
+          sidebarActive: 'bg-emerald-50 text-emerald-900 border-emerald-200'
+        };
+    }
   };
 
   // Parse course content when it updates
@@ -136,9 +203,9 @@ export const CourseGenerator: React.FC = () => {
     if (t.includes('intangiriro') || t.includes('intro')) return <Target className={className} />;
     if (t.includes('incamake') || t.includes('outline')) return <ListChecks className={className} />;
     if (t.includes('birambuye') || t.includes('detailed')) return <BookOpen className={className} />;
-    if (t.includes('ingero') || t.includes('example')) return <Layers className={className} />;
+    if (t.includes('ingero') || t.includes('example')) return <Lightbulb className={className} />;
     if (t.includes('ibitabo') || t.includes('book')) return <Book className={className} />;
-    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('amakuru')) return <Link className={className} />;
+    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('amakuru')) return <Bookmark className={className} />;
     if (t.includes('ibibazo') || t.includes('quiz')) return <HelpCircle className={className} />;
     return <ArrowRight className={className} />;
   };
@@ -159,7 +226,7 @@ export const CourseGenerator: React.FC = () => {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Ingingo</label>
+                <label className="text-sm font-medium text-slate-700">Ingingo (Topic)</label>
                 <input
                   type="text"
                   value={topic}
@@ -182,7 +249,7 @@ export const CourseGenerator: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Urwego</label>
+                  <label className="text-sm font-medium text-slate-700">Urwego (Level)</label>
                   <select 
                     value={level} 
                     onChange={(e) => setLevel(e.target.value as CourseLevel)}
@@ -194,24 +261,24 @@ export const CourseGenerator: React.FC = () => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                   <label className="text-sm font-medium text-slate-700">Igihe</label>
+                   <label className="text-sm font-medium text-slate-700">Igihe (Duration)</label>
                    <input
                     type="text"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    placeholder="Urugero: Icyumweru 1"
+                    placeholder="Ex: Icyumweru 1"
                     className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
                   />
                 </div>
               </div>
               
               <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Ibisabwa</label>
+                  <label className="text-sm font-medium text-slate-700">Ibisabwa (Prerequisites)</label>
                   <input
                   type="text"
                   value={prerequisites}
                   onChange={(e) => setPrerequisites(e.target.value)}
-                  placeholder="Urugero: Kumenya gusoma..."
+                  placeholder="Ex: Kumenya gusoma..."
                   className="w-full p-2.5 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
@@ -263,7 +330,7 @@ export const CourseGenerator: React.FC = () => {
                       }}
                       className={`w-full text-left p-3 rounded-lg border transition-all text-xs group ${
                         courseContent === item.content 
-                          ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500' 
+                          ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500 shadow-sm' 
                           : 'bg-white border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/50'
                       }`}
                     >
@@ -324,11 +391,7 @@ export const CourseGenerator: React.FC = () => {
                               win.document.write('<style>body { font-family: sans-serif; padding: 40px; line-height: 1.6; color: #333; } h1 { text-align: center; color: #064e3b; margin-bottom: 20px; } .section { margin-bottom: 30px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; } .header { background: #f0fdf4; padding: 10px 20px; font-weight: bold; color: #065f46; border-bottom: 1px solid #eee; } .content { padding: 20px; } ul { margin-left: 20px; } </style>');
                               win.document.write('</head><body>');
                               win.document.write('<h1>' + topic + '</h1>');
-                              
-                              // Extract content manually to strip React artifacts if possible, 
-                              // or just dump HTML. For simplicity:
                               win.document.write(printContent.innerHTML);
-                              
                               win.document.write('</body></html>');
                               win.document.close();
                               win.print();
@@ -362,23 +425,21 @@ export const CourseGenerator: React.FC = () => {
                     
                     {parsedSections.map((section, idx) => {
                       const isActive = activeSection === section.id;
-                      // Determine accent color for sidebar items
-                      const accentColor = section.theme === 'amber' ? 'text-amber-500' : section.theme === 'blue' ? 'text-blue-500' : 'text-emerald-500';
-                      const activeBg = section.theme === 'amber' ? 'bg-amber-50 text-amber-900' : section.theme === 'blue' ? 'bg-blue-50 text-blue-900' : 'bg-emerald-50 text-emerald-900';
+                      const styles = getThemeStyles(section.theme);
                       
                       return (
                         <button
                           key={section.id}
                           onClick={() => scrollToSection(section.id)}
-                          className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all flex items-center gap-3 group relative ${
-                            isActive ? `${activeBg} font-semibold shadow-sm` : 'text-stone-600 hover:bg-stone-50'
+                          className={`w-full text-left px-3 py-2.5 text-sm rounded-lg transition-all flex items-center gap-3 group relative border border-transparent ${
+                            isActive ? `${styles.sidebarActive} shadow-sm font-semibold` : `text-stone-600 ${styles.sidebarHover}`
                           }`}
                         >
                            <div className={`flex items-center justify-center w-6 h-6 rounded-md bg-white border shadow-sm shrink-0 transition-colors ${isActive ? 'border-transparent' : 'border-stone-200'}`}>
-                              {getSectionIcon(section.title, `w-3.5 h-3.5 ${isActive ? accentColor : 'text-stone-400'}`)}
+                              {getSectionIcon(section.title, `w-3.5 h-3.5 ${isActive ? styles.iconBg.split(' ')[1] : 'text-stone-400'}`)}
                            </div>
                            <span className="truncate">{section.title}</span>
-                           {isActive && <div className={`absolute right-2 w-1.5 h-1.5 rounded-full ${section.theme === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>}
+                           {isActive && <div className={`absolute right-2 w-1.5 h-1.5 rounded-full ${styles.accent}`}></div>}
                         </button>
                       );
                     })}
@@ -413,45 +474,24 @@ export const CourseGenerator: React.FC = () => {
 
                     {parsedSections.length > 0 ? (
                       parsedSections.map((section) => {
-                        // Section Styling based on Theme
-                        const theme = section.theme;
-                        let borderColor = 'border-emerald-100';
-                        let headerBg = 'bg-emerald-50/50';
-                        let iconBg = 'text-emerald-600';
-                        let ringColor = 'focus-within:ring-emerald-500';
-
-                        if (theme === 'amber') {
-                          borderColor = 'border-amber-200';
-                          headerBg = 'bg-amber-50';
-                          iconBg = 'text-amber-600';
-                          ringColor = 'focus-within:ring-amber-500';
-                        } else if (theme === 'blue') {
-                          borderColor = 'border-blue-200';
-                          headerBg = 'bg-blue-50';
-                          iconBg = 'text-blue-600';
-                          ringColor = 'focus-within:ring-blue-500';
-                        } else if (theme === 'indigo') {
-                          borderColor = 'border-indigo-100';
-                          headerBg = 'bg-indigo-50/50';
-                          iconBg = 'text-indigo-600';
-                        }
+                        const styles = getThemeStyles(section.theme);
 
                         return (
                           <div 
                             key={section.id} 
                             id={section.id} 
-                            className={`bg-white rounded-2xl shadow-sm border ${borderColor} overflow-hidden scroll-mt-6 transition-all duration-300 hover:shadow-md group`}
+                            className={`bg-white rounded-2xl shadow-sm border ${styles.border} overflow-hidden scroll-mt-6 transition-all duration-300 hover:shadow-md group`}
                           >
-                            <div className={`${headerBg} px-6 py-5 border-b ${borderColor} flex items-center gap-4`}>
-                              <div className={`p-2.5 bg-white rounded-xl shadow-sm ${iconBg} border border-white/50 group-hover:scale-110 transition-transform`}>
+                            <div className={`${styles.headerBg} px-6 py-5 border-b ${styles.border} flex items-center gap-4`}>
+                              <div className={`p-2.5 rounded-xl shadow-sm ${styles.iconBg} border border-white/50 group-hover:scale-110 transition-transform`}>
                                 {getSectionIcon(section.title)}
                               </div>
-                              <h2 className={`text-xl font-bold ${theme === 'amber' ? 'text-amber-900' : theme === 'blue' ? 'text-blue-900' : 'text-emerald-900'}`}>
+                              <h2 className={`text-xl font-bold ${styles.title}`}>
                                 {section.title}
                               </h2>
                             </div>
                             <div className="p-6 md:p-8 text-lg">
-                              <FormattedText text={section.content} className={theme === 'amber' ? 'text-stone-800' : ''} />
+                              <FormattedText text={section.content} className="text-stone-800" />
                             </div>
                           </div>
                         );
