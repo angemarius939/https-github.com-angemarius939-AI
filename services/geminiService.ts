@@ -128,7 +128,12 @@ export const generateConversationResponse = async (
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
   
-  const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Be supportive of Rwandan progress. Do not use markdown formatting like bold or lists, just natural speech text.";
+  // Inject Voice Training Knowledge
+  const voiceContext = getContextForView('VOICE_TRAINING');
+
+  const CONVERSATION_INSTRUCTION = `You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Be supportive of Rwandan progress. Do not use markdown formatting like bold or lists, just natural speech text.
+  
+  ${voiceContext ? `SPECIFIC PRONUNCIATION/USAGE RULES: ${voiceContext}` : ''}`;
 
   try {
     const ai = getAiClient();
@@ -301,58 +306,58 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  // Use Imagen 3 as PRIMARY model because it's more stable
-  const primaryModel = "imagen-3.0-generate-001";
-  const fallbackModel = "gemini-2.5-flash-image";
+  // Use Gemini Flash Image FIRST because it is faster (prevents Vercel timeouts)
+  const primaryModel = "gemini-2.5-flash-image"; 
+  const fallbackModel = "imagen-3.0-generate-001";
   
   const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
-  // Single-step prompt
+  // Prompt logic
   const finalPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
 
   const ai = getAiClient();
 
   try {
-    // Attempt 1: Imagen 3 (Robust)
+    // Attempt 1: Gemini Flash Image (Fast & Reliable on Serverless)
     console.log(`Attempting generation with ${primaryModel}...`);
-    const response = await ai.models.generateImages({
+    const response = await ai.models.generateContent({
       model: primaryModel,
-      prompt: finalPrompt,
+      contents: { parts: [{ text: finalPrompt }] },
       config: {
-        numberOfImages: 1,
-        aspectRatio: safeRatio
+        imageConfig: { aspectRatio: safeRatio }
       }
     });
-
-    const b64 = response.generatedImages?.[0]?.image?.imageBytes;
-    if (b64) {
-      return `data:image/png;base64,${b64}`;
+    
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
     }
-    throw new Error("Imagen model returned no image.");
+    throw new Error("Flash model returned no image.");
 
   } catch (primaryError: any) {
     console.warn(`${primaryModel} failed, trying ${fallbackModel}...`, primaryError);
 
     try {
-      // Attempt 2: Gemini Flash Image (Fallback)
-      const response = await ai.models.generateContent({
+      // Attempt 2: Imagen 3 (Backup)
+      const response = await ai.models.generateImages({
         model: fallbackModel,
-        contents: { parts: [{ text: finalPrompt }] },
+        prompt: finalPrompt,
         config: {
-          imageConfig: { aspectRatio: safeRatio }
+          numberOfImages: 1,
+          aspectRatio: safeRatio
         }
       });
-      
-      const parts = response.candidates?.[0]?.content?.parts;
-      if (parts) {
-        for (const part of parts) {
-          if (part.inlineData) {
-            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          }
-        }
+
+      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
+      if (b64) {
+        return `data:image/png;base64,${b64}`;
       }
-      throw new Error("Flash model returned no image.");
+      throw new Error("Imagen model returned no image.");
 
     } catch (fallbackError) {
       console.error("All image generation attempts failed.", fallbackError);
