@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
@@ -13,11 +13,17 @@ import { DecisionAssistant } from './components/DecisionAssistant';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ToastProvider } from './components/ToastProvider';
 import { AppView } from './types';
+import { recordVisit } from './services/statsService';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
+
+  // Track visit on mount
+  useEffect(() => {
+    recordVisit();
+  }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 

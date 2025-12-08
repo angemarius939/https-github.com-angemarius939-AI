@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Search } from 'lucide-react';
+import { FileText, Languages, Wand2, Copy, Check, MessageCircle, Volume2, Search, Info } from 'lucide-react';
 import { generateTextAnalysis } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -57,6 +58,13 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
     return `Kosora Imyandikire (${toneLabel})`;
   };
 
+  const getPlaceholder = () => {
+    if (activeTab === 'detect') return "Andika cyangwa ushyire hano umwandiko ushaka kumenya ururimi rwawo...";
+    if (activeTab === 'translate') return "Andika icyongereza, igifaransa cyangwa urundi rurimi ushaka guhindura...";
+    if (activeTab === 'grammar') return "Andika Ikinyarwanda ushaka gukosora...";
+    return "Shyira umwandiko hano...";
+  };
+
   return (
     <div className="flex flex-col h-full p-6 space-y-6 max-w-4xl mx-auto w-full overflow-y-auto">
       <div className="text-center mb-4">
@@ -111,7 +119,7 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
           
           <textarea
             className="flex-1 w-full p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none bg-white text-stone-800 min-h-[150px] font-sans"
-            placeholder="Shyira umwandiko hano..."
+            placeholder={getPlaceholder()}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
           />
@@ -139,6 +147,11 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
                 </button>
               ))}
             </div>
+            {activeTab === 'detect' && (
+              <p className="text-[10px] text-stone-400 text-center italic">
+                Guhitamo imvugo ntibikora mugihe urimo kuvumbura ururimi.
+              </p>
+            )}
           </div>
 
           <div className="mt-2 space-y-2">
@@ -186,11 +199,11 @@ export const TextAssistant: React.FC<TextAssistantProps> = ({ onNavigateToTTS })
              <div className="bg-emerald-50/50 border-b border-emerald-100 px-4 py-2 flex items-center text-xs text-emerald-600 font-medium">
                <div className="flex items-center gap-2">
                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                 <span>
-                    {activeTab === 'summarize' ? 'Incamake' : 
-                     activeTab === 'translate' ? 'Ubusobanuro' : 
-                     activeTab === 'grammar' ? 'Ikosora' : 
-                     'Indimi'}
+                 <span className="flex items-center gap-1">
+                    {activeTab === 'summarize' ? <><FileText className="w-3 h-3"/> Incamake</> : 
+                     activeTab === 'translate' ? <><Languages className="w-3 h-3"/> Ubusobanuro</> : 
+                     activeTab === 'grammar' ? <><Wand2 className="w-3 h-3"/> Ikosora</> : 
+                     <><Info className="w-3 h-3"/> Indimi</>}
                  </span>
                  {activeTab !== 'detect' && (
                     <>

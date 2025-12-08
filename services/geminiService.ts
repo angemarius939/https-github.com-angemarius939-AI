@@ -202,11 +202,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
   const model = "gemini-2.5-flash";
   
   // Inject Admin Knowledge for Image Tools
-  // We need to parse the JSON stringified content to make it readable context for the AI
   const rawContext = getContextForView('IMAGE_TOOLS'); 
-  // The context string contains raw JSON strings prefixed with __IMG_TRAIN__.
-  // Ideally, we'd parse this in getContextForView, but simpler to just append it as text 
-  // since Gemini handles JSON-like text well in context window.
   
   const systemPrompt = `${KINYARWANDA_SYSTEM_INSTRUCTION}
   
@@ -305,64 +301,62 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  // Use Gemini 2.5 Flash Image first (Experimental)
-  const flashModel = "gemini-2.5-flash-image";
-  const fallbackModel = "imagen-3.0-generate-001";
+  // Use Imagen 3 as PRIMARY model because it's more stable
+  const primaryModel = "imagen-3.0-generate-001";
+  const fallbackModel = "gemini-2.5-flash-image";
   
   const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
-  // Single-step prompt for Flash model (Handles translation internally)
-  const flashPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
+  // Single-step prompt
+  const finalPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
 
   const ai = getAiClient();
 
   try {
-    // Attempt 1: Gemini Flash Image
-    console.log(`Attempting generation with ${flashModel}...`);
-    const response = await ai.models.generateContent({
-      model: flashModel,
-      contents: { parts: [{ text: flashPrompt }] },
+    // Attempt 1: Imagen 3 (Robust)
+    console.log(`Attempting generation with ${primaryModel}...`);
+    const response = await ai.models.generateImages({
+      model: primaryModel,
+      prompt: finalPrompt,
       config: {
-        imageConfig: { aspectRatio: safeRatio }
+        numberOfImages: 1,
+        aspectRatio: safeRatio
       }
     });
-    
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData) {
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-    }
-    throw new Error("Flash model returned no image.");
 
-  } catch (flashError) {
-    console.warn("Flash Image failed, trying Imagen 3 Fallback...", flashError);
+    const b64 = response.generatedImages?.[0]?.image?.imageBytes;
+    if (b64) {
+      return `data:image/png;base64,${b64}`;
+    }
+    throw new Error("Imagen model returned no image.");
+
+  } catch (primaryError: any) {
+    console.warn(`${primaryModel} failed, trying ${fallbackModel}...`, primaryError);
 
     try {
-      // Attempt 2: Imagen 3 (Fallback)
-      // Note: Imagen usually requires 'generateImages' method in some SDK versions, 
-      // but @google/genai unifies this via models.generateImages
-      const response = await ai.models.generateImages({
+      // Attempt 2: Gemini Flash Image (Fallback)
+      const response = await ai.models.generateContent({
         model: fallbackModel,
-        prompt: flashPrompt,
+        contents: { parts: [{ text: finalPrompt }] },
         config: {
-          numberOfImages: 1,
-          aspectRatio: safeRatio
+          imageConfig: { aspectRatio: safeRatio }
         }
       });
-
-      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
-      if (b64) {
-        return `data:image/png;base64,${b64}`;
+      
+      const parts = response.candidates?.[0]?.content?.parts;
+      if (parts) {
+        for (const part of parts) {
+          if (part.inlineData) {
+            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          }
+        }
       }
-      throw new Error("Imagen model returned no image.");
+      throw new Error("Flash model returned no image.");
 
-    } catch (imagenError) {
-      console.error("All image generation attempts failed.", imagenError);
-      throw imagenError;
+    } catch (fallbackError) {
+      console.error("All image generation attempts failed.", fallbackError);
+      throw fallbackError;
     }
   }
 };

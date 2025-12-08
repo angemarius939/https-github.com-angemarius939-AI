@@ -33,7 +33,7 @@ export enum AppView {
   ADMIN = 'admin'
 }
 
-export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS';
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING';
 
 export interface KnowledgeItem {
   id: string;
@@ -52,6 +52,12 @@ export interface AnnotationBox {
 export interface ImageTrainingData {
   imageDescription: string;
   annotations: AnnotationBox[];
+}
+
+export interface VoiceTrainingData {
+  phrase: string;
+  phonetic?: string;
+  usageContext: string;
 }
 
 export interface TextToolResult {
@@ -97,4 +103,17 @@ export interface BusinessAnalysisResult {
   risks: string[];
   advice: string[];
   chartData: ChartDataPoint[];
+}
+
+export interface DailyStats {
+  date: string;
+  count: number;
+  countries: Record<string, number>;
+}
+
+export interface CountryStats {
+  code: string;
+  count: number;
+  name: string;
+  flag: string;
 }
