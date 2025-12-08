@@ -310,7 +310,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
   const primaryModel = "gemini-2.5-flash-image"; 
   const fallbackModel = "imagen-3.0-generate-001";
   
-  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9", "3:2", "2:3"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
   // Prompt logic

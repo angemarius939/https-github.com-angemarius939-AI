@@ -268,21 +268,21 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   };
 
   const getConfidenceColor = (score: number) => {
-    if (score >= 80) return "bg-emerald-500";
-    if (score >= 50) return "bg-yellow-500";
+    if (score >= 85) return "bg-emerald-500";
+    if (score >= 60) return "bg-yellow-500";
     return "bg-red-500";
   };
 
   const getConfidenceLabel = (score: number) => {
-    if (score >= 80) return "Icyizere Gihanitse";
-    if (score >= 50) return "Icyizere Ringaniye";
-    return "Icyizere Gike";
+    if (score >= 85) return "Icyizere Gihanitse (High)";
+    if (score >= 60) return "Icyizere Ringaniye (Medium)";
+    return "Icyizere Gike (Low)";
   };
 
   const getConfidenceMessage = (score: number) => {
-    if (score >= 80) return "Icyizere ni cyose. Ibisubizo birizewe cyane.";
-    if (score >= 50) return "Icyizere kiraringaniye. Reba niba ifoto isobanutse neza.";
-    return "Icyizere ni gike. Nyamuneka gerageza ifoto igaragara neza kurushaho.";
+    if (score >= 85) return "Icyizere ni cyose. Ifoto irasobanutse neza cyane, kandi AI yabashije kuyisesengura neza.";
+    if (score >= 60) return "Icyizere kiraringaniye. Ifoto iragaragara, ariko hari ibice bimwe bishobora kuba bitasobanutse neza.";
+    return "Icyizere ni gike. Ifoto ishobora kuba irimo igihu, idafite urumuri, cyangwa ibintu bitagaragara neza. Gerageza gufata indi.";
   };
 
   const getImageTypeIcon = (type: string) => {
@@ -300,6 +300,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
     { label: "9:16 (Portrait)", value: "9:16" },
     { label: "4:3 (Standard)", value: "4:3" },
     { label: "3:4 (Portrait)", value: "3:4" },
+    { label: "3:2 (Classic)", value: "3:2" },
+    { label: "2:3 (Portrait)", value: "2:3" },
   ];
 
   // Helper to calculate box styles
@@ -426,6 +428,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                    aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm' : 
                    aspectRatio === '4:3' ? 'aspect-[4/3]' : 
                    aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm' : 
+                   aspectRatio === '3:2' ? 'aspect-[3/2]' :
+                   aspectRatio === '2:3' ? 'aspect-[2/3] max-w-sm' :
                    'aspect-square max-w-lg'
                }`}>
                  {isGenerating ? (
@@ -711,8 +715,8 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                           Icyizere (Confidence)
                         </h4>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          analysisResult.confidenceScore >= 80 ? 'bg-emerald-100 text-emerald-700' : 
-                          analysisResult.confidenceScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 
+                          analysisResult.confidenceScore >= 85 ? 'bg-emerald-100 text-emerald-700' : 
+                          analysisResult.confidenceScore >= 60 ? 'bg-yellow-100 text-yellow-700' : 
                           'bg-red-100 text-red-700'
                         }`}>
                           {analysisResult.confidenceScore}%
@@ -726,7 +730,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                       </div>
                       
                       <div className="flex items-start gap-2 bg-stone-50 p-2 rounded-md">
-                         {analysisResult.confidenceScore < 50 ? (
+                         {analysisResult.confidenceScore < 60 ? (
                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
                          ) : (
                            <Info className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
