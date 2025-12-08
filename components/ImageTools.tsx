@@ -295,13 +295,11 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
   };
 
   const ratios = [
-    { label: "1:1", value: "1:1" },
-    { label: "16:9", value: "16:9" },
-    { label: "9:16", value: "9:16" },
-    { label: "4:3", value: "4:3" },
-    { label: "3:4", value: "3:4" },
-    { label: "3:2", value: "3:2" },
-    { label: "2:3", value: "2:3" },
+    { label: "1:1 (Kare)", value: "1:1" },
+    { label: "16:9 (Landscape)", value: "16:9" },
+    { label: "9:16 (Portrait)", value: "9:16" },
+    { label: "4:3 (Standard)", value: "4:3" },
+    { label: "3:4 (Portrait)", value: "3:4" },
   ];
 
   // Helper to calculate box styles
@@ -428,8 +426,6 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                    aspectRatio === '9:16' ? 'aspect-[9/16] max-w-sm' : 
                    aspectRatio === '4:3' ? 'aspect-[4/3]' : 
                    aspectRatio === '3:4' ? 'aspect-[3/4] max-w-sm' : 
-                   aspectRatio === '3:2' ? 'aspect-[3/2]' : 
-                   aspectRatio === '2:3' ? 'aspect-[2/3] max-w-sm' :
                    'aspect-square max-w-lg'
                }`}>
                  {isGenerating ? (
@@ -508,7 +504,7 @@ export const ImageTools: React.FC<ImageToolsProps> = ({ onNavigateToTTS }) => {
                 !isGenerating && !generatedImageUrl && (
                   <div className="text-center py-12 text-stone-400 bg-white rounded-xl border border-dashed border-stone-200">
                      <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                     <p className="text-sm font-medium">Nta mafoto urakora. Koresha Studio hejuru!</p>
+                     <p className="text-sm font-medium">Nta amafoto urakora. Koresha Studio hejuru!</p>
                   </div>
                 )
              )}

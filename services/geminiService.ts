@@ -70,7 +70,7 @@ const extractSources = (response: any): Source[] => {
   return Array.from(uniqueSources.values());
 };
 
-const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, a helpful, intelligent AI assistant specialized in Kinyarwanda. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, concise, and helpful. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists.";
+const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, a helpful, intelligent AI assistant specialized in Kinyarwanda. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, concise, and helpful. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals.";
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -128,7 +128,7 @@ export const generateConversationResponse = async (
 ): Promise<string> => {
   const model = "gemini-2.5-flash";
   
-  const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Do not use markdown formatting like bold or lists, just natural speech text.";
+  const CONVERSATION_INSTRUCTION = "You are a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Be supportive of Rwandan progress. Do not use markdown formatting like bold or lists, just natural speech text.";
 
   try {
     const ai = getAiClient();
@@ -201,6 +201,21 @@ export const generateTextAnalysis = async (
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
   const model = "gemini-2.5-flash";
   
+  // Inject Admin Knowledge for Image Tools
+  // We need to parse the JSON stringified content to make it readable context for the AI
+  const rawContext = getContextForView('IMAGE_TOOLS'); 
+  // The context string contains raw JSON strings prefixed with __IMG_TRAIN__.
+  // Ideally, we'd parse this in getContextForView, but simpler to just append it as text 
+  // since Gemini handles JSON-like text well in context window.
+  
+  const systemPrompt = `${KINYARWANDA_SYSTEM_INSTRUCTION}
+  
+  ${rawContext ? `
+  HERE IS SPECIFIC TRAINING DATA FOR RECOGNIZING OBJECTS IN RWANDA:
+  The admin has provided these examples of labeled images. Use the terminology found here if relevant.
+  ${rawContext.replace(/__IMG_TRAIN__/g, 'TRAINING_EXAMPLE_JSON: ')}
+  ` : ''}`;
+
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -219,7 +234,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         ]
       },
       config: {
-        systemInstruction: KINYARWANDA_SYSTEM_INSTRUCTION,
+        systemInstruction: systemPrompt,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -290,42 +305,65 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  const model = "gemini-2.5-flash-image";
-  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9", "3:2", "2:3"];
+  // Use Gemini 2.5 Flash Image first (Experimental)
+  const flashModel = "gemini-2.5-flash-image";
+  const fallbackModel = "imagen-3.0-generate-001";
+  
+  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
 
-  const fullPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
+  // Single-step prompt for Flash model (Handles translation internally)
+  const flashPrompt = `Create an image based on this description (translate from Kinyarwanda if needed): ${prompt}`;
+
+  const ai = getAiClient();
 
   try {
-    const ai = getAiClient();
-    try {
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: { parts: [{ text: fullPrompt }] },
-        config: { imageConfig: { aspectRatio: safeRatio } }
-      });
-      
-      const part = response.candidates?.[0]?.content?.parts?.[0];
-      if (part?.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    // Attempt 1: Gemini Flash Image
+    console.log(`Attempting generation with ${flashModel}...`);
+    const response = await ai.models.generateContent({
+      model: flashModel,
+      contents: { parts: [{ text: flashPrompt }] },
+      config: {
+        imageConfig: { aspectRatio: safeRatio }
       }
-      throw new Error("Flash generation failed");
-    } catch (flashError) {
-      console.log("Falling back to Imagen 3...");
-      const response = await ai.models.generateImages({
-        model: 'imagen-3.0-generate-001',
-        prompt: fullPrompt,
-        config: { numberOfImages: 1, aspectRatio: safeRatio }
-      });
-      const img = response.generatedImages?.[0]?.image;
-      if (img?.imageBytes) {
-        return `data:${img.mimeType || 'image/png'};base64,${img.imageBytes}`;
+    });
+    
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
       }
-      throw new Error("Imagen generation failed");
     }
-  } catch (e) {
-    console.error("Generate Image Error:", e);
-    throw e;
+    throw new Error("Flash model returned no image.");
+
+  } catch (flashError) {
+    console.warn("Flash Image failed, trying Imagen 3 Fallback...", flashError);
+
+    try {
+      // Attempt 2: Imagen 3 (Fallback)
+      // Note: Imagen usually requires 'generateImages' method in some SDK versions, 
+      // but @google/genai unifies this via models.generateImages
+      const response = await ai.models.generateImages({
+        model: fallbackModel,
+        prompt: flashPrompt,
+        config: {
+          numberOfImages: 1,
+          aspectRatio: safeRatio
+        }
+      });
+
+      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
+      if (b64) {
+        return `data:image/png;base64,${b64}`;
+      }
+      throw new Error("Imagen model returned no image.");
+
+    } catch (imagenError) {
+      console.error("All image generation attempts failed.", imagenError);
+      throw imagenError;
+    }
   }
 };
 
@@ -350,7 +388,7 @@ export const generateRuralAdvice = async (
 
   // Inject Admin Knowledge
   const adminContext = getContextForView('RURAL');
-  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda.";
+  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda. Promote modern, sustainable practices aligned with government programs (e.g. Smart Nkunganire).";
 
   // Force grounding to Rwandan sites
   const searchPrompt = `${prompt} (Search using site:.rw OR site:.gov.rw OR site:.ac.rw OR site:.org.rw)`;
@@ -404,15 +442,18 @@ export const generateCourse = async (
   This is the main content. Provide DETAILED explanations, deep dives into sub-topics, and clear concepts. Use full paragraphs, lists, and bold text for key terms.
 
   ## 5. Ingero Zifatika
-  Provide real-world scenarios and practical applications suitable for Rwanda.
+  Provide multiple detailed real-world scenarios and practical applications suitable for Rwanda.
 
-  ## 6. Imfashanyigisho & Ibitabo
-  List recommended books, articles, and resources for further reading. IMPORTANT: Prioritize resources available in Kinyarwanda or relevant to Rwanda.
+  ## 6. Ibitabo byo Gusoma (Recommended Books)
+  List specific books in Kinyarwanda or English relevant to the topic. If possible, mention where they can be found (e.g., Library, Online).
 
-  ## 7. Ibibazo & Imyitozo
-  Provide at least 5 assessment questions (Multiple choice or Open ended) and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end of this section.
+  ## 7. Izindi Mfashanyigisho (Resources)
+  List helpful websites, videos, or tools. Prioritize resources available in Kinyarwanda and valid .rw links.
 
-  Language: Strictly Kinyarwanda.
+  ## 8. Ibibazo & Imyitozo (Quiz)
+  Provide at least 5 assessment questions (Multiple choice or Open ended) and practical exercises to test understanding. Include the answers (Ibisubizo) at the very end of this section under a collapsible title if possible.
+
+  Language: Strictly Kinyarwanda. Include examples relevant to Rwanda's development context.
   ${adminContext}`;
 
   let prompt = `Create a ${level} level course about: ${topic}.`;
@@ -481,7 +522,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   const systemInstruction = `You are 'Umujyanama', an expert AI business analyst for Rwandan SMEs, farmers, and retailers. 
   Your goal is to interpret unstructured daily operational text (sales, expenses, harvest, etc.) and convert it into a structured financial insight report in Kinyarwanda.
   Identify: Revenue, Expenses, Profit, Risks, Advice, Chart Data.
-  Align advice with RRA and RDB guidelines where applicable.
+  Align advice with RRA and RDB guidelines where applicable. Encourage formalization and tax compliance.
   ${adminContext}`;
 
   try {

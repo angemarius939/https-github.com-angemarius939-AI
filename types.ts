@@ -33,7 +33,7 @@ export enum AppView {
   ADMIN = 'admin'
 }
 
-export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT';
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS';
 
 export interface KnowledgeItem {
   id: string;
@@ -41,6 +41,17 @@ export interface KnowledgeItem {
   content: string;
   scope: KnowledgeScope;
   dateAdded: number;
+}
+
+export interface AnnotationBox {
+  label: string;
+  description?: string;
+  box_2d: number[]; // [ymin, xmin, ymax, xmax] normalized 0-1000
+}
+
+export interface ImageTrainingData {
+  imageDescription: string;
+  annotations: AnnotationBox[];
 }
 
 export interface TextToolResult {

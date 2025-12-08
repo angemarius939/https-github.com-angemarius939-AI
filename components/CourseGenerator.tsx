@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
 import { CourseLevel, Source } from '../types';
@@ -125,7 +126,8 @@ export const CourseGenerator: React.FC = () => {
     if (t.includes('incamake') || t.includes('outline')) return <ListChecks className="w-5 h-5 text-emerald-600" />;
     if (t.includes('birambuye') || t.includes('detailed')) return <FileText className="w-5 h-5 text-emerald-600" />;
     if (t.includes('ingero') || t.includes('example')) return <Layers className="w-5 h-5 text-emerald-600" />;
-    if (t.includes('ibitabo') || t.includes('resource')) return <Book className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('ibitabo') || t.includes('book')) return <Book className="w-5 h-5 text-emerald-600" />;
+    if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('amakuru')) return <Link className="w-5 h-5 text-emerald-600" />;
     if (t.includes('ibibazo') || t.includes('quiz')) return <BrainCircuit className="w-5 h-5 text-emerald-600" />;
     return <ArrowRight className="w-5 h-5 text-emerald-600" />;
   };
@@ -140,7 +142,7 @@ export const CourseGenerator: React.FC = () => {
             <div className="text-center md:text-left">
               <h2 className="text-2xl font-bold text-emerald-900">Tegura Amasomo</h2>
               <p className="text-emerald-700 mt-2 text-sm">
-                Tegura isomo ryuzuye, rirambuye kandi rifite imyitozo.
+                Tegura isomo ryuzuye, rirambuye rifite imyitozo, ibitabo n'imfashanyigisho.
               </p>
             </div>
 
