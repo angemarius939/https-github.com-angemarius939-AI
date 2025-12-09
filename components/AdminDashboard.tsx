@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, CloudRain } from 'lucide-react';
+import { Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, CloudRain, Mic, CheckSquare, Square } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { saveKnowledgeItem, getKnowledgeItems, deleteKnowledgeItem } from '../services/knowledgeService';
@@ -11,7 +11,7 @@ export const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [items, setItems] = useState<KnowledgeItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'text' | 'image' | 'stats'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'image' | 'stats' | 'voice'>('text');
   
   // Stats State
   const [visitStats, setVisitStats] = useState<DailyStats[]>([]);
@@ -21,6 +21,12 @@ export const AdminDashboard: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [scope, setScope] = useState<KnowledgeScope>('ALL');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+  // Voice Training State
+  const [voicePhrase, setVoicePhrase] = useState('');
+  const [voicePhonetic, setVoicePhonetic] = useState('');
+  const [voiceUsage, setVoiceUsage] = useState('');
 
   // Image Training State
   const [trainingImage, setTrainingImage] = useState<string | null>(null);
@@ -52,6 +58,7 @@ export const AdminDashboard: React.FC = () => {
 
   const loadItems = () => {
     setItems(getKnowledgeItems());
+    setSelectedItems(new Set()); // Reset selection on reload
   };
 
   const loadStats = () => {
@@ -82,6 +89,30 @@ export const AdminDashboard: React.FC = () => {
     showToast('Amakuru yabitswe!', 'success');
   };
 
+  const handleSaveVoiceTraining = () => {
+    if (!voicePhrase.trim()) {
+        showToast('Andika interuro cyangwa ijambo', 'error');
+        return;
+    }
+
+    const voiceContent = `Phrase: "${voicePhrase}"
+Phonetic/Pronunciation: [${voicePhonetic || 'N/A'}]
+Usage Context: ${voiceUsage || 'General'}
+`;
+
+    saveKnowledgeItem({
+        title: `Voice Rule: ${voicePhrase}`,
+        content: voiceContent,
+        scope: 'VOICE_TRAINING'
+    });
+
+    setVoicePhrase('');
+    setVoicePhonetic('');
+    setVoiceUsage('');
+    loadItems();
+    showToast('Amakuru y\'ijwi yabitswe!', 'success');
+  };
+
   const handleLoadAgriTemplates = () => {
     // Template 1: Flood Prevention
     saveKnowledgeItem({
@@ -106,6 +137,37 @@ export const AdminDashboard: React.FC = () => {
       deleteKnowledgeItem(id);
       loadItems();
       showToast('Byasibwe', 'success');
+    }
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedItems.size === 0) return;
+    
+    if (confirm(`Ese urashaka gusiba amakuru ${selectedItems.size} wahisemo?`)) {
+      selectedItems.forEach(id => {
+        deleteKnowledgeItem(id);
+      });
+      loadItems();
+      showToast(`Amakuru ${selectedItems.size} yasibwe`, 'success');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === items.length && items.length > 0) {
+      setSelectedItems(new Set());
+    } else {
+      const allIds = new Set(items.map(i => i.id));
+      setSelectedItems(allIds);
     }
   };
 
@@ -344,13 +406,22 @@ export const AdminDashboard: React.FC = () => {
               Amafoto (Image)
             </button>
             <button
+              onClick={() => setActiveTab('voice')}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'voice' ? 'bg-emerald-50 text-emerald-700 shadow-sm' : 'text-stone-500 hover:text-emerald-600'
+              }`}
+            >
+              <Mic className="w-4 h-4" />
+              Ijwi (Voice)
+            </button>
+            <button
               onClick={() => setActiveTab('stats')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'stats' ? 'bg-emerald-50 text-emerald-700 shadow-sm' : 'text-stone-500 hover:text-emerald-600'
               }`}
             >
               <BarChart className="w-4 h-4" />
-              Imibare (Stats)
+              Imbonerahamwe (Stats)
             </button>
           </div>
 
@@ -422,7 +493,7 @@ export const AdminDashboard: React.FC = () => {
                 <>
                     {/* Input Section */}
                     <div className="lg:col-span-1 space-y-6">
-                        {activeTab === 'text' ? (
+                        {activeTab === 'text' && (
                             <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 animate-in fade-in">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-bold text-emerald-900 flex items-center">
@@ -480,7 +551,9 @@ export const AdminDashboard: React.FC = () => {
                                     </Button>
                                 </div>
                             </div>
-                        ) : (
+                        )}
+
+                        {activeTab === 'image' && (
                             <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 animate-in fade-in">
                                 <h3 className="text-lg font-bold text-emerald-900 mb-4 flex items-center">
                                     <MousePointer2 className="w-5 h-5 mr-2" />
@@ -561,6 +634,50 @@ export const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
+                        {activeTab === 'voice' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 animate-in fade-in">
+                                <h3 className="text-lg font-bold text-emerald-900 mb-4 flex items-center">
+                                    <Mic className="w-5 h-5 mr-2" />
+                                    Gutoza Amajwi (Voice Training)
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-stone-700">Interuro / Ijambo (Phrase)</label>
+                                        <input
+                                            type="text"
+                                            value={voicePhrase}
+                                            onChange={(e) => setVoicePhrase(e.target.value)}
+                                            placeholder="Urugero: Mwaramutse"
+                                            className="w-full p-2.5 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-stone-700">Imvugirwe (Phonetic - Optional)</label>
+                                        <input
+                                            type="text"
+                                            value={voicePhonetic}
+                                            onChange={(e) => setVoicePhonetic(e.target.value)}
+                                            placeholder="Urugero: Mwa-ra-mu-tse"
+                                            className="w-full p-2.5 border border-emerald-200 rounded-lg"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-stone-700">Ibisobanuro / Imikoreshereze (Context)</label>
+                                        <textarea
+                                            value={voiceUsage}
+                                            onChange={(e) => setVoiceUsage(e.target.value)}
+                                            placeholder="Sobanura uburyo iri jambo rikwiye gukoreshwa cyangwa kuvugwa..."
+                                            className="w-full h-32 p-2.5 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 resize-none"
+                                        />
+                                    </div>
+                                    <Button onClick={handleSaveVoiceTraining} className="w-full">
+                                        <Save className="w-4 h-4 mr-2" />
+                                        Bika Amabwiriza y'Ijwi
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* List/Preview Section */}
@@ -588,6 +705,30 @@ export const AdminDashboard: React.FC = () => {
                             <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6 min-h-[500px]">
                                 <h3 className="text-lg font-bold text-emerald-900 mb-4 flex items-center justify-between">
                                     <span>Amakuru Abitse ({items.length})</span>
+                                    
+                                    {/* Select All / Bulk Actions */}
+                                    <div className="flex gap-2">
+                                      {items.length > 0 && (
+                                        <>
+                                          <button 
+                                            onClick={toggleSelectAll}
+                                            className="text-xs text-stone-500 hover:text-emerald-600 flex items-center font-medium bg-stone-50 px-2 py-1 rounded border border-stone-200"
+                                          >
+                                            {selectedItems.size === items.length ? <CheckSquare className="w-3 h-3 mr-1" /> : <Square className="w-3 h-3 mr-1" />}
+                                            Hitamo Bose
+                                          </button>
+                                          {selectedItems.size > 0 && (
+                                            <button 
+                                              onClick={handleBulkDelete}
+                                              className="text-xs text-red-500 hover:text-red-700 flex items-center font-medium bg-red-50 px-2 py-1 rounded border border-red-100"
+                                            >
+                                              <Trash2 className="w-3 h-3 mr-1" />
+                                              Siba ({selectedItems.size})
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                 </h3>
                                 {items.length === 0 ? (
                                     <div className="text-center py-12 text-stone-400">
@@ -597,20 +738,33 @@ export const AdminDashboard: React.FC = () => {
                                 ) : (
                                     <div className="space-y-4">
                                         {items.map((item) => (
-                                            <div key={item.id} className="p-4 border border-stone-200 rounded-lg hover:border-emerald-300 transition-colors bg-stone-50/50">
+                                            <div key={item.id} className={`p-4 border rounded-lg transition-colors ${
+                                                selectedItems.has(item.id) 
+                                                ? 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-400' 
+                                                : 'border-stone-200 bg-stone-50/50 hover:border-emerald-300'
+                                            }`}>
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <h4 className="font-bold text-emerald-800">{item.title}</h4>
-                                                        <div className="flex gap-2 mt-1">
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-medium ${
-                                                                item.scope === 'IMAGE_TOOLS' ? 'bg-purple-100 text-purple-700' :
-                                                                item.scope === 'ALL' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-                                                            }`}>
-                                                                {item.scope}
-                                                            </span>
-                                                            <span className="text-[10px] text-stone-400">
-                                                                {new Date(item.dateAdded).toLocaleDateString()}
-                                                            </span>
+                                                    <div className="flex items-start gap-3">
+                                                        <button 
+                                                          onClick={() => toggleSelection(item.id)}
+                                                          className="mt-1 text-stone-400 hover:text-emerald-500"
+                                                        >
+                                                          {selectedItems.has(item.id) ? <CheckSquare className="w-4 h-4 text-emerald-500" /> : <Square className="w-4 h-4" />}
+                                                        </button>
+                                                        <div>
+                                                            <h4 className="font-bold text-emerald-800">{item.title}</h4>
+                                                            <div className="flex gap-2 mt-1">
+                                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-medium ${
+                                                                    item.scope === 'IMAGE_TOOLS' ? 'bg-purple-100 text-purple-700' :
+                                                                    item.scope === 'VOICE_TRAINING' ? 'bg-amber-100 text-amber-700' :
+                                                                    item.scope === 'ALL' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                                                                }`}>
+                                                                    {item.scope}
+                                                                </span>
+                                                                <span className="text-[10px] text-stone-400">
+                                                                    {new Date(item.dateAdded).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <button 
@@ -622,11 +776,11 @@ export const AdminDashboard: React.FC = () => {
                                                     </button>
                                                 </div>
                                                 {item.content.startsWith('__IMG_TRAIN__') ? (
-                                                    <div className="text-xs text-stone-500 italic bg-stone-100 p-2 rounded border border-stone-200">
+                                                    <div className="text-xs text-stone-500 italic bg-stone-100 p-2 rounded border border-stone-200 ml-7">
                                                         [Image Training Data Hidden] - Contains {JSON.parse(item.content.replace('__IMG_TRAIN__', '')).annotations.length} annotations.
                                                     </div>
                                                 ) : (
-                                                    <p className="text-sm text-stone-600 whitespace-pre-wrap leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
+                                                    <p className="text-sm text-stone-600 whitespace-pre-wrap leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-pointer ml-7">
                                                         {item.content}
                                                     </p>
                                                 )}
