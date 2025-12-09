@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, RefreshCw } from 'lucide-react';
+import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, RefreshCw, Sparkles } from 'lucide-react';
 import { Message, MessageRole, Source } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
@@ -417,9 +417,9 @@ export const ChatInterface: React.FC = () => {
             <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center mx-2 ${
                 msg.role === MessageRole.USER ? 'bg-emerald-600' : 
-                msg.role === MessageRole.ERROR ? 'bg-red-500' : 'bg-teal-600'
+                msg.role === MessageRole.ERROR ? 'bg-red-500' : 'bg-emerald-600'
               }`}>
-                {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />}
+                {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
               </div>
               
               <div className="flex flex-col">
@@ -497,7 +497,7 @@ export const ChatInterface: React.FC = () => {
                       <button 
                         onClick={() => handleCopyMessage(msg.text, msg.id)}
                         className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-300 hover:text-emerald-600'
+                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-400 hover:text-emerald-600'
                         }`}
                         title="Koporora"
                         aria-label="Koporora ubutumwa"
