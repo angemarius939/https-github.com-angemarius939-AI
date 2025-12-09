@@ -89,19 +89,25 @@ export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export interface ChartDataPoint {
   label: string;
   value: number;
-  type: 'revenue' | 'expense' | 'profit';
+  type: string; // Changed from union to string for generic support
 }
 
 export interface BusinessAnalysisResult {
-  summary: string;
-  financials: {
+  summary: string; // Can contain Markdown tables
+  isFinancial: boolean; // Flag to distinguish business vs generic data
+  financials?: {
     revenue: number;
     expense: number;
     profit: number;
     currency: string;
   };
-  risks: string[];
-  advice: string[];
+  kpiCards?: {
+    label: string;
+    value: string;
+    color?: string;
+  }[];
+  risks: string[]; // Used as "Challenges" for generic
+  advice: string[]; // Used as "Recommendations" for generic
   chartData: ChartDataPoint[];
 }
 

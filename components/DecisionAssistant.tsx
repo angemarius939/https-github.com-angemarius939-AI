@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase, Activity, FileText } from 'lucide-react';
 import { Button } from './Button';
 import { ProgressBar } from './ProgressBar';
 import { useToast } from './ToastProvider';
@@ -12,6 +12,7 @@ export const DecisionAssistant: React.FC = () => {
   const [input, setInput] = useState('');
   const [result, setResult] = useState<BusinessAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
   const { showToast } = useToast();
 
   const handleAnalyze = async () => {
@@ -29,7 +30,7 @@ export const DecisionAssistant: React.FC = () => {
     }
   };
 
-  const fillExample = (type: 'retail' | 'farm' | 'livestock' | 'monthly' | 'complex') => {
+  const fillExample = (type: 'retail' | 'farm' | 'livestock' | 'monthly' | 'complex' | 'generic') => {
     let text = "";
     if (type === 'retail') {
       text = "Uyu munsi ncuruje ibicuruzwa by'ibihumbi 50,000 RWF. Naguze inyongera y'ibicuruzwa by'ibihumbi 30,000 RWF. Nishyuye umuriro 5,000 RWF. Ndashaka kumenya inyungu yanjye n'inama z'uko nakongera abakiriya.";
@@ -41,8 +42,20 @@ export const DecisionAssistant: React.FC = () => {
       text = "Muri uku kwezi gushize, twinjije miliyoni 5 z'amafaranga y'u Rwanda mu bucuruzi bw'ibikoresho by'ubwubatsi. Twishyuye abakozi ibihumbi 800, umuriro n'amazi ibihumbi 100, n'imisoro ya RRA ibihumbi 200. Twaguze stock nshya ya miliyoni 3. Nyamuneka dukorere isesengura ry'ukwezi kandi utungire inama z'uburyo twagabanya amafaranga asohoka umwaka utaha.";
     } else if (type === 'complex') {
       text = "Dufite imishinga ibiri: Ubuhinzi n'Ubwikorezi. \n1. Ubuhinzi: Twagurishije toni 5 z'ibirayi kuri 300Frw/kg. Ifumbire yatwaye 500,000 Frw.\n2. Ubwikorezi: Moto yinjije 150,000 Frw, essence yatwaye 40,000 Frw, panne yatwaye 20,000 Frw.\nEse muri rusange twungutse angahe? Ni uwuhe mushinga uduha inyungu nyinshi? Ni izihe ngamba twafata?";
+    } else if (type === 'generic') {
+      text = "Mu ishuri ryisumbuye rya Kigali, abanyeshuri 50 bakoze ikizamini cy'imibare. 20 babonye hejuru ya 80%, 15 babonye hagati ya 50-79%, naho 15 babonye munsi ya 50%. Mu cyongereza ho, 40 babonye hejuru ya 60%. Nyamuneka dukorere raporoigaragaza uko batsinze, ushyiremo imbonerahamwe (table) n'inama z'uko twazamura ireme ry'uburezi.";
     }
     setInput(text);
+  };
+
+  const getExpenseRatio = () => {
+    if (!result?.financials || result.financials.revenue === 0) return 0;
+    return Math.min(Math.round((result.financials.expense / result.financials.revenue) * 100), 100);
+  };
+
+  const getProfitMargin = () => {
+    if (!result?.financials || result.financials.revenue === 0) return 0;
+    return Math.round((result.financials.profit / result.financials.revenue) * 100);
   };
 
   return (
@@ -53,8 +66,8 @@ export const DecisionAssistant: React.FC = () => {
           Umujyanama
         </h2>
         <p className="text-emerald-700 mt-2 max-w-2xl mx-auto">
-          Umufasha mu gufata ibyemezo by'ubucuruzi, ubuhinzi, n'ubworozi. 
-          Andika ibyo wakoze (umunsi, ukwezi, cyangwa umwaka), tubiguhemo imibare n'inama.
+          Umufasha mu gusesengura amakuru yose (Ubucuruzi, Uburezi, Imibare, n'ibindi). 
+          Andika ibyo ufite tubiguhemo imibare, ibishushanyo, na raporo.
         </p>
       </div>
 
@@ -62,12 +75,12 @@ export const DecisionAssistant: React.FC = () => {
         {/* Left Column: Input */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6">
-            <h3 className="font-semibold text-emerald-900 mb-4">Andika Ibikorwa byawe</h3>
+            <h3 className="font-semibold text-emerald-900 mb-4">Andika Amakuru (Data)</h3>
             
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Urugero: Uyu munsi nagurishije... Cyangwa: Muri uku kwezi..."
+              placeholder="Urugero: Uyu munsi nagurishije... Cyangwa: Abanyeshuri batsinze..."
               className="w-full h-48 p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 resize-none text-stone-800 text-sm leading-relaxed mb-4"
             />
             
@@ -80,7 +93,7 @@ export const DecisionAssistant: React.FC = () => {
               Sesengura
             </Button>
             
-            <ProgressBar isLoading={isLoading} label="Irimo gusesengura imari..." duration={4000} />
+            <ProgressBar isLoading={isLoading} label="Irimo gusesengura..." duration={4000} />
 
             <div className="mt-6 pt-6 border-t border-emerald-50">
               <p className="text-xs font-semibold text-emerald-600 uppercase mb-3">Gerageza Urugero:</p>
@@ -98,22 +111,16 @@ export const DecisionAssistant: React.FC = () => {
                   🌽 Ubuhinzi (Agriculture)
                 </button>
                 <button 
-                  onClick={() => fillExample('livestock')}
-                  className="text-left text-xs p-2 rounded-lg bg-stone-50 hover:bg-emerald-50 text-stone-600 hover:text-emerald-700 transition-colors border border-stone-100 hover:border-emerald-200"
-                >
-                  🐄 Ubworozi (Livestock)
-                </button>
-                <button 
                   onClick={() => fillExample('monthly')}
                   className="text-left text-xs p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 transition-colors border border-blue-100 hover:border-blue-200 font-medium"
                 >
                   📅 Raporo y'Ukwezi (Monthly)
                 </button>
                 <button 
-                  onClick={() => fillExample('complex')}
-                  className="text-left text-xs p-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 transition-colors border border-purple-100 hover:border-purple-200 font-medium"
+                  onClick={() => fillExample('generic')}
+                  className="text-left text-xs p-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 hover:text-teal-800 transition-colors border border-teal-100 hover:border-teal-200 font-medium"
                 >
-                  🔄 Imishinga Ivangavanze (Complex)
+                  📊 Raporo Rusange (Generic)
                 </button>
               </div>
             </div>
@@ -127,7 +134,7 @@ export const DecisionAssistant: React.FC = () => {
               <BarChart3 className="w-16 h-16 mb-4 opacity-20" />
               <p className="text-lg font-medium text-stone-500">Nta sesengura rirahari</p>
               <p className="text-sm mt-2 max-w-sm">
-                Andika amakuru ibumoso ukande "Sesengura" kugira ngo ubone raporo y'imari n'inama.
+                Andika amakuru ibumoso ukande "Sesengura" kugira ngo ubone raporo n'imbonerahamwe.
               </p>
             </div>
           ) : (
@@ -144,99 +151,156 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               </div>
 
-              {/* KPI Cards with Visual Appeal */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Revenue */}
-                <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden group hover:shadow-md transition-shadow">
-                   <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
-                      <Wallet className="w-16 h-16 text-emerald-600" />
-                   </div>
-                   <div className="flex flex-col relative z-10">
-                     <span className="text-sm font-medium text-emerald-600 mb-1 flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4" /> Yinjijwe (Revenue)
-                     </span>
-                     <div className="text-2xl font-extrabold text-emerald-800 tracking-tight">
-                       {result.financials.revenue.toLocaleString()} 
-                       <span className="text-xs font-medium text-emerald-600 ml-1">{result.financials.currency}</span>
+              {/* KPI Cards Logic: Business vs Generic */}
+              {result.isFinancial && result.financials ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Revenue */}
+                  <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                     <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+                        <Wallet className="w-16 h-16 text-emerald-600" />
                      </div>
-                   </div>
-                </div>
-                
-                {/* Expense */}
-                <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden group hover:shadow-md transition-shadow">
-                   <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
-                      <Briefcase className="w-16 h-16 text-rose-600" />
-                   </div>
-                   <div className="flex flex-col relative z-10">
-                     <span className="text-sm font-medium text-rose-600 mb-1 flex items-center gap-1">
-                        <TrendingDown className="w-4 h-4" /> Yasohotse (Expense)
-                     </span>
-                     <div className="text-2xl font-extrabold text-rose-800 tracking-tight">
-                       {result.financials.expense.toLocaleString()} 
-                       <span className="text-xs font-medium text-rose-600 ml-1">{result.financials.currency}</span>
+                     <div className="flex flex-col relative z-10">
+                       <span className="text-sm font-medium text-emerald-600 mb-1 flex items-center gap-1">
+                          <TrendingUp className="w-4 h-4" /> Yinjijwe
+                       </span>
+                       <div className="text-2xl font-extrabold text-emerald-800 tracking-tight">
+                         {result.financials.revenue.toLocaleString()} 
+                         <span className="text-xs font-medium text-emerald-600 ml-1">{result.financials.currency}</span>
+                       </div>
                      </div>
-                   </div>
-                </div>
+                  </div>
+                  
+                  {/* Expense */}
+                  <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+                     <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+                        <Briefcase className="w-16 h-16 text-rose-600" />
+                     </div>
+                     <div className="flex flex-col relative z-10">
+                       <span className="text-sm font-medium text-rose-600 mb-1 flex items-center gap-1">
+                          <TrendingDown className="w-4 h-4" /> Yasohotse
+                       </span>
+                       <div className="text-2xl font-extrabold text-rose-800 tracking-tight">
+                         {result.financials.expense.toLocaleString()} 
+                         <span className="text-xs font-medium text-rose-600 ml-1">{result.financials.currency}</span>
+                       </div>
+                     </div>
+                  </div>
 
-                {/* Profit */}
-                <div className={`p-5 rounded-2xl border relative overflow-hidden group hover:shadow-md transition-shadow ${result.financials.profit >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
-                   <div className={`absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform`}>
-                      <PiggyBank className={`w-16 h-16 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
-                   </div>
-                   <div className="flex flex-col relative z-10">
-                     <span className={`text-sm font-medium mb-1 flex items-center gap-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                        <DollarSign className="w-4 h-4" /> Inyungu (Profit)
-                     </span>
-                     <div className={`text-2xl font-extrabold tracking-tight ${result.financials.profit >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>
-                       {result.financials.profit.toLocaleString()} 
-                       <span className={`text-xs font-medium ml-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{result.financials.currency}</span>
+                  {/* Profit */}
+                  <div className={`p-5 rounded-2xl border relative overflow-hidden group hover:shadow-md transition-shadow ${result.financials.profit >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
+                     <div className={`absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform`}>
+                        <PiggyBank className={`w-16 h-16 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
                      </div>
-                   </div>
+                     <div className="flex flex-col relative z-10">
+                       <span className={`text-sm font-medium mb-1 flex items-center gap-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                          <DollarSign className="w-4 h-4" /> Inyungu
+                       </span>
+                       <div className={`text-2xl font-extrabold tracking-tight ${result.financials.profit >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>
+                         {result.financials.profit.toLocaleString()} 
+                         <span className={`text-xs font-medium ml-1 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{result.financials.currency}</span>
+                       </div>
+                     </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Generic KPI Cards */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                   {result.kpiCards?.map((card, idx) => (
+                     <div key={idx} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-5">
+                           <Activity className="w-16 h-16 text-stone-800" />
+                        </div>
+                        <div className="relative z-10">
+                           <span className="text-sm font-medium text-stone-500 mb-1 block">{card.label}</span>
+                           <div className={`text-2xl font-extrabold tracking-tight ${
+                             card.color === 'emerald' ? 'text-emerald-700' :
+                             card.color === 'blue' ? 'text-blue-700' :
+                             card.color === 'orange' ? 'text-orange-700' : 'text-stone-800'
+                           }`}>
+                             {card.value}
+                           </div>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              )}
 
               {/* Charts Section */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-                <h3 className="font-bold text-stone-800 mb-6 flex items-center">
-                   <BarChart3 className="w-5 h-5 mr-2 text-emerald-600" />
-                   Imbonerahamwe y'Imari
-                </h3>
-                
-                <div className="flex items-end justify-around h-48 w-full gap-4 px-4 pb-2 border-b border-stone-200">
-                   {result.chartData.map((data, idx) => {
-                     // Normalize height based on max value roughly
-                     const maxVal = Math.max(...result.chartData.map(d => d.value));
-                     const heightPercent = maxVal > 0 ? (data.value / maxVal) * 100 : 0;
-                     
-                     return (
-                       <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
-                          <div className="text-xs font-bold text-stone-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {data.value.toLocaleString()}
-                          </div>
-                          <div 
-                            className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out hover:opacity-90 ${
-                              data.type === 'revenue' ? 'bg-emerald-500' : 
-                              data.type === 'expense' ? 'bg-rose-400' : 
-                              'bg-blue-500'
-                            }`}
-                            style={{ height: `${Math.max(heightPercent, 5)}%` }}
-                          ></div>
-                          <div className="text-xs font-medium text-stone-500 mt-2 text-center truncate w-full">
-                            {data.label}
-                          </div>
-                       </div>
-                     );
-                   })}
+              {result.chartData && result.chartData.length > 0 && (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-stone-800 flex items-center">
+                          <BarChart3 className="w-5 h-5 mr-2 text-emerald-600" />
+                          Imbonerahamwe (Graphics)
+                      </h3>
+                      <div className="flex bg-stone-100 rounded-lg p-1">
+                          <button 
+                              onClick={() => setChartType('bar')}
+                              className={`p-1.5 rounded-md transition-all ${chartType === 'bar' ? 'bg-white shadow text-emerald-700' : 'text-stone-500 hover:text-stone-700'}`}
+                              title="Bar Chart"
+                          >
+                              <BarChart3 className="w-4 h-4" />
+                          </button>
+                          <button 
+                              onClick={() => setChartType('pie')}
+                              className={`p-1.5 rounded-md transition-all ${chartType === 'pie' ? 'bg-white shadow text-emerald-700' : 'text-stone-500 hover:text-stone-700'}`}
+                              title="Pie Chart"
+                          >
+                              <PieChart className="w-4 h-4" />
+                          </button>
+                      </div>
+                  </div>
+                  
+                  {chartType === 'bar' ? (
+                      <div className="flex items-end justify-around h-48 w-full gap-4 px-4 pb-2 border-b border-stone-200 animate-in fade-in">
+                          {result.chartData.map((data, idx) => {
+                              const maxVal = Math.max(...result.chartData.map(d => Math.abs(d.value)), 1);
+                              const heightPercent = maxVal > 0 ? (Math.abs(data.value) / maxVal) * 100 : 0;
+                              
+                              return (
+                              <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
+                                  <div className="text-xs font-bold text-stone-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      {data.value.toLocaleString()}
+                                  </div>
+                                  <div 
+                                      className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out hover:opacity-90 relative group-hover:scale-105 ${
+                                      data.type === 'revenue' ? 'bg-emerald-500' : 
+                                      data.type === 'expense' ? 'bg-rose-400' : 
+                                      data.type === 'profit' ? 'bg-blue-500' :
+                                      'bg-indigo-400' // Generic color
+                                      }`}
+                                      style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                                  ></div>
+                                  <div className="text-xs font-medium text-stone-500 mt-2 text-center truncate w-full" title={data.label}>
+                                      {data.label}
+                                  </div>
+                              </div>
+                              );
+                          })}
+                      </div>
+                  ) : (
+                      <div className="flex justify-center items-center h-48 animate-in fade-in">
+                         {/* Simple Pie Representation for Generic Data */}
+                         <div className="flex flex-wrap justify-center gap-4">
+                            {result.chartData.map((d, i) => (
+                               <div key={i} className="flex items-center gap-2">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                      d.type === 'revenue' ? 'bg-emerald-500' : 
+                                      d.type === 'expense' ? 'bg-rose-400' : 
+                                      d.type === 'profit' ? 'bg-blue-500' :
+                                      'bg-indigo-400'
+                                  }`}></div>
+                                  <span className="text-sm text-stone-600">{d.label}: <b>{d.value.toLocaleString()}</b></span>
+                               </div>
+                            ))}
+                         </div>
+                      </div>
+                  )}
                 </div>
-                <div className="flex justify-center gap-4 mt-4 text-xs text-stone-500">
-                  <div className="flex items-center"><div className="w-3 h-3 bg-emerald-500 rounded mr-1"></div> Yinjijwe</div>
-                  <div className="flex items-center"><div className="w-3 h-3 bg-rose-400 rounded mr-1"></div> Yasohotse</div>
-                  <div className="flex items-center"><div className="w-3 h-3 bg-blue-500 rounded mr-1"></div> Inyungu</div>
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* Risks */}
+                 {/* Risks / Challenges */}
                  <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
                     <div className="bg-amber-50/50 px-6 py-4 border-b border-amber-100 flex items-center gap-2">
                        <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
@@ -257,13 +321,13 @@ export const DecisionAssistant: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* Advice */}
+                 {/* Advice / Recommendations */}
                  <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
                     <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center gap-2">
                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
                          <Lightbulb className="w-5 h-5" />
                        </div>
-                       <h3 className="font-bold text-stone-800">Inama z'Umujyanama</h3>
+                       <h3 className="font-bold text-stone-800">Inama & Ibisubizo</h3>
                     </div>
                     <div className="p-6">
                         <ul className="space-y-3">

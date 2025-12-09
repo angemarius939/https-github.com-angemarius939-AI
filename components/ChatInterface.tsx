@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile } from 'lucide-react';
+import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, RefreshCw } from 'lucide-react';
 import { Message, MessageRole, Source } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
@@ -259,8 +259,19 @@ export const ChatInterface: React.FC = () => {
       timestamp: Date.now()
     }]);
     setSearchQuery('');
+    setInputValue(''); // Clear input text as well
     setIsSearchOpen(false);
     setIsClearConfirmOpen(false);
+  };
+
+  const handleClearInput = () => {
+    setInputValue('');
+    playUISound('click');
+  };
+
+  const handleDeleteMessage = (id: string) => {
+    setMessages(prev => prev.filter(msg => msg.id !== id));
+    playUISound('click');
   };
 
   const handleCopyMessage = (text: string, id: string) => {
@@ -494,6 +505,21 @@ export const ChatInterface: React.FC = () => {
                         {copiedMessageId === msg.id ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     )}
+
+                    {/* Delete Message Button */}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
+                      className={`p-1 rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                        msg.role === MessageRole.USER 
+                          ? 'text-emerald-200 hover:text-white hover:bg-emerald-700' 
+                          : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
+                      }`}
+                      title="Siba"
+                      aria-label="Siba ubu butumwa"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+
                     <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
                   </div>
 
@@ -547,9 +573,18 @@ export const ChatInterface: React.FC = () => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={isListening ? "Ndakumva..." : "Andika ubutumwa hano..."}
-              className={`w-full p-3 pl-12 pr-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none h-14 max-h-32 overflow-y-auto ${isListening ? 'bg-emerald-50' : ''}`}
+              className={`w-full p-3 pl-12 pr-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none h-14 max-h-32 overflow-y-auto custom-scrollbar ${isListening ? 'bg-emerald-50' : ''}`}
               disabled={isStreaming || isListening}
             />
+            {inputValue && (
+              <button
+                onClick={handleClearInput}
+                className="absolute right-3 top-3 text-stone-300 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-stone-100"
+                title="Siba byose"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
           
           <Button 

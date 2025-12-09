@@ -518,16 +518,19 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
 
   const adminContext = getContextForView('BUSINESS');
 
-  const systemInstruction = `You are 'Umujyanama', an expert AI business analyst for Rwandan SMEs, farmers, and retailers. 
-  Your goal is to interpret unstructured operational text (which can be daily, monthly, or annual activities) and convert it into a structured financial insight report in Kinyarwanda.
+  const systemInstruction = `You are 'Umujyanama', an expert AI Data & Business Analyst for Rwanda.
+  Your goal is to interpret ANY input (Business, Education, Demographics, Sports, etc.) and generate a structured report in Kinyarwanda.
   
-  CRITICAL INSTRUCTIONS:
-  1. Detect the Timeframe: Identify if the input refers to a day, month, or year.
-  2. For Monthly/Annual Data: Provide strategic insights (Icyerekezo), identify seasonal trends, and suggest long-term improvements.
-  3. For Complex Scenarios: Break down multiple revenue streams or cost centers clearly.
-  4. Identify: Revenue, Expenses, Profit, Risks, Advice, Chart Data.
+  INSTRUCTIONS:
+  1. **Identify the Type**: Is this financial/business data or general data?
+     - If Business: Set 'isFinancial' to true. Populate 'financials'.
+     - If General (e.g., School grades, Census): Set 'isFinancial' to false. Populate 'kpiCards' with key metrics found in text.
+  2. **Timeframe**: Detect daily, monthly, or annual context.
+  3. **Analysis**: Fill 'risks' (or Challenges) and 'advice' (or Recommendations).
+  4. **Visualization**: Always populate 'chartData' with graphable numbers found in the text.
+  5. **Tables**: If the data requires comparison, generate a Markdown Table inside the 'summary' field.
   
-  Align advice with RRA and RDB guidelines where applicable. Encourage formalization and tax compliance.
+  Language: Strictly Kinyarwanda. Align advice with Rwandan context (RRA, RDB, REB, etc.).
   ${adminContext}`;
 
   try {
@@ -541,7 +544,8 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
         responseSchema: {
            type: Type.OBJECT,
            properties: {
-             summary: { type: Type.STRING },
+             summary: { type: Type.STRING, description: "Detailed summary including Markdown tables if needed." },
+             isFinancial: { type: Type.BOOLEAN },
              financials: {
                type: Type.OBJECT,
                properties: {
@@ -550,7 +554,19 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
                  profit: { type: Type.NUMBER },
                  currency: { type: Type.STRING }
                },
-               required: ["revenue", "expense", "profit", "currency"]
+               nullable: true
+             },
+             kpiCards: {
+               type: Type.ARRAY,
+               items: {
+                 type: Type.OBJECT,
+                 properties: {
+                   label: { type: Type.STRING },
+                   value: { type: Type.STRING },
+                   color: { type: Type.STRING, description: "Suggest a color: emerald, blue, orange, red" }
+                 }
+               },
+               nullable: true
              },
              risks: { type: Type.ARRAY, items: { type: Type.STRING } },
              advice: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -561,12 +577,12 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
                  properties: {
                    label: { type: Type.STRING },
                    value: { type: Type.NUMBER },
-                   type: { type: Type.STRING }
+                   type: { type: Type.STRING, description: "Category name for the chart segment" }
                  }
                }
              }
            },
-           required: ["summary", "financials", "risks", "advice", "chartData"]
+           required: ["summary", "isFinancial", "risks", "advice", "chartData"]
         }
       }
     });
@@ -576,7 +592,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     return JSON.parse(text) as BusinessAnalysisResult;
 
   } catch (error) {
-    console.error("Gemini Business Analysis Error:", error);
+    console.error("Gemini Data Analysis Error:", error);
     throw error;
   }
 };
