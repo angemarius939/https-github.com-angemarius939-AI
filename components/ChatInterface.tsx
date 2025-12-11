@@ -1,13 +1,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Trash2, Bot, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, RefreshCw, Sparkles } from 'lucide-react';
-import { Message, MessageRole, Source } from '../types';
+import { Send, Trash2, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, Smile, RefreshCw, Sparkles, Image as ImageIcon, TrendingUp, Sprout, GraduationCap, ArrowRight } from 'lucide-react';
+import { Message, MessageRole, Source, AppView } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
 import { FormattedText } from './FormattedText';
 import { SourcesToggle } from './SourcesToggle';
 
-export const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  onNavigate?: (view: AppView) => void;
+}
+
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -264,6 +268,11 @@ export const ChatInterface: React.FC = () => {
     setIsClearConfirmOpen(false);
   };
 
+  const handleQuickClear = () => {
+     playUISound('delete');
+     confirmClearChat();
+  }
+
   const handleClearInput = () => {
     setInputValue('');
     playUISound('click');
@@ -310,6 +319,14 @@ export const ChatInterface: React.FC = () => {
   );
 
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+
+  const quickFeatures = [
+    { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-600' },
+    { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-600' },
+    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-600' },
+    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-600' },
+    { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-600' },
+  ];
 
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm overflow-hidden border border-emerald-100 relative">
@@ -389,6 +406,14 @@ export const ChatInterface: React.FC = () => {
               </Button>
               <Button 
                 variant="ghost" 
+                onClick={handleQuickClear}
+                title="Siba Byose (Quick)"
+                className="text-stone-400 hover:text-stone-600 hover:bg-stone-100"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
                 onClick={() => { playUISound('click'); setIsClearConfirmOpen(true); }}
                 title="Siba Ikiganiro"
                 className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -402,6 +427,27 @@ export const ChatInterface: React.FC = () => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50 relative" onClick={() => setActiveReactionId(null)}>
+        {/* Welcome Dashboard State */}
+        {messages.length <= 1 && !searchQuery && !inputValue && (
+           <div className="mb-8 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <p className="text-xs font-bold text-stone-400 uppercase mb-3 tracking-wider text-center">Izindi Serivisi</p>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                 {quickFeatures.map((feat, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => onNavigate && onNavigate(feat.view)}
+                      className="flex flex-col items-center justify-center p-3 bg-white border border-stone-200 rounded-xl hover:border-emerald-300 hover:shadow-md transition-all group"
+                    >
+                       <div className={`p-2 rounded-full mb-2 ${feat.color} bg-opacity-20 group-hover:scale-110 transition-transform`}>
+                          <feat.icon className="w-5 h-5" />
+                       </div>
+                       <span className="text-[10px] font-medium text-stone-600 group-hover:text-emerald-700">{feat.label}</span>
+                    </button>
+                 ))}
+              </div>
+           </div>
+        )}
+
         {filteredMessages.length === 0 && searchQuery && (
           <div className="flex flex-col items-center justify-center h-full text-stone-400 space-y-2">
             <Search className="w-8 h-8 opacity-20" />
@@ -497,7 +543,7 @@ export const ChatInterface: React.FC = () => {
                       <button 
                         onClick={() => handleCopyMessage(msg.text, msg.id)}
                         className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-400 hover:text-emerald-600'
+                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-300 hover:text-emerald-600'
                         }`}
                         title="Koporora"
                         aria-label="Koporora ubutumwa"
