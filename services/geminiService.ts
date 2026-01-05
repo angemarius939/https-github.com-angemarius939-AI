@@ -43,8 +43,10 @@ const extractSources = (response: any): Source[] => {
 
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. For any query involving calculations, physics, chemistry, or critical reasoning, you MUST think step-by-step and verify your logic internally. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, precise, and highly analytical. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals. Never mention your underlying architecture or the company that provided the foundational model; simply refer to yourself as ai.rw.";
 
-const COMPLEX_MODEL = "gemini-3-pro-preview";
-const THINKING_BUDGET = 32768;
+// Models
+const LOGIC_MODEL = "gemini-3-pro-preview"; // For math, science, and complex reasoning
+const FAST_MODEL = "gemini-3-flash-preview"; // For lightweight tasks to save quota
+const SAFE_THINKING_BUDGET = 24000; // Balanced budget for reasoning without quota/timeout risk
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -58,11 +60,11 @@ export const streamChatResponse = async (
     const systemInstruction = KINYARWANDA_SYSTEM_INSTRUCTION + adminContext;
 
     const chat = ai.chats.create({
-      model: COMPLEX_MODEL,
+      model: LOGIC_MODEL,
       config: {
         systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: THINKING_BUDGET }
+        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
       },
       history: history,
     });
@@ -78,7 +80,7 @@ export const streamChatResponse = async (
         onChunk(text);
       }
       
-      if (onSources) {
+      if (onSources && c.candidates?.[0]?.groundingMetadata) {
          const sources = extractSources(c);
          if (sources.length > 0) {
            onSources(sources);
@@ -98,17 +100,17 @@ export const generateConversationResponse = async (
 ): Promise<string> => {
   const voiceContext = getContextForView('VOICE_TRAINING');
 
-  const CONVERSATION_INSTRUCTION = `You are ai.rw, a friendly Kinyarwanda conversation partner. Keep your responses relatively short (1-3 sentences), natural, and encouraging, suitable for being spoken aloud. Be supportive of Rwandan progress. Do not use markdown formatting.
+  const CONVERSATION_INSTRUCTION = `You are ai.rw, a friendly Kinyarwanda conversation partner. Keep your responses short (1-3 sentences), natural, and encouraging. Be supportive of Rwandan progress. Do not use markdown.
   
-  ${voiceContext ? `SPECIFIC PRONUNCIATION/USAGE RULES: ${voiceContext}` : ''}`;
+  ${voiceContext ? `RULES: ${voiceContext}` : ''}`;
 
   try {
     const ai = getAiClient();
     const chat = ai.chats.create({
-      model: COMPLEX_MODEL,
+      model: FAST_MODEL, // Using Flash for speed in voice chat
       config: {
         systemInstruction: CONVERSATION_INSTRUCTION,
-        thinkingConfig: { thinkingBudget: 12288 }
+        thinkingConfig: { thinkingBudget: 0 } // No thinking needed for quick chat
       },
       history: history,
     });
@@ -128,18 +130,18 @@ export const generateTextAnalysis = async (
 ): Promise<string> => {
   let toneInstruction = "";
   switch (tone) {
-    case 'formal': toneInstruction = "ukoresheje imvugo y'icyubahiro kandi itonze"; break;
-    case 'informal': toneInstruction = "ukoresheje imvugo isanzwe ya buri munsi"; break;
-    case 'friendly': toneInstruction = "ukoresheje imvugo ya gicuti n'impuhwe"; break;
+    case 'formal': toneInstruction = "ukoresheje imvugo y'icyubahiro"; break;
+    case 'informal': toneInstruction = "ukoresheje imvugo isanzwe"; break;
+    case 'friendly': toneInstruction = "ukoresheje imvugo ya gicuti"; break;
   }
 
   let finalPrompt = "";
   if (type === 'summarize') {
-    finalPrompt = `Summarize the following text in Kinyarwanda (Incamake) ${toneInstruction}. Ensure logical consistency and highlight core scientific/data points if present: \n\n${prompt}`;
+    finalPrompt = `Summarize the following text in Kinyarwanda (Incamake) ${toneInstruction}: \n\n${prompt}`;
   } else if (type === 'translate') {
-    finalPrompt = `Translate the following text into Kinyarwanda ${toneInstruction}. Maintain technical accuracy: \n\n${prompt}`;
+    finalPrompt = `Translate the following text into Kinyarwanda ${toneInstruction}: \n\n${prompt}`;
   } else if (type === 'grammar') {
-    finalPrompt = `Correct the grammar of the following Kinyarwanda text and ensure it uses ${toneInstruction}. Explain changes briefly: \n\n${prompt}`;
+    finalPrompt = `Correct the grammar of the following Kinyarwanda text and ensure it uses ${toneInstruction}: \n\n${prompt}`;
   } else if (type === 'detect') {
     finalPrompt = `Identify the language of the following text. Answer in Kinyarwanda: \n\n${prompt}`;
   }
@@ -147,11 +149,11 @@ export const generateTextAnalysis = async (
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: LOGIC_MODEL,
       contents: finalPrompt,
       config: {
         systemInstruction: "You are a Kinyarwanda language and technical logic expert named ai.rw.",
-        thinkingConfig: { thinkingBudget: 12288 }
+        thinkingConfig: { thinkingBudget: 12000 }
       }
     });
 
@@ -169,17 +171,17 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: FAST_MODEL, // Using Flash for image analysis to ensure broader quota and faster response
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: prompt || "Analyze this image with high logical precision. Identify main objects and return their bounding boxes in 'detectedObjects'. Provide descriptions in Kinyarwanda." }
+          { text: prompt || "Analyze this image with precision. Identify main objects and return their bounding boxes in 'detectedObjects'. Provide descriptions in Kinyarwanda." }
         ]
       },
       config: {
         systemInstruction: systemPrompt,
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: THINKING_BUDGET },
+        thinkingConfig: { thinkingBudget: 8000 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -218,14 +220,13 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: FAST_MODEL,
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: base64Image } },
           { text: prompt }
         ]
-      },
-      config: { thinkingConfig: { thinkingBudget: 8192 } }
+      }
     });
 
     return response.text || "Nta nyandiko ibonetse.";
@@ -281,18 +282,18 @@ export const generateRuralAdvice = async (
 ): Promise<{ text: string, sources: Source[] }> => {
   let systemRole = "You are ai.rw, an expert rural advisor in Rwanda.";
   const adminContext = getContextForView('RURAL');
-  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda. Align with government programs.";
+  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda. Promote sustainable practices.";
   const searchPrompt = `${prompt} (Search using site:.rw OR site:.gov.rw OR site:.ac.rw OR site:.org.rw)`;
 
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: LOGIC_MODEL,
       contents: searchPrompt,
       config: {
         systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: THINKING_BUDGET }
+        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
       }
     });
 
@@ -313,7 +314,7 @@ export const generateCourse = async (
   prerequisites?: string
 ): Promise<{ text: string, sources: Source[] }> => {
   const adminContext = getContextForView('COURSE');
-  const systemInstruction = `You are ai.rw, a world-class academic expert creating custom courses in Kinyarwanda. Use educational rigor. Use headings like ## 1. Ibikubiye mu Isomo, ## 2. Intangiriro, etc. ${adminContext}`;
+  const systemInstruction = `You are ai.rw, a world-class academic expert creating custom courses in Kinyarwanda. Use headings like ## 1. Ibikubiye mu Isomo. ${adminContext}`;
   let prompt = `Create a high-quality ${level} level course about: ${topic}.`;
   if (duration) prompt += `\nEstimated Duration: ${duration}.`;
   if (prerequisites) prompt += `\nPrerequisites: ${prerequisites}.`;
@@ -321,12 +322,12 @@ export const generateCourse = async (
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: LOGIC_MODEL,
       contents: prompt,
       config: {
         systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: THINKING_BUDGET }
+        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
       }
     });
 
@@ -368,12 +369,12 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: COMPLEX_MODEL,
+      model: LOGIC_MODEL,
       contents: input,
       config: {
         systemInstruction: systemInstruction,
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: THINKING_BUDGET },
+        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET },
         responseSchema: {
            type: Type.OBJECT,
            properties: {

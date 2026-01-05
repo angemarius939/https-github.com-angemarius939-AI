@@ -3,10 +3,24 @@ import { KnowledgeItem, KnowledgeScope } from '../types';
 
 const STORAGE_KEY = 'ai_rw_knowledge_base';
 
+const SEED_DATA: KnowledgeItem[] = [
+  {
+    id: 'seed-voice-1',
+    title: 'Voice Rule: Amakuru',
+    scope: 'VOICE_TRAINING',
+    content: 'Phrase: "Amakuru"\nPhonetic: [A-ma-ku-ru]\nContext: Rikoreshwa mu kubaza uko umuntu ameze. AI igomba kuvuga ijwi ririmo urugwiro.',
+    dateAdded: Date.now()
+  }
+];
+
 export const getKnowledgeItems = (): KnowledgeItem[] => {
   if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DATA));
+    return SEED_DATA;
+  }
+  return JSON.parse(stored);
 };
 
 export const saveKnowledgeItem = (item: Omit<KnowledgeItem, 'id' | 'dateAdded'>) => {

@@ -4,7 +4,8 @@ import {
   Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, 
   FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, 
   Mic, CheckSquare, Square, FlaskConical, Headphones, Search, 
-  Settings, LayoutDashboard, BrainCircuit, Activity, ChevronRight, Filter
+  Settings, LayoutDashboard, BrainCircuit, Activity, ChevronRight, Filter,
+  Volume2, Info
 } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -105,16 +106,6 @@ export const AdminDashboard: React.FC = () => {
       loadItems();
       showToast('Byasibwe', 'success');
     }
-  };
-
-  const toggleSelection = (id: string) => {
-    const newSelection = new Set(selectedItems);
-    if (newSelection.has(id)) {
-      newSelection.delete(id);
-    } else {
-      newSelection.add(id);
-    }
-    setSelectedItems(newSelection);
   };
 
   const filteredItems = items.filter(item => {
@@ -241,6 +232,8 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === tab && <ChevronRight className="w-4 h-4 ml-auto" />}
     </button>
   );
+
+  const voiceRules = items.filter(i => i.scope === 'VOICE_TRAINING');
 
   return (
     <div className="flex h-full bg-stone-50 overflow-hidden">
@@ -560,21 +553,22 @@ export const AdminDashboard: React.FC = () => {
 
           {/* VIEW: VOICE TRAINING */}
           {activeTab === 'train_voice' && (
-             <div className="max-w-2xl mx-auto w-full animate-in fade-in">
-                <div className="bg-white p-10 rounded-3xl shadow-sm border border-stone-200 space-y-6">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
+                {/* Form Section */}
+                <div className="lg:col-span-1 bg-white p-8 rounded-3xl shadow-sm border border-stone-200 space-y-6">
                    <div className="text-center">
                       <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4"><Mic className="w-8 h-8" /></div>
-                      <h3 className="text-2xl font-bold text-stone-900">Gutoza Imvugo y'Ijwi</h3>
-                      <p className="text-stone-500 mt-1">Fasha AI kuvuga neza amagambo cyangwa interuro z'Ikinyarwanda.</p>
+                      <h3 className="text-2xl font-bold text-stone-900">Gutoza Imvugo</h3>
+                      <p className="text-stone-500 text-sm mt-1">Fasha AI kuvuga neza amagambo y'Ikinyarwanda.</p>
                    </div>
 
                    <div className="space-y-4">
                       <div>
-                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Ijambo / Interuro (Phrase)</label>
+                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Ijambo / Interuro</label>
                          <input value={voicePhrase} onChange={e => setVoicePhrase(e.target.value)} placeholder="Urugero: Mwaramutse" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
                       </div>
                       <div>
-                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Imvugirwe (Phonetic - Optional)</label>
+                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Imvugirwe (Phonetic)</label>
                          <input value={voicePhonetic} onChange={e => setVoicePhonetic(e.target.value)} placeholder="Urugero: Mwa-ra-mu-tse" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
                       </div>
                       <div>
@@ -592,6 +586,44 @@ export const AdminDashboard: React.FC = () => {
                          loadItems();
                          showToast("Amabwiriza y'ijwi yabitswe!", "success");
                       }}>Bika Amabwiriza</Button>
+                   </div>
+                </div>
+
+                {/* Listing Section */}
+                <div className="lg:col-span-2 space-y-6">
+                   <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-bold text-stone-800 flex items-center gap-2">
+                        <Volume2 className="w-5 h-5 text-amber-600" />
+                        Amabwiriza Abitse ({voiceRules.length})
+                      </h4>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {voiceRules.length === 0 ? (
+                        <div className="col-span-full p-20 text-center bg-white rounded-3xl border border-dashed border-stone-200 text-stone-400 italic font-medium">
+                          Nta mabwiriza y'ijwi arahari.
+                        </div>
+                      ) : (
+                        voiceRules.map(rule => (
+                          <div key={rule.id} className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 hover:border-amber-300 transition-all flex flex-col justify-between group">
+                            <div>
+                               <div className="flex justify-between items-start mb-2">
+                                  <h5 className="font-black text-stone-900">{rule.title.replace('Voice Rule: ', '')}</h5>
+                                  <button onClick={() => handleDelete(rule.id)} className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                                     <Trash2 className="w-4 h-4" />
+                                  </button>
+                               </div>
+                               <div className="text-xs text-stone-600 bg-amber-50 p-3 rounded-xl border border-amber-100 font-mono mb-4">
+                                  {rule.content.split('\n')[1]}
+                               </div>
+                               <p className="text-xs text-stone-500 leading-relaxed italic flex items-start gap-1.5">
+                                  <Info className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                                  {rule.content.split('\n')[2]?.replace('Context: ', '')}
+                               </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
                    </div>
                 </div>
              </div>
