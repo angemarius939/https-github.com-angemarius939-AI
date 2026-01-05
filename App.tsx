@@ -1,28 +1,37 @@
 
-import React, { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { Menu, X, Loader2 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
-import { TextAssistant } from './components/TextAssistant';
-import { ImageTools } from './components/ImageTools';
-import { RuralAssistant } from './components/RuralAssistant';
-import { CourseGenerator } from './components/CourseGenerator';
-import { VoiceConversation } from './components/VoiceConversation';
-import { TextToSpeech } from './components/TextToSpeech';
-import { DecisionAssistant } from './components/DecisionAssistant';
-import { AdminDashboard } from './components/AdminDashboard';
 import { ToastProvider } from './components/ToastProvider';
 import { AppView } from './types';
 import { recordVisit } from './services/statsService';
+
+// Lazy load non-landing components for faster initial boot
+const TextAssistant = lazy(() => import('./components/TextAssistant').then(m => ({ default: m.TextAssistant })));
+const ImageTools = lazy(() => import('./components/ImageTools').then(m => ({ default: m.ImageTools })));
+const RuralAssistant = lazy(() => import('./components/RuralAssistant').then(m => ({ default: m.RuralAssistant })));
+const CourseGenerator = lazy(() => import('./components/CourseGenerator').then(m => ({ default: m.CourseGenerator })));
+const VoiceConversation = lazy(() => import('./components/VoiceConversation').then(m => ({ default: m.VoiceConversation })));
+const TextToSpeech = lazy(() => import('./components/TextToSpeech').then(m => ({ default: m.TextToSpeech })));
+const DecisionAssistant = lazy(() => import('./components/DecisionAssistant').then(m => ({ default: m.DecisionAssistant })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+
+const LoadingView = () => (
+  <div className="h-full w-full flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm">
+    <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
+    <p className="text-emerald-900 font-bold text-xs uppercase tracking-widest">Irimo gufungura...</p>
+  </div>
+);
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
 
-  // Track visit on mount
   useEffect(() => {
-    recordVisit();
+    // Non-blocking visit recording
+    recordVisit().catch(console.error);
   }, []);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -53,28 +62,34 @@ export default function App() {
   };
 
   const renderView = () => {
-    switch (currentView) {
-      case AppView.CHAT:
-        return <ChatInterface onNavigate={handleViewChange} />;
-      case AppView.VOICE_CONVERSATION:
-        return <VoiceConversation />;
-      case AppView.TEXT_TO_SPEECH:
-        return <TextToSpeech initialText={ttsInitialText} />;
-      case AppView.TEXT_TOOLS:
-        return <TextAssistant onNavigateToTTS={handleNavigateToTTS} />;
-      case AppView.IMAGE_TOOLS:
-        return <ImageTools onNavigateToTTS={handleNavigateToTTS} />;
-      case AppView.RURAL_SUPPORT:
-        return <RuralAssistant />;
-      case AppView.DECISION_ASSISTANT:
-        return <DecisionAssistant />;
-      case AppView.COURSE_GENERATOR:
-        return <CourseGenerator />;
-      case AppView.ADMIN:
-        return <AdminDashboard />;
-      default:
-        return <ChatInterface onNavigate={handleViewChange} />;
-    }
+    return (
+      <Suspense fallback={<LoadingView />}>
+        {(() => {
+          switch (currentView) {
+            case AppView.CHAT:
+              return <ChatInterface onNavigate={handleViewChange} />;
+            case AppView.VOICE_CONVERSATION:
+              return <VoiceConversation />;
+            case AppView.TEXT_TO_SPEECH:
+              return <TextToSpeech initialText={ttsInitialText} />;
+            case AppView.TEXT_TOOLS:
+              return <TextAssistant onNavigateToTTS={handleNavigateToTTS} />;
+            case AppView.IMAGE_TOOLS:
+              return <ImageTools onNavigateToTTS={handleNavigateToTTS} />;
+            case AppView.RURAL_SUPPORT:
+              return <RuralAssistant />;
+            case AppView.DECISION_ASSISTANT:
+              return <DecisionAssistant />;
+            case AppView.COURSE_GENERATOR:
+              return <CourseGenerator />;
+            case AppView.ADMIN:
+              return <AdminDashboard />;
+            default:
+              return <ChatInterface onNavigate={handleViewChange} />;
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (

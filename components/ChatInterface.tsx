@@ -328,8 +328,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
   const quickFeatures = [
-    { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
-    { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700' },
+    // Note: Amafoto and Kuvuga are hidden per request. Admin can restore them by uncommenting below.
+    // { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
+    // { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700' },
     { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
     { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700' },
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
@@ -574,7 +575,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         {messages.length <= 2 && !searchQuery && (
            <div className="mt-4 mb-8 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <p className="text-xs font-bold text-stone-400 uppercase mb-3 tracking-wider text-center">Hitamo Serivisi (Quick Access)</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                  {quickFeatures.map((feat, idx) => (
                     <button 
                       key={idx}
