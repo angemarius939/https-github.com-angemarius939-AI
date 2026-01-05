@@ -38,6 +38,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const emojiList = ['👍', '👎', '❤️', '🔥', '🎉', '🤔', '😂', '👋', '🤖', '✅', '✨', '🚀'];
   const reactionList = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
+  // Requested check for admin visibility
+  const isAdmin = typeof window !== 'undefined' && localStorage.getItem('ai_rw_admin_active') === 'true';
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -206,9 +209,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       console.error("Chat error:", error);
       let errorMessage = 'Habaye ikibazo cya tekinike. Ongera ugerageze mukanya.';
       
-      // Localized error message for empty API key scenario
-      if (error?.toString().includes("API key not found") || error?.toString().includes("401")) {
-        errorMessage = "Ikibazo cya API Key: Nyamuneka reba niba API Key yashyizwemo neza muri Environment Variables.";
+      // Localized error message for missing API key
+      if (error?.message === "API_KEY_MISSING" || error?.toString().includes("401") || error?.toString().includes("403")) {
+        errorMessage = "Ikibazo cya API Key: Nyamuneka reba niba API Key yashyizwemo neza muri Environment Variables ya Vercel.";
       }
 
       setMessages(prev => [...prev, {
@@ -293,6 +296,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
   const quickFeatures = [
+    // Standard hidden features (visible to Admin only)
+    ...(isAdmin ? [
+        { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
+        { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700' },
+    ] : []),
+    // Standard landing features in Kinyarwanda
     { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
     { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700' },
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
@@ -456,7 +465,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         {messages.length <= 2 && !searchQuery && (
            <div className="mt-8 mb-12 px-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="text-center mb-6">
-                 <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">Quick Access Services</p>
+                 <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">Hitamo Serivisi (Quick Access)</p>
                  <div className="h-0.5 w-12 bg-emerald-500/20 mx-auto mt-2 rounded-full"></div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">

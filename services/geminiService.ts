@@ -11,8 +11,9 @@ let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
   const apiKey = process.env?.API_KEY;
-  if (!apiKey) {
-    throw new Error("API key not found in environment variables.");
+  if (!apiKey || apiKey === '' || apiKey === 'undefined') {
+    console.error("ai.rw: API_KEY is missing from environment variables.");
+    throw new Error("API_KEY_MISSING");
   }
   if (!aiInstance) {
     aiInstance = new GoogleGenAI({ apiKey });
@@ -130,7 +131,7 @@ export const generateTextAnalysis = async (
 ): Promise<string> => {
   let toneInstruction = "";
   switch (tone) {
-    case 'formal': toneInstruction = "ukoresheje imvugo y'icyubahiro"; break;
+    case 'formal': toneInstruction = "ukokesheje imvugo y'icyubahiro"; break;
     case 'informal': toneInstruction = "ukoresheje imvugo isanzwe"; break;
     case 'friendly': toneInstruction = "ukoresheje imvugo ya gicuti"; break;
   }
@@ -322,7 +323,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text }] }],
       config: {
-        responseModalities: [Modality.AUDIO],
+        responseModalalities: [Modality.AUDIO],
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: { voiceName },

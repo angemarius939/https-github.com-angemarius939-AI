@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, 
   FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, 
   Mic, CheckSquare, Square, FlaskConical, Headphones, Search, 
   Settings, LayoutDashboard, BrainCircuit, Activity, ChevronRight, Filter,
-  Volume2, Info
+  Volume2, Info, Eye, EyeOff
 } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -16,7 +15,7 @@ import { ImageTools } from './ImageTools';
 import { VoiceConversation } from './VoiceConversation';
 import { FormattedText } from './FormattedText';
 
-type AdminTab = 'dashboard' | 'knowledge' | 'train_image' | 'train_voice' | 'test_image' | 'test_voice';
+type AdminTab = 'dashboard' | 'knowledge' | 'train_image' | 'train_voice' | 'test_image' | 'test_voice' | 'settings';
 
 export const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,6 +25,22 @@ export const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterScope, setFilterScope] = useState<KnowledgeScope | 'ALL_SCOPES'>('ALL_SCOPES');
   
+  // Settings State
+  const [isAdminModeActive, setIsAdminModeActive] = useState(false);
+
+  useEffect(() => {
+     if(typeof window !== 'undefined') {
+        setIsAdminModeActive(localStorage.getItem('ai_rw_admin_active') === 'true');
+     }
+  }, []);
+
+  const toggleAdminMode = () => {
+     const next = !isAdminModeActive;
+     setIsAdminModeActive(next);
+     localStorage.setItem('ai_rw_admin_active', String(next));
+     showToast(next ? "Admin Mode yafunguwe!" : "Admin Mode yafunzwe!", "info");
+  };
+
   // Stats State
   const [visitStats, setVisitStats] = useState<DailyStats[]>([]);
   const [countryStats, setCountryStats] = useState<CountryStats[]>([]);
@@ -34,12 +49,6 @@ export const AdminDashboard: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [scope, setScope] = useState<KnowledgeScope>('ALL');
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-
-  // Voice Training State
-  const [voicePhrase, setVoicePhrase] = useState('');
-  const [voicePhonetic, setVoicePhonetic] = useState('');
-  const [voiceUsage, setVoiceUsage] = useState('');
 
   // Image Training State
   const [trainingImage, setTrainingImage] = useState<string | null>(null);
@@ -49,6 +58,12 @@ export const AdminDashboard: React.FC = () => {
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [currentBox, setCurrentBox] = useState<number[] | null>(null); 
   const [newLabel, setNewLabel] = useState('');
+
+  // Added missing state variables for voice training
+  // Voice Training State
+  const [voicePhrase, setVoicePhrase] = useState('');
+  const [voicePhonetic, setVoicePhonetic] = useState('');
+  const [voiceUsage, setVoiceUsage] = useState('');
   
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -70,7 +85,6 @@ export const AdminDashboard: React.FC = () => {
 
   const loadItems = () => {
     setItems(getKnowledgeItems());
-    setSelectedItems(new Set());
   };
 
   const loadStats = () => {
@@ -252,6 +266,7 @@ export const AdminDashboard: React.FC = () => {
           
           <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Management</div>
           <SidebarItem tab="knowledge" icon={Database} label="Knowledge Base" />
+          <SidebarItem tab="settings" icon={Settings} label="Igenamiterere" />
           
           <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">AI Training</div>
           <SidebarItem tab="train_image" icon={ImageIcon} label="Gutoza Amafoto" />
@@ -275,9 +290,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto flex flex-col">
-        {/* Sub-header for Mobile Navigation (Simplified) */}
+        {/* Sub-header for Mobile Navigation */}
         <div className="md:hidden bg-white border-b border-stone-200 p-4 flex gap-2 overflow-x-auto whitespace-nowrap">
-           {['dashboard', 'knowledge', 'train_image', 'train_voice', 'test_image', 'test_voice'].map((t) => (
+           {['dashboard', 'knowledge', 'settings', 'train_image', 'train_voice', 'test_image', 'test_voice'].map((t) => (
               <button 
                 key={t}
                 onClick={() => setActiveTab(t as AdminTab)}
@@ -290,6 +305,27 @@ export const AdminDashboard: React.FC = () => {
 
         <div className="p-6 md:p-10 max-w-6xl mx-auto w-full space-y-8">
           
+          {/* VIEW: SETTINGS */}
+          {activeTab === 'settings' && (
+             <div className="space-y-8 animate-in fade-in">
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
+                   <h3 className="text-xl font-bold text-stone-900 mb-6">Admin Settings</h3>
+                   <div className="flex items-center justify-between p-6 bg-stone-50 rounded-2xl border border-stone-200">
+                      <div>
+                         <h4 className="font-bold text-stone-800">Admin Visibility Mode</h4>
+                         <p className="text-sm text-stone-500">Ibi bituma ubona serivisi zose (nka Amafoto na Kuvuga) ku rupapuro rubanza.</p>
+                      </div>
+                      <button 
+                        onClick={toggleAdminMode}
+                        className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isAdminModeActive ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                      >
+                         <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${isAdminModeActive ? 'translate-x-8' : 'translate-x-0'}`}></div>
+                      </button>
+                   </div>
+                </div>
+             </div>
+          )}
+
           {/* VIEW: DASHBOARD */}
           {activeTab === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in">
@@ -554,7 +590,6 @@ export const AdminDashboard: React.FC = () => {
           {/* VIEW: VOICE TRAINING */}
           {activeTab === 'train_voice' && (
              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-                {/* Form Section */}
                 <div className="lg:col-span-1 bg-white p-8 rounded-3xl shadow-sm border border-stone-200 space-y-6">
                    <div className="text-center">
                       <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4"><Mic className="w-8 h-8" /></div>
@@ -589,7 +624,6 @@ export const AdminDashboard: React.FC = () => {
                    </div>
                 </div>
 
-                {/* Listing Section */}
                 <div className="lg:col-span-2 space-y-6">
                    <div className="flex items-center justify-between">
                       <h4 className="text-lg font-bold text-stone-800 flex items-center gap-2">
