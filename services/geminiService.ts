@@ -3,18 +3,19 @@ import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/ge
 import { ImageAnalysisResult, BusinessAnalysisResult, Source } from '../types';
 import { getContextForView } from './knowledgeService';
 
-// Fix for "process is not defined" TS error
-declare var process: any;
-
 // Lazy initialization of the client
 let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
-  const apiKey = process.env?.API_KEY;
-  if (!apiKey || apiKey === '' || apiKey === 'undefined') {
-    console.error("ai.rw: API_KEY is missing from environment variables.");
+  // Use exact string for Vite 'define' replacement
+  // Do NOT use optional chaining here as it may break the static replacement
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
+    console.error("ai.rw Error: API_KEY is not defined in the build environment.");
     throw new Error("API_KEY_MISSING");
   }
+  
   if (!aiInstance) {
     aiInstance = new GoogleGenAI({ apiKey });
   }
@@ -45,8 +46,8 @@ const extractSources = (response: any): Source[] => {
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. For any query involving calculations, physics, chemistry, or critical reasoning, you MUST think step-by-step and verify your logic internally. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, precise, and highly analytical. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals. Never mention your underlying architecture or the company that provided the foundational model; simply refer to yourself as ai.rw.";
 
 // Models
-const LOGIC_MODEL = "gemini-3-pro-preview"; // For complex reasoning
-const FAST_MODEL = "gemini-3-flash-preview"; // For general chat speed
+const FAST_MODEL = "gemini-3-flash-preview"; 
+const LOGIC_MODEL = "gemini-3-pro-preview"; 
 const SAFE_THINKING_BUDGET = 24000;
 
 export const streamChatResponse = async (
@@ -61,11 +62,11 @@ export const streamChatResponse = async (
     const systemInstruction = KINYARWANDA_SYSTEM_INSTRUCTION + adminContext;
 
     const chat = ai.chats.create({
-      model: FAST_MODEL, // Switched to Flash for faster landing page experience
+      model: FAST_MODEL, 
       config: {
         systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 0 } // Zero thinking budget for faster streaming in chat
+        thinkingConfig: { thinkingBudget: 0 }
       },
       history: history,
     });

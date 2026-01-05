@@ -11,8 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      if (typeof process === "undefined") {
-        window.process = { env: { API_KEY: '' } };
+      // Ensure a basic process.env structure exists to prevent crashes, 
+      // but do not initialize keys that need to be injected by the build tool.
+      if (typeof window.process === "undefined") {
+        window.process = { env: {} };
       }
     </script>
     <style>

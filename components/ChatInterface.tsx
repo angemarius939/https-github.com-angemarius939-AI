@@ -16,7 +16,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      text: 'Muraho! Nitwa ai.rw. Nagufasha iki uyu munsi?',
+      text: 'Muraho! Nitwa **ai.rw**, umufasha wawe mu Kinyarwanda. \n\nNagufasha iki uyu munsi? Hitamo muri serivisi ziri hasi cyangwa unyandikire hano.',
       timestamp: Date.now()
     }
   ]);
@@ -38,7 +38,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const emojiList = ['👍', '👎', '❤️', '🔥', '🎉', '🤔', '😂', '👋', '🤖', '✅', '✨', '🚀'];
   const reactionList = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-  // Requested check for admin visibility
+  // Check for admin visibility
   const isAdmin = typeof window !== 'undefined' && localStorage.getItem('ai_rw_admin_active') === 'true';
 
   const scrollToBottom = () => {
@@ -209,9 +209,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       console.error("Chat error:", error);
       let errorMessage = 'Habaye ikibazo cya tekinike. Ongera ugerageze mukanya.';
       
-      // Localized error message for missing API key
       if (error?.message === "API_KEY_MISSING" || error?.toString().includes("401") || error?.toString().includes("403")) {
-        errorMessage = "Ikibazo cya API Key: Nyamuneka reba niba API Key yashyizwemo neza muri Environment Variables ya Vercel.";
+        errorMessage = "Ikibazo cya API Key: Nyamuneka reba niba API Key yashyizwemo neza muri Environment Variables ya Vercel (Production environment).";
       }
 
       setMessages(prev => [...prev, {
@@ -296,17 +295,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
   const quickFeatures = [
-    // Standard hidden features (visible to Admin only)
+    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700', description: 'Inama z\'ubuhinzi' },
+    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700', description: 'Gusesengura' },
+    { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700', description: 'Tegura isomo' },
+    { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-teal-100 text-teal-700', description: 'Kosora inyandiko' },
+    { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-pink-100 text-pink-700', description: 'Hindura ijwi' },
     ...(isAdmin ? [
-        { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
-        { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700' },
+        { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700', description: 'Hanga ishusho' },
+        { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700', description: 'Ganira na AI' },
     ] : []),
-    // Standard landing features in Kinyarwanda
-    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
-    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700' },
-    { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
-    { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-teal-100 text-teal-700' },
-    { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-pink-100 text-pink-700' },
   ];
 
   return (
@@ -462,26 +459,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
           </div>
         ))}
         
-        {messages.length <= 2 && !searchQuery && (
+        {messages.length <= 1 && !searchQuery && (
            <div className="mt-8 mb-12 px-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              <div className="text-center mb-6">
-                 <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">Hitamo Serivisi (Quick Access)</p>
-                 <div className="h-0.5 w-12 bg-emerald-500/20 mx-auto mt-2 rounded-full"></div>
+              <div className="text-center mb-8">
+                 <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em] mb-2">Hitamo Serivisi (Quick Access)</p>
+                 <div className="h-0.5 w-12 bg-emerald-500/20 mx-auto rounded-full"></div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                  {quickFeatures.map((feat, idx) => (
                     <button 
                       key={idx}
                       type="button"
                       onClick={() => navigateTo(feat.view)}
-                      className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-emerald-100 shadow-sm transition-all group active:scale-95 cursor-pointer ${feat.color} bg-opacity-5 hover:bg-opacity-10 hover:shadow-md hover:-translate-y-1 duration-300`}
+                      className={`flex flex-col items-center justify-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all group active:scale-95 cursor-pointer ${feat.color} bg-opacity-5 hover:bg-opacity-10 hover:shadow-xl hover:-translate-y-2 duration-300`}
                     >
-                       <div className={`p-3 rounded-2xl mb-2 ${feat.color} bg-opacity-20 group-hover:rotate-6 transition-all`}>
-                          <feat.icon className="w-6 h-6" />
+                       <div className={`p-4 rounded-2xl mb-4 ${feat.color} bg-opacity-20 group-hover:rotate-6 transition-all shadow-sm`}>
+                          <feat.icon className="w-8 h-8" />
                        </div>
-                       <span className="text-xs font-black uppercase tracking-wider">{feat.label}</span>
+                       <span className="text-sm font-black uppercase tracking-wider mb-1">{feat.label}</span>
+                       <span className="text-[10px] opacity-60 font-medium">{feat.description}</span>
                     </button>
                  ))}
+              </div>
+              <div className="mt-12 p-6 bg-white border border-emerald-50 rounded-3xl text-center flex flex-col items-center">
+                 <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mb-3">
+                    <Sparkles className="w-5 h-5" />
+                 </div>
+                 <h4 className="text-sm font-bold text-emerald-900">Ukeneye ubufasha?</h4>
+                 <p className="text-xs text-stone-500 mt-1 max-w-xs">Andika ikibazo cyawe hano hasi, ai.rw iguhe igisubizo mu Kinyarwanda mu masegonda make.</p>
               </div>
            </div>
         )}
