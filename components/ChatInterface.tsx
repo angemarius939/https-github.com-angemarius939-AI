@@ -24,26 +24,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Voice Input State
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const textBeforeListening = useRef('');
-
-  // Clear Confirmation State
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
-
-  // Copy State
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-
-  // Emoji State
   const [showInputEmoji, setShowInputEmoji] = useState(false);
   const [activeReactionId, setActiveReactionId] = useState<string | null>(null);
-
-  // Sound state tracker
   const hasPlayedReceiveSound = useRef(false);
 
   const emojiList = ['👍', '👎', '❤️', '🔥', '🎉', '🤔', '😂', '👋', '🤖', '✅', '✨', '🚀'];
@@ -107,9 +96,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         osc.start(now);
         osc.stop(now + 0.1);
       }
-    } catch (e) {
-      console.error("Audio play failed", e);
-    }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -120,25 +107,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'rw-RW';
 
-      recognitionRef.current.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        setIsListening(false);
-      };
+      recognitionRef.current.onstart = () => setIsListening(true);
+      recognitionRef.current.onend = () => setIsListening(false);
+      recognitionRef.current.onerror = () => setIsListening(false);
 
       recognitionRef.current.onresult = (event: any) => {
         let fullTranscript = '';
         for (let i = 0; i < event.results.length; ++i) {
              fullTranscript += event.results[i][0].transcript;
         }
-
         const separator = textBeforeListening.current && !textBeforeListening.current.endsWith(' ') && fullTranscript ? ' ' : '';
         setInputValue(textBeforeListening.current + separator + fullTranscript);
       };
@@ -155,7 +132,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       alert("Browser yanyu ntabwo ishyigikiye kwandika ukoresheje ijwi.");
       return;
     }
-
     if (isListening) {
       recognitionRef.current.stop();
     } else {
@@ -165,14 +141,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   };
 
   const handleSendMessage = async () => {
-    if (isListening && recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-
+    if (isListening && recognitionRef.current) recognitionRef.current.stop();
     if (!inputValue.trim() || isStreaming) return;
 
     playUISound('send');
-
     if (isSearchOpen) {
       setSearchQuery('');
       setIsSearchOpen(false);
@@ -217,7 +189,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
             playUISound('receive');
             hasPlayedReceiveSound.current = true;
           }
-
           currentText += chunk;
           setMessages(prev => prev.map(m => 
             m.id === modelMsgId ? { ...m, text: currentText } : m
@@ -226,7 +197,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         (newSources) => {
            newSources.forEach(s => uniqueSources.set(s.uri, s));
            const sourceArray = Array.from(uniqueSources.values());
-           
            setMessages(prev => prev.map(m => 
              m.id === modelMsgId ? { ...m, sources: sourceArray } : m
            ));
@@ -234,13 +204,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       );
     } catch (error: any) {
       console.error("Chat error:", error);
+      let errorMessage = 'Habaye ikibazo cya tekinike. Ongera ugerageze mukanya.';
       
-      let errorMessage = 'Habaye ikibazo. Ongera ugerageze.';
-      
-      if (error?.message === "MISSING_API_KEY") {
-        errorMessage = "Ikibazo cya Tekinike: 'VITE_API_KEY' ntibonetse muri Vercel Settings. Nyamuneka shyiramo API Key yawe.";
-      } else if (error?.toString().includes("401") || error?.toString().includes("403")) {
-        errorMessage = "Ikibazo cya API Key: API Key yanyu ntabwo yemewe cyangwa nta burenganzira ifite.";
+      // Localized error message for empty API key scenario
+      if (error?.toString().includes("API key not found") || error?.toString().includes("401")) {
+        errorMessage = "Ikibazo cya API Key: Nyamuneka reba niba API Key yashyizwemo neza muri Environment Variables.";
       }
 
       setMessages(prev => [...prev, {
@@ -263,7 +231,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       timestamp: Date.now()
     }]);
     setSearchQuery('');
-    setInputValue(''); // Clear input text as well
+    setInputValue('');
     setIsSearchOpen(false);
     setIsClearConfirmOpen(false);
   };
@@ -314,11 +282,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     return new Date(timestamp).toLocaleTimeString('rw-RW', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Direct navigation handler without extra checks for maximum reliability
   const navigateTo = (view: AppView) => {
-     if (onNavigate) {
-       onNavigate(view);
-     }
+     if (onNavigate) onNavigate(view);
   };
 
   const filteredMessages = messages.filter(msg => 
@@ -328,9 +293,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
   const quickFeatures = [
-    // Note: Amafoto and Kuvuga are hidden per request. Admin can restore them by uncommenting below.
-    // { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
-    // { view: AppView.VOICE_CONVERSATION, icon: Mic, label: 'Kuvuga', color: 'bg-blue-100 text-blue-700' },
     { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
     { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700' },
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
@@ -355,20 +317,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 </p>
               </div>
               <div className="flex gap-3 w-full pt-2">
-                <Button 
-                  variant="secondary" 
-                  className="flex-1" 
-                  onClick={() => { playUISound('click'); setIsClearConfirmOpen(false); }}
-                >
-                  Oya, Bireke
-                </Button>
-                <Button 
-                  variant="danger" 
-                  className="flex-1" 
-                  onClick={confirmClearChat}
-                >
-                  Yego, Siba
-                </Button>
+                <Button variant="secondary" className="flex-1" onClick={() => { playUISound('click'); setIsClearConfirmOpen(false); }}>Oya, Bireke</Button>
+                <Button variant="danger" className="flex-1" onClick={confirmClearChat}>Yego, Siba</Button>
               </div>
             </div>
           </div>
@@ -390,44 +340,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 className="w-full pl-9 pr-4 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
               />
             </div>
-            <Button 
-              variant="ghost" 
-              onClick={() => { playUISound('click'); setIsSearchOpen(false); setSearchQuery(''); }}
-              className="p-2 h-10 w-10 text-stone-500 hover:text-stone-700"
-              title="Funga"
-            >
+            <Button variant="ghost" onClick={() => { playUISound('click'); setIsSearchOpen(false); setSearchQuery(''); }} className="p-2 h-10 w-10 text-stone-500 hover:text-stone-700">
               <X className="w-5 h-5" />
             </Button>
           </div>
         ) : (
           <>
-            <div>
-              <h2 className="text-lg font-semibold text-emerald-900">Ikiganiro</h2>
-              <p className="text-sm text-emerald-600">Ganira na ai.rw mu Kinyarwanda</p>
+            <div className="animate-in fade-in slide-in-from-left-2 duration-300">
+              <h2 className="text-lg font-black text-emerald-950 uppercase tracking-tight">ai.rw</h2>
+              <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest opacity-80">Ubufasha mu Kinyarwanda</p>
             </div>
             <div className="flex gap-1">
-              <Button 
-                variant="ghost" 
-                onClick={() => { playUISound('click'); setIsSearchOpen(true); }}
-                title="Shakisha"
-                className="text-emerald-700 hover:bg-emerald-100/50"
-              >
+              <Button variant="ghost" onClick={() => { playUISound('click'); setIsSearchOpen(true); }} className="text-emerald-700 hover:bg-emerald-100/50">
                 <Search className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="ghost" 
-                onClick={handleQuickClear}
-                title="Siba Byose (Quick)"
-                className="text-stone-400 hover:text-stone-600 hover:bg-stone-100"
-              >
+              <Button variant="ghost" onClick={handleQuickClear} className="text-stone-400 hover:text-stone-600 hover:bg-stone-100">
                 <RefreshCw className="w-5 h-5" />
               </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => { playUISound('click'); setIsClearConfirmOpen(true); }}
-                title="Siba Ikiganiro"
-                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
+              <Button variant="ghost" onClick={() => { playUISound('click'); setIsClearConfirmOpen(true); }} className="text-red-500 hover:text-red-700 hover:bg-red-50">
                 <Trash2 className="w-5 h-5" />
               </Button>
             </div>
@@ -436,8 +366,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50 relative" onClick={() => setActiveReactionId(null)}>
-        
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 relative" onClick={() => setActiveReactionId(null)}>
         {filteredMessages.length === 0 && searchQuery && (
           <div className="flex flex-col items-center justify-center h-full text-stone-400 space-y-2">
             <Search className="w-8 h-8 opacity-20" />
@@ -446,20 +375,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         )}
 
         {filteredMessages.map((msg) => (
-          <div 
-            key={msg.id} 
-            className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}
-          >
+          <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex max-w-[90%] md:max-w-[80%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center mx-2 ${
+              <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center mx-2 shadow-sm ${
                 msg.role === MessageRole.USER ? 'bg-emerald-600' : 
                 msg.role === MessageRole.ERROR ? 'bg-red-500' : 'bg-emerald-600'
               }`}>
-                {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
+                {msg.role === MessageRole.USER ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
               </div>
               
               <div className="flex flex-col">
-                <div className={`p-3 rounded-2xl shadow-sm min-w-[80px] group relative ${
+                <div className={`p-4 rounded-2xl shadow-sm min-w-[80px] group relative animate-in fade-in slide-in-from-bottom-1 duration-300 ${
                   msg.role === MessageRole.USER 
                     ? 'bg-emerald-600 text-white rounded-tr-none' 
                     : msg.role === MessageRole.ERROR
@@ -474,53 +400,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                     )}
                     
                     {!msg.text && isStreaming && msg.role === MessageRole.MODEL && msg.id === lastMessageId && (
-                      <div className="py-2 px-1">
-                        <div className="flex space-x-1.5 items-center bg-emerald-50/80 rounded-full px-2 py-1 w-fit">
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></div>
+                      <div className="py-2">
+                        <div className="flex space-x-1 items-center bg-emerald-50/80 rounded-full px-2 py-1 w-fit">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></div>
                         </div>
                       </div>
                     )}
                   </div>
                   
-                  {/* Reaction Logic */}
                   {msg.reaction && (
-                     <div 
-                       onClick={() => handleReaction(msg.id, msg.reaction!)}
-                       className={`absolute -bottom-3 ${msg.role === MessageRole.USER ? 'left-0' : 'right-0'} bg-white border border-stone-200 rounded-full px-1.5 py-0.5 text-xs shadow-sm cursor-pointer hover:bg-stone-50 transition-transform hover:scale-110 flex items-center z-10`}
-                       title="Kura reaction"
-                     >
+                     <div onClick={() => handleReaction(msg.id, msg.reaction!)} className={`absolute -bottom-3 ${msg.role === MessageRole.USER ? 'left-0' : 'right-0'} bg-white border border-stone-200 rounded-full px-2 py-0.5 text-xs shadow-sm cursor-pointer hover:bg-stone-50 transition-transform hover:scale-110 flex items-center z-10`}>
                        {msg.reaction}
                      </div>
                   )}
 
-                  <div className={`flex items-center justify-end gap-2 mt-1 ${
-                    msg.role === MessageRole.USER 
-                      ? 'text-emerald-100/80' 
-                      : msg.role === MessageRole.ERROR 
-                      ? 'text-red-300' 
-                      : 'text-stone-400'
+                  <div className={`flex items-center justify-end gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity ${
+                    msg.role === MessageRole.USER ? 'text-emerald-100/80' : msg.role === MessageRole.ERROR ? 'text-red-300' : 'text-stone-400'
                   }`}>
                     {msg.role === MessageRole.MODEL && msg.text && !msg.reaction && (
                       <div className="relative">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setActiveReactionId(activeReactionId === msg.id ? null : msg.id); }}
-                          className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none ${
-                            activeReactionId === msg.id ? 'text-emerald-600 bg-emerald-50' : 'text-stone-300 hover:text-emerald-600'
-                          }`}
-                          title="Tanga Reaction"
-                        >
+                        <button onClick={(e) => { e.stopPropagation(); setActiveReactionId(activeReactionId === msg.id ? null : msg.id); }} className="p-1 rounded hover:bg-emerald-50 transition-colors">
                           <Smile size={14} />
                         </button>
                         {activeReactionId === msg.id && (
                           <div className="absolute bottom-6 left-0 bg-white border border-stone-200 rounded-lg shadow-lg p-1.5 flex gap-1 z-20 animate-in fade-in zoom-in-95 duration-150">
                              {reactionList.map(emoji => (
-                               <button
-                                 key={emoji}
-                                 onClick={() => handleReaction(msg.id, emoji)}
-                                 className="hover:bg-stone-100 rounded p-1 text-base transition-transform hover:scale-110"
-                               >
+                               <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="hover:bg-stone-100 rounded p-1 text-base transition-transform hover:scale-110">
                                  {emoji}
                                </button>
                              ))}
@@ -528,90 +435,61 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                         )}
                       </div>
                     )}
-
                     {msg.role === MessageRole.MODEL && msg.text && (
-                      <button 
-                        onClick={() => handleCopyMessage(msg.text, msg.id)}
-                        className={`p-1 rounded hover:bg-emerald-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                          copiedMessageId === msg.id ? 'text-emerald-600' : 'text-stone-300 hover:text-emerald-600'
-                        }`}
-                        title="Koporora"
-                        aria-label="Koporora ubutumwa"
-                      >
+                      <button onClick={() => handleCopyMessage(msg.text, msg.id)} className="p-1 rounded hover:bg-emerald-50 transition-colors">
                         {copiedMessageId === msg.id ? <Check size={14} /> : <Copy size={14} />}
                       </button>
                     )}
-
-                    {/* Delete Message Button */}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }}
-                      className={`p-1 rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                        msg.role === MessageRole.USER 
-                          ? 'text-emerald-200 hover:text-white hover:bg-emerald-700' 
-                          : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
-                      }`}
-                      title="Siba"
-                      aria-label="Siba ubu butumwa"
-                    >
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteMessage(msg.id); }} className="p-1 rounded hover:bg-red-50 transition-colors">
                       <Trash2 size={14} />
                     </button>
-
-                    <span className="text-[10px] font-medium">{formatTime(msg.timestamp)}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{formatTime(msg.timestamp)}</span>
                   </div>
 
-                  {/* Sources Display */}
-                  {msg.sources && msg.sources.length > 0 && (
-                     <SourcesToggle sources={msg.sources} />
-                  )}
-
+                  {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} />}
                 </div>
               </div>
             </div>
           </div>
         ))}
         
-        {/* Welcome Dashboard State - Rendered AFTER messages so it's at the bottom when empty/started */}
-        {/* Always show if query is empty and messages are few to keep accessible */}
         {messages.length <= 2 && !searchQuery && (
-           <div className="mt-4 mb-8 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-3 tracking-wider text-center">Hitamo Serivisi (Quick Access)</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+           <div className="mt-8 mb-12 px-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="text-center mb-6">
+                 <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">Quick Access Services</p>
+                 <div className="h-0.5 w-12 bg-emerald-500/20 mx-auto mt-2 rounded-full"></div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                  {quickFeatures.map((feat, idx) => (
                     <button 
                       key={idx}
                       type="button"
                       onClick={() => navigateTo(feat.view)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border border-stone-100 shadow-sm transition-all group active:scale-95 cursor-pointer ${feat.color} bg-opacity-10`}
+                      className={`flex flex-col items-center justify-center p-4 rounded-3xl border border-emerald-100 shadow-sm transition-all group active:scale-95 cursor-pointer ${feat.color} bg-opacity-5 hover:bg-opacity-10 hover:shadow-md hover:-translate-y-1 duration-300`}
                     >
-                       <div className={`p-2 rounded-full mb-2 ${feat.color} bg-opacity-20 group-hover:scale-110 transition-transform`}>
-                          <feat.icon className="w-5 h-5" />
+                       <div className={`p-3 rounded-2xl mb-2 ${feat.color} bg-opacity-20 group-hover:rotate-6 transition-all`}>
+                          <feat.icon className="w-6 h-6" />
                        </div>
-                       <span className="text-[10px] font-bold text-stone-700">{feat.label}</span>
+                       <span className="text-xs font-black uppercase tracking-wider">{feat.label}</span>
                     </button>
                  ))}
               </div>
            </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white border-t border-emerald-100 relative">
-        {/* Emoji Picker Popup */}
+      <div className="p-4 bg-white border-t border-emerald-100 relative shadow-[0_-10px_20px_rgba(16,185,129,0.03)]">
         {showInputEmoji && (
-          <div className="absolute bottom-20 left-4 bg-white border border-emerald-100 rounded-xl shadow-xl p-3 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200 w-64">
-             <div className="flex justify-between items-center mb-2 pb-2 border-b border-stone-100">
-               <span className="text-xs font-bold text-stone-500">Emojis</span>
+          <div className="absolute bottom-20 left-4 bg-white border border-emerald-100 rounded-2xl shadow-2xl p-4 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200 w-72">
+             <div className="flex justify-between items-center mb-3 pb-2 border-b border-stone-100">
+               <span className="text-xs font-black uppercase tracking-widest text-emerald-900/40">Hitamo Emoji</span>
                <button onClick={() => setShowInputEmoji(false)} className="text-stone-400 hover:text-stone-600"><X size={14}/></button>
              </div>
-             <div className="grid grid-cols-6 gap-1">
+             <div className="grid grid-cols-6 gap-2">
                {emojiList.map(emoji => (
-                 <button
-                   key={emoji}
-                   onClick={() => handleAddInputEmoji(emoji)}
-                   className="p-1.5 hover:bg-emerald-50 rounded text-lg transition-transform hover:scale-110"
-                 >
+                 <button key={emoji} onClick={() => handleAddInputEmoji(emoji)} className="p-2 hover:bg-emerald-50 rounded-lg text-xl transition-transform hover:scale-125">
                    {emoji}
                  </button>
                ))}
@@ -619,30 +497,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
           </div>
         )}
 
-        <div className="flex items-end gap-2 max-w-4xl mx-auto">
+        <div className="flex items-end gap-3 max-w-4xl mx-auto">
           <div className="relative flex-1">
              <button
                onClick={() => setShowInputEmoji(!showInputEmoji)}
-               className={`absolute left-3 top-3 text-stone-400 hover:text-emerald-500 transition-colors p-1 rounded-md hover:bg-emerald-50 ${showInputEmoji ? 'text-emerald-500 bg-emerald-50' : ''}`}
-               title="Shyiramo Emoji"
+               className={`absolute left-4 top-4 text-stone-400 hover:text-emerald-600 transition-all p-1 rounded-md ${showInputEmoji ? 'text-emerald-600 bg-emerald-50' : ''}`}
              >
-               <Smile size={18} />
+               <Smile size={20} />
              </button>
             <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? "Ndakumva..." : "Andika ubutumwa hano..."}
-              className={`w-full p-3 pl-12 pr-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none h-14 max-h-32 overflow-y-auto custom-scrollbar ${isListening ? 'bg-emerald-50' : ''}`}
+              placeholder={isListening ? "Ndakumva..." : "Baza ai.rw icyo wifuza..."}
+              className={`w-full p-4 pl-14 pr-12 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all resize-none h-14 max-h-40 overflow-y-auto font-medium text-stone-800 ${isListening ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50/50'}`}
               disabled={isStreaming || isListening}
             />
             {inputValue && (
-              <button
-                onClick={handleClearInput}
-                className="absolute right-3 top-3 text-stone-300 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-stone-100"
-                title="Siba byose"
-              >
-                <X size={16} />
+              <button onClick={handleClearInput} className="absolute right-4 top-4 text-stone-300 hover:text-red-500 transition-colors p-1">
+                <X size={18} />
               </button>
             )}
           </div>
@@ -650,8 +523,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
           <Button 
             variant={isListening ? "danger" : "secondary"}
             onClick={toggleListening}
-            className={`h-14 w-14 rounded-xl transition-all ${isListening ? 'animate-pulse ring-2 ring-red-400' : ''}`}
-            title="Koresha Ijwi"
+            className={`h-14 w-14 rounded-full transition-all shadow-md ${isListening ? 'animate-pulse ring-4 ring-red-400/20' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
             disabled={isStreaming}
           >
             {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -661,14 +533,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
             onClick={handleSendMessage} 
             disabled={!inputValue.trim() || isStreaming}
             isLoading={isStreaming}
-            className="h-14 w-14 rounded-xl"
+            className="h-14 w-14 rounded-full shadow-lg shadow-emerald-500/20"
           >
             {!isStreaming && <Send className="w-5 h-5" />}
           </Button>
         </div>
-        <p className="text-center text-xs text-stone-400 mt-2">
-          ai.rw ishobora gukora amakosa. Banza ugenzure amakuru y'ingenzi.
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-3 text-[10px] font-black uppercase tracking-[0.1em] text-stone-400">
+           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40"></div>
+           ai.rw ishobora gukora amakosa. Banza ugenzure amakuru.
+        </div>
       </div>
     </div>
   );

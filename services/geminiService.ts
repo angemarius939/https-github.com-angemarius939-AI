@@ -10,11 +10,11 @@ declare var process: any;
 let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
+  const apiKey = process.env?.API_KEY;
+  if (!apiKey) {
+    throw new Error("API key not found in environment variables.");
+  }
   if (!aiInstance) {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      throw new Error("MISSING_API_KEY");
-    }
     aiInstance = new GoogleGenAI({ apiKey });
   }
   return aiInstance;
@@ -44,9 +44,9 @@ const extractSources = (response: any): Source[] => {
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. For any query involving calculations, physics, chemistry, or critical reasoning, you MUST think step-by-step and verify your logic internally. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, precise, and highly analytical. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals. Never mention your underlying architecture or the company that provided the foundational model; simply refer to yourself as ai.rw.";
 
 // Models
-const LOGIC_MODEL = "gemini-3-pro-preview"; // For math, science, and complex reasoning
-const FAST_MODEL = "gemini-3-flash-preview"; // For lightweight tasks to save quota
-const SAFE_THINKING_BUDGET = 24000; // Balanced budget for reasoning without quota/timeout risk
+const LOGIC_MODEL = "gemini-3-pro-preview"; // For complex reasoning
+const FAST_MODEL = "gemini-3-flash-preview"; // For general chat speed
+const SAFE_THINKING_BUDGET = 24000;
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -60,11 +60,11 @@ export const streamChatResponse = async (
     const systemInstruction = KINYARWANDA_SYSTEM_INSTRUCTION + adminContext;
 
     const chat = ai.chats.create({
-      model: LOGIC_MODEL,
+      model: FAST_MODEL, // Switched to Flash for faster landing page experience
       config: {
         systemInstruction: systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
+        thinkingConfig: { thinkingBudget: 0 } // Zero thinking budget for faster streaming in chat
       },
       history: history,
     });
@@ -107,10 +107,10 @@ export const generateConversationResponse = async (
   try {
     const ai = getAiClient();
     const chat = ai.chats.create({
-      model: FAST_MODEL, // Using Flash for speed in voice chat
+      model: FAST_MODEL,
       config: {
         systemInstruction: CONVERSATION_INSTRUCTION,
-        thinkingConfig: { thinkingBudget: 0 } // No thinking needed for quick chat
+        thinkingConfig: { thinkingBudget: 0 }
       },
       history: history,
     });
@@ -149,11 +149,11 @@ export const generateTextAnalysis = async (
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: LOGIC_MODEL,
+      model: FAST_MODEL,
       contents: finalPrompt,
       config: {
         systemInstruction: "You are a Kinyarwanda language and technical logic expert named ai.rw.",
-        thinkingConfig: { thinkingBudget: 12000 }
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
 
@@ -171,7 +171,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: FAST_MODEL, // Using Flash for image analysis to ensure broader quota and faster response
+      model: FAST_MODEL,
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: base64Image } },
@@ -181,7 +181,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
       config: {
         systemInstruction: systemPrompt,
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: 8000 },
+        thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -228,7 +228,6 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
         ]
       }
     });
-
     return response.text || "Nta nyandiko ibonetse.";
   } catch (error) {
     console.error("ai.rw OCR Error:", error);
@@ -238,67 +237,51 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
   const primaryModel = "gemini-2.5-flash-image"; 
-  const fallbackModel = "imagen-4.0-generate-001";
   const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9", "3:2", "2:3"];
   const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
-  const finalPrompt = `Create a high quality image: ${prompt}`;
-
-  const ai = getAiClient();
-
-  try {
-    const response = await ai.models.generateContent({
-      model: primaryModel,
-      contents: { parts: [{ text: finalPrompt }] },
-      config: { imageConfig: { aspectRatio: safeRatio } }
-    });
-    
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData) return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
-    }
-    throw new Error("No image generated");
-  } catch (primaryError) {
-    try {
-      const response = await ai.models.generateImages({
-        model: fallbackModel,
-        prompt: finalPrompt,
-        config: { numberOfImages: 1, aspectRatio: safeRatio }
-      });
-      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
-      if (b64) return `data:image/png;base64,${b64}`;
-      throw new Error("No image generated");
-    } catch (fallbackError) {
-      console.error("ai.rw Image Gen Error:", fallbackError);
-      throw fallbackError;
-    }
-  }
-};
-
-export const generateRuralAdvice = async (
-  prompt: string,
-  sector: 'agriculture' | 'business' | 'services' | 'technology' | 'climate'
-): Promise<{ text: string, sources: Source[] }> => {
-  let systemRole = "You are ai.rw, an expert rural advisor in Rwanda.";
-  const adminContext = getContextForView('RURAL');
-  const systemInstruction = systemRole + adminContext + " Answer in Kinyarwanda. Promote sustainable practices.";
-  const searchPrompt = `${prompt} (Search using site:.rw OR site:.gov.rw OR site:.ac.rw OR site:.org.rw)`;
 
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: LOGIC_MODEL,
-      contents: searchPrompt,
+      model: primaryModel,
+      contents: {
+        parts: [{ text: `Create a high quality image: ${prompt}` }],
+      },
       config: {
-        systemInstruction: systemInstruction,
-        tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
-      }
+        imageConfig: {
+          aspectRatio: safeRatio as any,
+        },
+      },
     });
 
-    return { 
-      text: response.text || "Ntabwo bishobotse kubona inama.",
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    throw new Error("No image data returned from model");
+  } catch (error) {
+    console.error("ai.rw Image Gen Error:", error);
+    throw error;
+  }
+};
+
+export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
+  const ai = getAiClient();
+  const context = getContextForView('RURAL');
+  const systemInstruction = `You are an expert advisor for rural development in Rwanda specializing in ${sector}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: FAST_MODEL,
+      contents: query,
+      config: {
+        systemInstruction,
+        tools: [{ googleSearch: {} }]
+      }
+    });
+    return {
+      text: response.text || "",
       sources: extractSources(response)
     };
   } catch (error) {
@@ -307,125 +290,117 @@ export const generateRuralAdvice = async (
   }
 };
 
-export const generateCourse = async (
-  topic: string,
-  level: string,
-  duration?: string,
-  prerequisites?: string
-): Promise<{ text: string, sources: Source[] }> => {
-  const adminContext = getContextForView('COURSE');
-  const systemInstruction = `You are ai.rw, a world-class academic expert creating custom courses in Kinyarwanda. Use headings like ## 1. Ibikubiye mu Isomo. ${adminContext}`;
-  let prompt = `Create a high-quality ${level} level course about: ${topic}.`;
-  if (duration) prompt += `\nEstimated Duration: ${duration}.`;
-  if (prerequisites) prompt += `\nPrerequisites: ${prerequisites}.`;
+export const generateCourse = async (topic: string, level: string, duration: string, prerequisites: string): Promise<{ text: string, sources: Source[] }> => {
+  const ai = getAiClient();
+  const context = getContextForView('COURSE');
+  const systemInstruction = `You are an expert educator. Create a comprehensive course on ${topic} at ${level} level, intended for a duration of ${duration}. Prerequisites: ${prerequisites}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
 
   try {
-    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: LOGIC_MODEL,
-      contents: prompt,
+      contents: `Generate a detailed course outline and content for: ${topic}`,
       config: {
-        systemInstruction: systemInstruction,
+        systemInstruction,
         tools: [{ googleSearch: {} }],
         thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
       }
     });
-
-    return { 
-      text: response.text || "Ntabwo bishobotse gutegura isomo.",
+    return {
+      text: response.text || "",
       sources: extractSources(response)
     };
   } catch (error) {
-    console.error("ai.rw Education Error:", error);
+    console.error("ai.rw Course Error:", error);
     throw error;
   }
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const model = "gemini-2.5-flash-preview-tts";
-  let apiVoice = voiceName === 'AdVoice' ? 'Fenrir' : voiceName; 
-
+  const ai = getAiClient();
   try {
-    const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: model,
-      contents: [{ parts: [{ text: text }] }],
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text }] }],
       config: {
-        responseModalities: [Modality.AUDIO], 
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: apiVoice } } },
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName },
+          },
+        },
       },
     });
-    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) throw new Error("No audio data returned");
+    return base64Audio;
   } catch (error) {
-    console.error("ai.rw TTS Error:", error);
+    console.error("ai.rw Speech Error:", error);
     throw error;
   }
 };
 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
-  const adminContext = getContextForView('BUSINESS');
-  const systemInstruction = `You are 'Umujyanama' by ai.rw, a senior Data Scientist for Rwanda. Generate structured reports in Kinyarwanda with mathematical precision. ${adminContext}`;
+  const ai = getAiClient();
+  const context = getContextForView('BUSINESS');
+  const systemInstruction = `You are a professional business and data analyst for ai.rw. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
 
   try {
-    const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: LOGIC_MODEL,
+      model: FAST_MODEL,
       contents: input,
       config: {
-        systemInstruction: systemInstruction,
+        systemInstruction,
         responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET },
         responseSchema: {
-           type: Type.OBJECT,
-           properties: {
-             summary: { type: Type.STRING },
-             isFinancial: { type: Type.BOOLEAN },
-             financials: {
-               type: Type.OBJECT,
-               properties: {
-                 revenue: { type: Type.NUMBER },
-                 expense: { type: Type.NUMBER },
-                 profit: { type: Type.NUMBER },
-                 currency: { type: Type.STRING }
-               },
-               nullable: true
-             },
-             kpiCards: {
-               type: Type.ARRAY,
-               items: {
-                 type: Type.OBJECT,
-                 properties: {
-                   label: { type: Type.STRING },
-                   value: { type: Type.STRING },
-                   color: { type: Type.STRING }
-                 }
-               },
-               nullable: true
-             },
-             risks: { type: Type.ARRAY, items: { type: Type.STRING } },
-             advice: { type: Type.ARRAY, items: { type: Type.STRING } },
-             chartData: {
-               type: Type.ARRAY,
-               items: {
-                 type: Type.OBJECT,
-                 properties: {
-                   label: { type: Type.STRING },
-                   value: { type: Type.NUMBER },
-                   type: { type: Type.STRING }
-                 }
-               }
-             }
-           },
-           required: ["summary", "isFinancial", "risks", "advice", "chartData"]
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            isFinancial: { type: Type.BOOLEAN },
+            financials: {
+              type: Type.OBJECT,
+              properties: {
+                revenue: { type: Type.NUMBER },
+                expense: { type: Type.NUMBER },
+                profit: { type: Type.NUMBER },
+                currency: { type: Type.STRING }
+              }
+            },
+            kpiCards: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING },
+                  value: { type: Type.STRING },
+                  color: { type: Type.STRING }
+                }
+              }
+            },
+            risks: { type: Type.ARRAY, items: { type: Type.STRING } },
+            advice: { type: Type.ARRAY, items: { type: Type.STRING } },
+            chartData: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING },
+                  value: { type: Type.NUMBER },
+                  type: { type: Type.STRING }
+                }
+              }
+            }
+          },
+          required: ["summary", "isFinancial", "risks", "advice", "chartData"]
         }
       }
     });
 
     const text = response.text;
-    if (!text) throw new Error("No analysis generated");
+    if (!text) throw new Error("No analysis result");
     return JSON.parse(text) as BusinessAnalysisResult;
   } catch (error) {
-    console.error("ai.rw Data Analysis Error:", error);
+    console.error("ai.rw Business Error:", error);
     throw error;
   }
 };
