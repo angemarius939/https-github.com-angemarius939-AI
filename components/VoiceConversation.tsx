@@ -1,6 +1,8 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Volume2, Loader2, PlayCircle, StopCircle, Search, X, MessageSquare, RotateCcw } from 'lucide-react';
-import { generateConversationResponse } from '../services/geminiService';
+import { Mic, MicOff, Volume2, Loader2, PlayCircle, StopCircle, Search, X, MessageSquare, RotateCcw, Copy, Check } from 'lucide-react';
+import { generateConversationResponse, generateSpeech } from '../services/geminiService';
+import { decodeBase64Audio, decodePCMToAudioBuffer, playAudioBuffer } from '../services/audioService';
 import { useToast } from './ToastProvider';
 import { Button } from './Button';
 
@@ -11,25 +13,24 @@ export const VoiceConversation: React.FC = () => {
   const [lastResponse, setLastResponse] = useState('Kanda mikoro kugira ngo tuganire.');
   const [conversationHistory, setConversationHistory] = useState<{role: string, parts: {text: string}[]}[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef(''); // Ref to track transcript synchronously
+  const transcriptRef = useRef('');
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  
   const { showToast } = useToast();
 
   useEffect(() => {
-    // Ensure audio context is unlocked
-    if (typeof window !== 'undefined') {
-       window.speechSynthesis.cancel();
-    }
-
     if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Stop after one sentence for turn-taking
+      recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'rw-RW';
 
@@ -37,7 +38,6 @@ export const VoiceConversation: React.FC = () => {
       
       recognitionRef.current.onend = () => {
         setIsListening(false);
-        // Use ref to check transcript to avoid closure staleness
         const text = transcriptRef.current.trim();
         if (text && text.length > 0) {
            processUserInput(text);
@@ -56,10 +56,27 @@ export const VoiceConversation: React.FC = () => {
         const current = event.resultIndex;
         const result = event.results[current][0].transcript;
         setTranscript(result);
-        transcriptRef.current = result; // Update ref
+        transcriptRef.current = result;
       };
     }
+
+    return () => {
+      stopAudio();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, [showToast]);
+
+  const stopAudio = () => {
+    if (activeSourceRef.current) {
+      try {
+        activeSourceRef.current.stop();
+      } catch (e) {}
+      activeSourceRef.current = null;
+    }
+    setIsSpeaking(false);
+  };
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
@@ -69,12 +86,8 @@ export const VoiceConversation: React.FC = () => {
 
     if (isListening) {
       recognitionRef.current.stop();
-      // Logic handled in onend
     } else {
-      // Stop TTS if playing
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      
+      stopAudio();
       setTranscript('');
       transcriptRef.current = '';
       try {
@@ -85,30 +98,49 @@ export const VoiceConversation: React.FC = () => {
     }
   };
 
+  const speakTextWithEngine = async (text: string) => {
+    stopAudio();
+    setIsSpeaking(true);
+    
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      }
+
+      const base64Audio = await generateSpeech(text, 'Zephyr');
+      if (!base64Audio) throw new Error("Audio generation failed");
+
+      const pcmData = decodeBase64Audio(base64Audio);
+      const buffer = await decodePCMToAudioBuffer(pcmData, audioContextRef.current);
+      
+      activeSourceRef.current = playAudioBuffer(buffer, audioContextRef.current, () => {
+        setIsSpeaking(false);
+        activeSourceRef.current = null;
+      });
+    } catch (e) {
+      console.error("ai.rw TTS Error:", e);
+      setIsSpeaking(false);
+      showToast("Habaye ikibazo cy'amajwi.", "error");
+    }
+  };
+
   const processUserInput = async (text: string) => {
     setIsProcessing(true);
+    setCopied(false);
     
-    // Add user message to history
     const newHistory = [...conversationHistory, { role: 'user', parts: [{ text }] }];
     setConversationHistory(newHistory);
     
     try {
       const response = await generateConversationResponse(newHistory, text);
-      
       setLastResponse(response);
       setConversationHistory(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
       
-      // Auto-speak response
-      speakText(response);
+      await speakTextWithEngine(response);
       
     } catch (error: any) {
       console.error(error);
-      if (error?.message === "MISSING_API_KEY") {
-         setLastResponse("Ikibazo: API Key ntabwo ibonetse muri Vercel Settings.");
-         showToast("API Key ntibonetse.", "error");
-      } else {
-         setLastResponse("Habaye ikibazo. Ongera ugerageze.");
-      }
+      setLastResponse("Habaye ikibazo. Ongera ugerageze.");
     } finally {
       setIsProcessing(false);
       setTranscript('');
@@ -116,55 +148,25 @@ export const VoiceConversation: React.FC = () => {
     }
   };
 
-  const speakText = (text: string) => {
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Improved Voice Selection Strategy for Kinyarwanda
-    const voices = window.speechSynthesis.getVoices();
-    
-    // 1. Try to find an actual Kinyarwanda voice (rare)
-    let selectedVoice = voices.find(v => v.lang.toLowerCase().includes('rw'));
-    
-    // 2. Fallback to French (Français) - Vowels are very similar to Kinyarwanda (a, e, i, o, u)
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang.toLowerCase().includes('fr'));
-    }
-    
-    // 3. Fallback to a clear UK English voice (better than US for Bantu phonemes usually)
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.name.includes('Google UK English Female') || v.lang.includes('en-GB'));
-    }
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    // Adjust rate and pitch for a more natural, explanatory tone
-    utterance.rate = 0.95; 
-    utterance.pitch = 1.05;
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    
-    window.speechSynthesis.speak(utterance);
+  const handleCopy = () => {
+    if (!lastResponse) return;
+    navigator.clipboard.writeText(lastResponse);
+    setCopied(true);
+    showToast('Byakoporowe!', 'info');
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  // Filter history for search
   const filteredHistory = conversationHistory.filter(item => 
     item.parts[0].text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Top Controls */}
       <div className="absolute top-4 right-4 z-20">
         <Button 
           variant="ghost" 
           onClick={() => setIsSearchOpen(!isSearchOpen)}
           className="bg-white/80 backdrop-blur shadow-sm hover:bg-white text-emerald-800"
-          title={isSearchOpen ? "Funga" : "Shakisha"}
         >
           {isSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
         </Button>
@@ -173,8 +175,8 @@ export const VoiceConversation: React.FC = () => {
       {isSearchOpen ? (
         <div className="flex-1 p-6 pt-20 bg-white/95 backdrop-blur-md flex flex-col h-full animate-in fade-in slide-in-from-top-4 duration-300 z-10">
           <div className="max-w-3xl mx-auto w-full flex flex-col h-full">
-            <h3 className="text-xl font-bold text-emerald-900 mb-4 flex items-center">
-              <MessageSquare className="w-5 h-5 mr-2" />
+            <h3 className="text-xl font-bold text-emerald-900 mb-4 flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
               Amateka y'Ikiganiro
             </h3>
             
@@ -185,44 +187,36 @@ export const VoiceConversation: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Shakisha mu byavuzwe..."
-                className="w-full p-3 pl-10 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm"
+                className="w-full p-4 pl-12 border border-emerald-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none shadow-sm"
               />
-              <Search className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <Search className="w-5 h-5 text-emerald-400 absolute left-4 top-1/2 transform -translate-y-1/2" />
             </div>
             
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
               {filteredHistory.length === 0 ? (
                 <div className="text-center text-stone-400 mt-12">
-                   <p>{searchQuery ? `Nta kintu kibonetse kijyanye na "${searchQuery}"` : "Nta mateka y'ikiganiro arahari."}</p>
+                   <p>Nta mateka y'ikiganiro arahari.</p>
                 </div>
               ) : (
                 filteredHistory.map((item, idx) => (
-                  <div key={idx} className={`p-4 rounded-xl border ${item.role === 'user' ? 'bg-emerald-50 border-emerald-100 ml-8' : 'bg-white border-stone-200 mr-8 shadow-sm'}`}>
+                  <div key={idx} className={`p-4 rounded-2xl border ${item.role === 'user' ? 'bg-emerald-50 border-emerald-100 ml-8' : 'bg-white border-stone-200 mr-8 shadow-sm'}`}>
                     <div className="flex justify-between items-start mb-1">
-                      <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                         {item.role === 'user' ? 'Wowe' : 'ai.rw'}
                       </p>
-                      {item.role === 'model' && (
-                        <button 
-                          onClick={() => speakText(item.parts[0].text)} 
-                          className="text-emerald-500 hover:text-emerald-700 transition-colors"
-                          title="Soma"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <div className="flex gap-2">
+                        {item.role === 'model' && (
+                          <button 
+                            onClick={() => { navigator.clipboard.writeText(item.parts[0].text); showToast('Byakoporowe!', 'info'); }} 
+                            className="text-stone-300 hover:text-emerald-600 transition-colors"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-stone-800 leading-relaxed text-sm md:text-base">
-                      {searchQuery ? (
-                        <span>
-                          {item.parts[0].text.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, i) => 
-                            part.toLowerCase() === searchQuery.toLowerCase() ? 
-                            <span key={i} className="bg-yellow-200 text-black font-semibold rounded px-0.5">{part}</span> : part
-                          )}
-                        </span>
-                      ) : (
-                        item.parts[0].text
-                      )}
+                    <p className="text-stone-800 leading-relaxed text-sm">
+                      {item.parts[0].text}
                     </p>
                   </div>
                 ))
@@ -232,69 +226,70 @@ export const VoiceConversation: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full p-6 w-full max-w-3xl mx-auto">
-          {/* Visualizer / Status Area */}
-          <div className="w-full flex-1 flex flex-col items-center justify-center space-y-8 min-h-[300px]">
+          <div className="w-full flex-1 flex flex-col items-center justify-center space-y-12 min-h-[300px]">
             
-            {/* AI Avatar / Status */}
-            <div className={`relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 ${isSpeaking ? 'bg-emerald-100 scale-110' : 'bg-white shadow-xl'}`}>
-              <div className={`absolute inset-0 rounded-full border-4 border-emerald-500 opacity-20 ${isSpeaking ? 'animate-ping' : ''}`}></div>
+            <div className={`relative w-48 h-48 rounded-full flex items-center justify-center transition-all duration-500 ${isSpeaking || isListening ? 'bg-emerald-100 scale-110 shadow-2xl shadow-emerald-200/50' : 'bg-white shadow-xl'}`}>
+              {(isSpeaking || isListening) && (
+                <div className="absolute inset-0 rounded-full border-8 border-emerald-500/20 animate-ping"></div>
+              )}
               {isProcessing ? (
                 <Loader2 className="w-16 h-16 text-emerald-600 animate-spin" />
               ) : isListening ? (
-                <div className="flex gap-1 items-end h-16">
-                  <div className="w-2 bg-emerald-500 animate-[bounce_1s_infinite] h-8"></div>
-                  <div className="w-2 bg-emerald-500 animate-[bounce_1.2s_infinite] h-12"></div>
-                  <div className="w-2 bg-emerald-500 animate-[bounce_0.8s_infinite] h-6"></div>
-                  <div className="w-2 bg-emerald-500 animate-[bounce_1.1s_infinite] h-10"></div>
+                <div className="flex gap-1.5 items-end h-16">
+                  {[0.4, 0.7, 0.3, 0.8, 0.5].map((d, i) => (
+                    <div key={i} className="w-2.5 bg-emerald-500 rounded-full animate-bounce" style={{ height: `${d * 100}%`, animationDelay: `${i * 0.1}s` }}></div>
+                  ))}
                 </div>
               ) : (
-                <Volume2 className={`w-16 h-16 ${isSpeaking ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <Volume2 className={`w-20 h-20 ${isSpeaking ? 'text-emerald-600 animate-pulse' : 'text-slate-300'}`} />
               )}
             </div>
 
-            {/* Conversation Text Display */}
-            <div className="w-full space-y-4 text-center max-w-lg">
+            <div className="w-full space-y-6 text-center max-w-xl">
               {isListening && transcript && (
-                <p className="text-xl text-slate-500 animate-pulse">"{transcript}..."</p>
+                <p className="text-2xl font-bold text-emerald-800 animate-pulse">"{transcript}..."</p>
               )}
               
               {!isListening && !isProcessing && (
-                <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-emerald-100">
-                  <p className="text-lg md:text-xl font-medium text-slate-800 leading-relaxed">
+                <div className="bg-white/90 backdrop-blur-md p-8 rounded-[32px] shadow-2xl border border-emerald-100/50 transform transition-all hover:scale-[1.01]">
+                  <p className="text-xl md:text-2xl font-medium text-slate-800 leading-snug">
                     {lastResponse}
                   </p>
                   {lastResponse && (
-                    <button 
-                      onClick={() => isSpeaking ? window.speechSynthesis.cancel() : speakText(lastResponse)}
-                      className="mt-4 px-5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium flex items-center justify-center gap-2 mx-auto transition-colors duration-200 border border-emerald-200"
-                    >
-                      {isSpeaking ? <StopCircle className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
-                      {isSpeaking ? "Hagarika" : "Ongera Wumve"}
-                    </button>
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
+                      <button 
+                        onClick={() => isSpeaking ? stopAudio() : speakTextWithEngine(lastResponse)}
+                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200"
+                      >
+                        {isSpeaking ? <StopCircle className="w-5 h-5 fill-current" /> : <RotateCcw className="w-5 h-5" />}
+                        {isSpeaking ? "Hagarika" : "Ongera Wumve"}
+                      </button>
+                      <button 
+                        onClick={handleCopy}
+                        className="p-3 bg-white hover:bg-stone-50 text-emerald-600 rounded-full border border-stone-200 transition-all hover:scale-110"
+                        title="Koporora"
+                      >
+                        {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Control Area */}
-          <div className="w-full p-8 pb-12 flex justify-center">
+          <div className="w-full p-12 flex justify-center">
             <button
               onClick={toggleListening}
-              className={`relative group flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 shadow-xl ${
+              className={`relative group flex items-center justify-center w-28 h-28 rounded-full transition-all duration-300 shadow-2xl ${
                 isListening 
                   ? 'bg-red-500 text-white scale-110 shadow-red-200' 
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105 shadow-emerald-200'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105 shadow-emerald-600/30'
               }`}
             >
-              {isListening ? (
-                <MicOff className="w-10 h-10" />
-              ) : (
-                <Mic className="w-10 h-10" />
-              )}
-              
-              <span className="absolute -bottom-10 text-sm font-semibold text-slate-600 whitespace-nowrap bg-white/80 px-3 py-1 rounded-full">
-                {isListening ? "Kanda uhagarike" : "Kanda uvuge"}
+              {isListening ? <MicOff className="w-12 h-12" /> : <Mic className="w-12 h-12" />}
+              <span className="absolute -bottom-14 text-sm font-black uppercase tracking-widest text-slate-400 bg-white/50 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                {isListening ? "Hagarika" : "Kanda Uvuge"}
               </span>
             </button>
           </div>

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase, Activity, FileText } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase, Activity, FileText, Copy, Check } from 'lucide-react';
 import { Button } from './Button';
 import { ProgressBar } from './ProgressBar';
 import { useToast } from './ToastProvider';
@@ -13,12 +12,14 @@ export const DecisionAssistant: React.FC = () => {
   const [result, setResult] = useState<BusinessAnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
 
   const handleAnalyze = async () => {
     if (!input.trim()) return;
     setIsLoading(true);
     setResult(null);
+    setCopied(false);
     try {
       const data = await generateBusinessAnalysis(input);
       setResult(data);
@@ -28,6 +29,14 @@ export const DecisionAssistant: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCopy = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(result.summary);
+    setCopied(true);
+    showToast('Byakoporowe!', 'info');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const fillExample = (type: 'retail' | 'farm' | 'livestock' | 'monthly' | 'complex' | 'generic') => {
@@ -141,11 +150,20 @@ export const DecisionAssistant: React.FC = () => {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Summary Card */}
-              <div className="bg-emerald-900 text-white rounded-2xl p-6 shadow-lg">
-                <h3 className="text-lg font-bold mb-2 flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2 text-yellow-400" />
-                  Incamake
-                </h3>
+              <div className="bg-emerald-900 text-white rounded-2xl p-6 shadow-lg relative group">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-bold flex items-center">
+                    <Lightbulb className="w-5 h-5 mr-2 text-yellow-400" />
+                    Incamake
+                  </h3>
+                  <button 
+                    onClick={handleCopy}
+                    className="p-1.5 rounded-md hover:bg-white/10 text-emerald-100 transition-colors"
+                    title="Koporora"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
                 <div className="text-emerald-100 leading-relaxed">
                   <FormattedText text={result.summary} className="text-emerald-100" />
                 </div>

@@ -35,10 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
 
   const menuItems = [
     { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
-    { id: AppView.VOICE_CONVERSATION, label: 'Kuvuga', icon: <Mic className="w-5 h-5" /> },
     { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
     { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
-    { id: AppView.IMAGE_TOOLS, label: 'Amafoto', icon: <ImageIcon className="w-5 h-5" /> },
     { id: AppView.RURAL_SUPPORT, label: 'Iterambere', icon: <Sprout className="w-5 h-5" /> },
     { id: AppView.DECISION_ASSISTANT, label: 'Umujyanama', icon: <TrendingUp className="w-5 h-5" /> },
     { id: AppView.COURSE_GENERATOR, label: 'Amasomo', icon: <GraduationCap className="w-5 h-5" /> },

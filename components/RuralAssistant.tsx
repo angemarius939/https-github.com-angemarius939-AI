@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, CloudSun } from 'lucide-react';
+import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, CloudSun, Copy, Check } from 'lucide-react';
 import { generateRuralAdvice } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -13,6 +13,7 @@ export const RuralAssistant: React.FC = () => {
   const [advice, setAdvice] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { showToast } = useToast();
 
   const quickActions = {
@@ -57,6 +58,7 @@ export const RuralAssistant: React.FC = () => {
     setIsLoading(true);
     setAdvice('');
     setSources([]);
+    setCopied(false);
     try {
       const result = await generateRuralAdvice(promptToUse, sector);
       setAdvice(result.text);
@@ -68,6 +70,14 @@ export const RuralAssistant: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCopy = () => {
+    if (!advice) return;
+    navigator.clipboard.writeText(advice);
+    setCopied(true);
+    showToast('Byakoporowe!', 'info');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const getSectorIcon = () => {
@@ -174,9 +184,18 @@ export const RuralAssistant: React.FC = () => {
         <div className="flex-1 min-h-[300px] p-4 bg-stone-50 rounded-xl border border-stone-200 overflow-y-auto">
           {advice ? (
             <div className="animate-in fade-in duration-500 pb-4">
-              <h4 className="font-semibold text-emerald-800 mb-3 flex items-center sticky top-0 bg-stone-50 py-2 border-b border-stone-200">
-                <Sprout className="w-4 h-4 mr-2" />
-                Inama ya ai.rw:
+              <h4 className="font-semibold text-emerald-800 mb-3 flex items-center justify-between sticky top-0 bg-stone-50 py-2 border-b border-stone-200 z-10">
+                <div className="flex items-center">
+                  <Sprout className="w-4 h-4 mr-2" />
+                  Inama ya ai.rw:
+                </div>
+                <button 
+                  onClick={handleCopy}
+                  className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-600 transition-colors"
+                  title="Koporora"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
               </h4>
               <FormattedText text={advice} />
               

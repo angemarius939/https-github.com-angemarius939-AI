@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link, ChevronRight, HelpCircle, Download, Lightbulb, Bookmark } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, ListChecks, Search, History, Target, Layers, Book, BrainCircuit, ArrowRight, Printer, Layout, FileText, Link, ChevronRight, HelpCircle, Download, Lightbulb, Bookmark, Copy, Check } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
 import { CourseLevel, Source } from '../types';
@@ -36,6 +35,7 @@ export const CourseGenerator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [parsedSections, setParsedSections] = useState<ParsedSection[]>([]);
   const [activeSection, setActiveSection] = useState<string>('');
+  const [copied, setCopied] = useState(false);
   
   // History and Search State
   const [history, setHistory] = useState<CourseHistoryItem[]>([]);
@@ -159,6 +159,7 @@ export const CourseGenerator: React.FC = () => {
     if (!topic.trim()) return;
     setIsLoading(true);
     setSources([]);
+    setCopied(false);
     try {
       const result = await generateCourse(topic, level, duration, prerequisites);
       setCourseContent(result.text);
@@ -182,6 +183,14 @@ export const CourseGenerator: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCopy = () => {
+    if (!courseContent) return;
+    navigator.clipboard.writeText(courseContent);
+    setCopied(true);
+    showToast('Byakoporowe!', 'info');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const filteredHistory = history.filter(item => 
@@ -381,6 +390,13 @@ export const CourseGenerator: React.FC = () => {
                    </div>
                  </div>
                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleCopy}
+                      className="p-2.5 text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
+                      title="Koporora"
+                    >
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </button>
                     <button 
                       onClick={() => {
                          const printContent = document.getElementById('printable-course');
