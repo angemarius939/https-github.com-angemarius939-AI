@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, BarChart3, PieChart, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase, Activity, FileText, Copy, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Lightbulb, Microscope, Compass, ArrowRight, Loader2, Wallet, PiggyBank, Briefcase, Activity, FileText, Copy, Check } from 'lucide-react';
 import { Button } from './Button';
 import { ProgressBar } from './ProgressBar';
 import { useToast } from './ToastProvider';
@@ -57,21 +58,11 @@ export const DecisionAssistant: React.FC = () => {
     setInput(text);
   };
 
-  const getExpenseRatio = () => {
-    if (!result?.financials || result.financials.revenue === 0) return 0;
-    return Math.min(Math.round((result.financials.expense / result.financials.revenue) * 100), 100);
-  };
-
-  const getProfitMargin = () => {
-    if (!result?.financials || result.financials.revenue === 0) return 0;
-    return Math.round((result.financials.profit / result.financials.revenue) * 100);
-  };
-
   return (
     <div className="flex flex-col h-full max-w-6xl mx-auto w-full p-4 md:p-8 space-y-8 overflow-y-auto">
       <div className="text-center">
         <h2 className="text-3xl font-bold text-emerald-900 flex items-center justify-center gap-3">
-          <TrendingUp className="w-8 h-8 text-emerald-600" />
+          <Microscope className="w-8 h-8 text-emerald-600" />
           Umujyanama
         </h2>
         <p className="text-emerald-700 mt-2 max-w-2xl mx-auto">
@@ -140,7 +131,7 @@ export const DecisionAssistant: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {!result ? (
             <div className="bg-stone-50 rounded-2xl border border-stone-200 border-dashed h-full min-h-[400px] flex flex-col items-center justify-center text-stone-400 p-8 text-center">
-              <BarChart3 className="w-16 h-16 mb-4 opacity-20" />
+              <Microscope className="w-16 h-16 mb-4 opacity-20" />
               <p className="text-lg font-medium text-stone-500">Nta sesengura rirahari</p>
               <p className="text-sm mt-2 max-w-sm">
                 Andika amakuru ibumoso ukande "Sesengura" kugira ngo ubone raporo n'imbonerahamwe.
@@ -169,10 +160,9 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               </div>
 
-              {/* KPI Cards Logic: Business vs Generic */}
+              {/* KPI Cards */}
               {result.isFinancial && result.financials ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Revenue */}
                   <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden group hover:shadow-md transition-shadow">
                      <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
                         <Wallet className="w-16 h-16 text-emerald-600" />
@@ -188,7 +178,6 @@ export const DecisionAssistant: React.FC = () => {
                      </div>
                   </div>
                   
-                  {/* Expense */}
                   <div className="bg-rose-50 p-5 rounded-2xl border border-rose-100 relative overflow-hidden group hover:shadow-md transition-shadow">
                      <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
                         <Briefcase className="w-16 h-16 text-rose-600" />
@@ -204,7 +193,6 @@ export const DecisionAssistant: React.FC = () => {
                      </div>
                   </div>
 
-                  {/* Profit */}
                   <div className={`p-5 rounded-2xl border relative overflow-hidden group hover:shadow-md transition-shadow ${result.financials.profit >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
                      <div className={`absolute top-0 right-0 p-4 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform`}>
                         <PiggyBank className={`w-16 h-16 ${result.financials.profit >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
@@ -221,7 +209,6 @@ export const DecisionAssistant: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                /* Generic KPI Cards */
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                    {result.kpiCards?.map((card, idx) => (
                      <div key={idx} className="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm relative overflow-hidden">
@@ -243,82 +230,54 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               )}
 
-              {/* Charts Section */}
+              {/* Graphics Section */}
               {result.chartData && result.chartData.length > 0 && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="font-bold text-stone-800 flex items-center">
-                          <BarChart3 className="w-5 h-5 mr-2 text-emerald-600" />
-                          Imbonerahamwe (Graphics)
+                          <Compass className="w-5 h-5 mr-2 text-emerald-600" />
+                          Imbonerahamwe (Visuals)
                       </h3>
                       <div className="flex bg-stone-100 rounded-lg p-1">
                           <button 
                               onClick={() => setChartType('bar')}
                               className={`p-1.5 rounded-md transition-all ${chartType === 'bar' ? 'bg-white shadow text-emerald-700' : 'text-stone-500 hover:text-stone-700'}`}
-                              title="Bar Chart"
                           >
-                              <BarChart3 className="w-4 h-4" />
-                          </button>
-                          <button 
-                              onClick={() => setChartType('pie')}
-                              className={`p-1.5 rounded-md transition-all ${chartType === 'pie' ? 'bg-white shadow text-emerald-700' : 'text-stone-500 hover:text-stone-700'}`}
-                              title="Pie Chart"
-                          >
-                              <PieChart className="w-4 h-4" />
+                              <Microscope className="w-4 h-4" />
                           </button>
                       </div>
                   </div>
                   
-                  {chartType === 'bar' ? (
-                      <div className="flex items-end justify-around h-48 w-full gap-4 px-4 pb-2 border-b border-stone-200 animate-in fade-in">
-                          {result.chartData.map((data, idx) => {
-                              const maxVal = Math.max(...result.chartData.map(d => Math.abs(d.value)), 1);
-                              const heightPercent = maxVal > 0 ? (Math.abs(data.value) / maxVal) * 100 : 0;
-                              
-                              return (
-                              <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
-                                  <div className="text-xs font-bold text-stone-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      {data.value.toLocaleString()}
-                                  </div>
-                                  <div 
-                                      className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out hover:opacity-90 relative group-hover:scale-105 ${
-                                      data.type === 'revenue' ? 'bg-emerald-500' : 
-                                      data.type === 'expense' ? 'bg-rose-400' : 
-                                      data.type === 'profit' ? 'bg-blue-500' :
-                                      'bg-indigo-400' // Generic color
-                                      }`}
-                                      style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                                  ></div>
-                                  <div className="text-xs font-medium text-stone-500 mt-2 text-center truncate w-full" title={data.label}>
-                                      {data.label}
-                                  </div>
+                  <div className="flex items-end justify-around h-48 w-full gap-4 px-4 pb-2 border-b border-stone-200 animate-in fade-in">
+                      {result.chartData.map((data, idx) => {
+                          const maxVal = Math.max(...result.chartData.map(d => Math.abs(d.value)), 1);
+                          const heightPercent = maxVal > 0 ? (Math.abs(data.value) / maxVal) * 100 : 0;
+                          
+                          return (
+                          <div key={idx} className="flex flex-col items-center flex-1 h-full justify-end group">
+                              <div className="text-xs font-bold text-stone-600 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {data.value.toLocaleString()}
                               </div>
-                              );
-                          })}
-                      </div>
-                  ) : (
-                      <div className="flex justify-center items-center h-48 animate-in fade-in">
-                         {/* Simple Pie Representation for Generic Data */}
-                         <div className="flex flex-wrap justify-center gap-4">
-                            {result.chartData.map((d, i) => (
-                               <div key={i} className="flex items-center gap-2">
-                                  <div className={`w-3 h-3 rounded-full ${
-                                      d.type === 'revenue' ? 'bg-emerald-500' : 
-                                      d.type === 'expense' ? 'bg-rose-400' : 
-                                      d.type === 'profit' ? 'bg-blue-500' :
-                                      'bg-indigo-400'
-                                  }`}></div>
-                                  <span className="text-sm text-stone-600">{d.label}: <b>{d.value.toLocaleString()}</b></span>
-                               </div>
-                            ))}
-                         </div>
-                      </div>
-                  )}
+                              <div 
+                                  className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out hover:opacity-90 relative group-hover:scale-105 ${
+                                  data.type === 'revenue' ? 'bg-emerald-500' : 
+                                  data.type === 'expense' ? 'bg-rose-400' : 
+                                  data.type === 'profit' ? 'bg-blue-500' :
+                                  'bg-indigo-400'
+                                  }`}
+                                  style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                              ></div>
+                              <div className="text-xs font-medium text-stone-500 mt-2 text-center truncate w-full" title={data.label}>
+                                  {data.label}
+                              </div>
+                          </div>
+                          );
+                      })}
+                  </div>
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* Risks / Challenges */}
                  <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
                     <div className="bg-amber-50/50 px-6 py-4 border-b border-amber-100 flex items-center gap-2">
                        <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
@@ -334,12 +293,10 @@ export const DecisionAssistant: React.FC = () => {
                             {risk}
                             </li>
                         ))}
-                        {result.risks.length === 0 && <li className="text-sm text-stone-400 italic">Nta mbogamizi zigaragara zabonetse.</li>}
                         </ul>
                     </div>
                  </div>
 
-                 {/* Advice / Recommendations */}
                  <div className="bg-white rounded-2xl shadow-sm border border-stone-100 overflow-hidden">
                     <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center gap-2">
                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
@@ -359,7 +316,6 @@ export const DecisionAssistant: React.FC = () => {
                     </div>
                  </div>
               </div>
-
             </div>
           )}
         </div>

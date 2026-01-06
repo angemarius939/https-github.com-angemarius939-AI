@@ -11,10 +11,18 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
   if (!text) return null;
 
   const highlightText = (htmlContent: string) => {
-    if (!searchQuery) return htmlContent;
+    if (!searchQuery || searchQuery.trim() === '') return htmlContent;
+    
+    // Escape special characters in search query for regex
     const safeQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${safeQuery})`, 'gi');
-    return htmlContent.replace(regex, '<mark class="bg-yellow-200 text-stone-900 rounded-sm px-0.5">$1</mark>');
+    
+    // Negative lookahead to ensure we are not inside an HTML tag
+    // This looks for safeQuery ONLY if it's followed by 0 or more non-angle-bracket characters 
+    // that are then followed by either the end of the string or an opening bracket.
+    // Basically: it ensures the match isn't part of a <tag attribute="...">
+    const regex = new RegExp(`(${safeQuery})(?![^<]*>)`, 'gi');
+    
+    return htmlContent.replace(regex, '<mark class="bg-yellow-200 text-stone-900 rounded-sm px-0.5 font-bold shadow-sm">$1</mark>');
   };
 
   const parseInline = (line: string) => {
@@ -74,7 +82,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
                 <code className="text-lg md:text-xl font-mono text-emerald-900 font-bold block overflow-x-auto custom-scrollbar">
                   {math}
                 </code>
-                <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600 mt-4 opacity-50">Scientific Logic</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600 mt-4 opacity-50">Ubuvumbuzi mu bumenyi (Science)</p>
               </div>
             );
           }

@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Lock, Plus, Trash2, Database, Save, LogOut, Image as ImageIcon, 
   FileText, MousePointer2, X, AlertCircle, BarChart, Sprout, 
   Mic, CheckSquare, Square, FlaskConical, Headphones, Search, 
   Settings, LayoutDashboard, BrainCircuit, Activity, ChevronRight, Filter,
-  Volume2, Info, Eye, EyeOff
+  Volume2, Info, Eye, EyeOff, Layout, ShieldCheck
 } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
@@ -27,10 +28,12 @@ export const AdminDashboard: React.FC = () => {
   
   // Settings State
   const [isAdminModeActive, setIsAdminModeActive] = useState(false);
+  const [isLandingEnabled, setIsLandingEnabled] = useState(true);
 
   useEffect(() => {
      if(typeof window !== 'undefined') {
         setIsAdminModeActive(localStorage.getItem('ai_rw_admin_active') === 'true');
+        setIsLandingEnabled(localStorage.getItem('ai_rw_landing_enabled') !== 'false');
      }
   }, []);
 
@@ -38,7 +41,14 @@ export const AdminDashboard: React.FC = () => {
      const next = !isAdminModeActive;
      setIsAdminModeActive(next);
      localStorage.setItem('ai_rw_admin_active', String(next));
-     showToast(next ? "Admin Mode yafunguwe!" : "Admin Mode yafunzwe!", "info");
+     showToast(next ? "Ubuyobozi (Admin Mode) bwafunguwe!" : "Ubuyobozi (Admin Mode) bwafunzwe!", "info");
+  };
+
+  const toggleLandingPage = () => {
+     const next = !isLandingEnabled;
+     setIsLandingEnabled(next);
+     localStorage.setItem('ai_rw_landing_enabled', String(next));
+     showToast(next ? "Urupapuro rubanza ruremerwa!" : "Urupapuro rubanza rwahagaritswe!", "success");
   };
 
   // Stats State
@@ -59,7 +69,6 @@ export const AdminDashboard: React.FC = () => {
   const [currentBox, setCurrentBox] = useState<number[] | null>(null); 
   const [newLabel, setNewLabel] = useState('');
 
-  // Added missing state variables for voice training
   // Voice Training State
   const [voicePhrase, setVoicePhrase] = useState('');
   const [voicePhonetic, setVoicePhonetic] = useState('');
@@ -94,28 +103,28 @@ export const AdminDashboard: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'admin2025') {
+    if (password === 'admin2026') {
       setIsAuthenticated(true);
-      showToast('Murakaza neza Admin', 'success');
+      showToast('Murakaza neza mu buyobozi bwa ai.rw', 'success');
     } else {
-      showToast('Ijambo ry\'ibanga atari ryo', 'error');
+      showToast('Ijambo ry\'ibanga ntiryo', 'error');
     }
   };
 
   const handleSaveText = () => {
     if (!title.trim() || !content.trim()) {
-      showToast('Uzuza imyanya yose', 'error');
+      showToast('Nyamuneka uzuza imyanya yose', 'error');
       return;
     }
     saveKnowledgeItem({ title, content, scope });
     setTitle('');
     setContent('');
     loadItems();
-    showToast('Amakuru yabitswe!', 'success');
+    showToast('Amakuru yabitswe neza!', 'success');
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Ese urashaka gusiba aya makuru?')) {
+    if (confirm('Ese urashaka gusiba aya makuru burundu?')) {
       deleteKnowledgeItem(id);
       loadItems();
       showToast('Byasibwe', 'success');
@@ -213,7 +222,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Lock className="w-8 h-8 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-bold text-emerald-900">Admin Login</h2>
+            <h2 className="text-2xl font-bold text-emerald-900">Kwinjira mu buyobozi</h2>
             <p className="text-stone-500 text-sm mt-2">Injiza ijambo ry'ibanga kugira ngo winjire.</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -256,23 +265,23 @@ export const AdminDashboard: React.FC = () => {
         <div className="p-6 border-b border-stone-100">
           <h1 className="text-xl font-bold text-emerald-900 flex items-center gap-2">
             <Settings className="w-6 h-6" />
-            Genzura (Admin)
+            Ubuyobozi (Admin)
           </h1>
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2">Overview</div>
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2">Incamake</div>
           <SidebarItem tab="dashboard" icon={LayoutDashboard} label="Imbonerahamwe" />
           
-          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Management</div>
-          <SidebarItem tab="knowledge" icon={Database} label="Knowledge Base" />
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Imicungire</div>
+          <SidebarItem tab="knowledge" icon={Database} label="Ububiko bw'Amakuru" />
           <SidebarItem tab="settings" icon={Settings} label="Igenamiterere" />
           
-          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">AI Training</div>
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Gutoza AI</div>
           <SidebarItem tab="train_image" icon={ImageIcon} label="Gutoza Amafoto" />
           <SidebarItem tab="train_voice" icon={Mic} label="Gutoza Ijwi" />
           
-          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Testing</div>
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-4 mb-2 mt-6">Kugerageza</div>
           <SidebarItem tab="test_image" icon={FlaskConical} label="Kugerageza Amafoto" />
           <SidebarItem tab="test_voice" icon={Headphones} label="Kugerageza Ijwi" />
         </nav>
@@ -308,19 +317,49 @@ export const AdminDashboard: React.FC = () => {
           {/* VIEW: SETTINGS */}
           {activeTab === 'settings' && (
              <div className="space-y-8 animate-in fade-in">
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-200">
-                   <h3 className="text-xl font-bold text-stone-900 mb-6">Admin Settings</h3>
-                   <div className="flex items-center justify-between p-6 bg-stone-50 rounded-2xl border border-stone-200">
-                      <div>
-                         <h4 className="font-bold text-stone-800">Admin Visibility Mode</h4>
-                         <p className="text-sm text-stone-500">Ibi bituma ubona serivisi zose (nka Amafoto na Kuvuga) ku rupapuro rubanza.</p>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 space-y-6">
+                   <h3 className="text-xl font-bold text-stone-900 mb-6 flex items-center gap-2">
+                      <Settings className="w-6 h-6 text-emerald-600" />
+                      Igenamiterere rya Sisitemu
+                   </h3>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex flex-col justify-between p-6 bg-stone-50 rounded-2xl border border-stone-200">
+                         <div>
+                            <div className="flex items-center gap-2 mb-2">
+                               {/* Fix: use ShieldCheck which is now imported */}
+                               <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                               <h4 className="font-bold text-stone-800 uppercase text-xs tracking-widest">Admin Mode</h4>
+                            </div>
+                            <p className="text-sm text-stone-500">Ibi bituma ubona serivisi zose zitararangira neza ku rupapuro rubanza.</p>
+                         </div>
+                         <div className="mt-4 flex justify-end">
+                            <button 
+                              onClick={toggleAdminMode}
+                              className={`w-14 h-7 rounded-full transition-all flex items-center px-1 ${isAdminModeActive ? 'bg-emerald-500' : 'bg-stone-300'}`}
+                            >
+                               <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${isAdminModeActive ? 'translate-x-7' : 'translate-x-0'}`}></div>
+                            </button>
+                         </div>
                       </div>
-                      <button 
-                        onClick={toggleAdminMode}
-                        className={`w-16 h-8 rounded-full transition-all flex items-center px-1 ${isAdminModeActive ? 'bg-emerald-500' : 'bg-stone-300'}`}
-                      >
-                         <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${isAdminModeActive ? 'translate-x-8' : 'translate-x-0'}`}></div>
-                      </button>
+
+                      <div className="flex flex-col justify-between p-6 bg-stone-50 rounded-2xl border border-stone-200">
+                         <div>
+                            <div className="flex items-center gap-2 mb-2">
+                               <Layout className="w-5 h-5 text-blue-500" />
+                               <h4 className="font-bold text-stone-800 uppercase text-xs tracking-widest">Urupapuro Rubanza</h4>
+                            </div>
+                            <p className="text-sm text-stone-500">Erekana urupapuro rubanza (Landing Page) iyo umuntu akigera kuri ai.rw.</p>
+                         </div>
+                         <div className="mt-4 flex justify-end">
+                            <button 
+                              onClick={toggleLandingPage}
+                              className={`w-14 h-7 rounded-full transition-all flex items-center px-1 ${isLandingEnabled ? 'bg-blue-500' : 'bg-stone-300'}`}
+                            >
+                               <div className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform ${isLandingEnabled ? 'translate-x-7' : 'translate-x-0'}`}></div>
+                            </button>
+                         </div>
+                      </div>
                    </div>
                 </div>
              </div>
@@ -341,14 +380,14 @@ export const AdminDashboard: React.FC = () => {
                      <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl"><Database className="w-6 h-6" /></div>
                      <div>
                         <div className="text-2xl font-extrabold text-stone-900">{items.length}</div>
-                        <div className="text-xs text-stone-500 font-medium">Knowledge Items</div>
+                        <div className="text-xs text-stone-500 font-medium">Amakuru abitse</div>
                      </div>
                   </div>
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex items-center gap-4">
                      <div className="p-3 bg-amber-100 text-amber-600 rounded-xl"><BrainCircuit className="w-6 h-6" /></div>
                      <div>
                         <div className="text-2xl font-extrabold text-stone-900">{items.filter(i => i.scope === 'IMAGE_TOOLS').length}</div>
-                        <div className="text-xs text-stone-500 font-medium">Training Modules</div>
+                        <div className="text-xs text-stone-500 font-medium">Imyitozo ya AI</div>
                      </div>
                   </div>
                </div>
@@ -357,7 +396,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="bg-white p-8 rounded-2xl shadow-sm border border-stone-200">
                      <h3 className="text-lg font-bold text-stone-900 mb-6 flex items-center gap-2">
                         <BarChart className="w-5 h-5 text-emerald-600" />
-                        Abasuye buri munsi
+                        Abasura buri munsi
                      </h3>
                      <div className="h-48 flex items-end gap-2 border-b border-stone-100 pb-2">
                         {visitStats.slice(0, 7).reverse().map((day, i) => {
@@ -401,7 +440,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 sticky top-6">
                      <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
                         <Plus className="w-5 h-5 text-emerald-600" />
-                        Injiza Amakuru
+                        Injiza Amakuru Mashya
                      </h3>
                      <div className="space-y-4">
                         <div>
@@ -409,12 +448,12 @@ export const AdminDashboard: React.FC = () => {
                            <input 
                              value={title} 
                              onChange={e => setTitle(e.target.value)}
-                             placeholder="Ex: Ibiciro bya Kawa..."
+                             placeholder="Urugero: Ibiciro bya Kawa..."
                              className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                           />
+                        />
                         </div>
                         <div>
-                           <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Scope</label>
+                           <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Aho bishyirwa (Scope)</label>
                            <select 
                              value={scope} 
                              onChange={e => setScope(e.target.value as KnowledgeScope)}
@@ -428,11 +467,11 @@ export const AdminDashboard: React.FC = () => {
                            </select>
                         </div>
                         <div>
-                           <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Content</label>
+                           <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Ibikubiyemo (Content)</label>
                            <textarea 
                              value={content} 
                              onChange={e => setContent(e.target.value)}
-                             placeholder="Amakuru AI izifashisha..."
+                             placeholder="Amakuru AI izifashisha mugusubiza..."
                              className="w-full h-40 p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
                            />
                         </div>
@@ -472,7 +511,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="space-y-4">
                      {filteredItems.length === 0 ? (
                         <div className="p-20 text-center bg-white rounded-2xl border border-dashed border-stone-200 text-stone-400 font-medium">
-                           Nta makuru yabonetse.
+                           Nta makuru yabonetse mu bubiko.
                         </div>
                      ) : (
                         filteredItems.map(item => (
@@ -509,7 +548,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-stone-200 space-y-6">
                    <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
                       <ImageIcon className="w-5 h-5 text-purple-600" />
-                      Gutoza AI kumenya amashusho
+                      Gutoza AI kumenya amashusho (Image Training)
                    </h3>
                    {!trainingImage ? (
                       <div className="border-4 border-dashed border-stone-100 rounded-3xl p-20 text-center hover:bg-stone-50 transition-colors cursor-pointer" onClick={() => (document.getElementById('img-train') as any).click()}>
@@ -522,7 +561,7 @@ export const AdminDashboard: React.FC = () => {
                             }
                          }} />
                          <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400"><Plus className="w-8 h-8" /></div>
-                         <p className="text-sm text-stone-500 font-bold">Kanda hano ushyiremo ifoto</p>
+                         <p className="text-sm text-stone-500 font-bold">Kanda hano ushyiremo ifoto yo gutoza</p>
                       </div>
                    ) : (
                       <div className="space-y-4">
@@ -542,11 +581,11 @@ export const AdminDashboard: React.FC = () => {
                                  autoFocus 
                                  value={newLabel} 
                                  onChange={e => setNewLabel(e.target.value)} 
-                                 placeholder="Izina ry'iki kintu..." 
+                                 placeholder="Izina ry'iki kintu mu Kinyarwanda..." 
                                  className="flex-1 p-2 border border-emerald-200 rounded-lg outline-none text-sm" 
                                />
-                               <Button size="sm" onClick={confirmAnnotation}>Emeza</Button>
-                               <Button variant="secondary" size="sm" onClick={() => setCurrentBox(null)}><X className="w-4 h-4"/></Button>
+                               <Button onClick={confirmAnnotation}>Emeza</Button>
+                               <Button variant="secondary" onClick={() => setCurrentBox(null)}><X className="w-4 h-4"/></Button>
                             </div>
                          )}
                          <div className="flex flex-wrap gap-2">
@@ -560,7 +599,7 @@ export const AdminDashboard: React.FC = () => {
                          <div className="flex gap-2 pt-4">
                             <Button className="flex-1" disabled={annotations.length === 0} onClick={() => {
                                saveKnowledgeItem({
-                                  title: `Training: ${imgDescription || 'Image'}`,
+                                  title: `Imyitozo: ${imgDescription || 'Amafoto'}`,
                                   scope: 'IMAGE_TOOLS',
                                   content: `__IMG_TRAIN__${JSON.stringify({ imageDescription: imgDescription, annotations })}`
                                });
@@ -568,7 +607,7 @@ export const AdminDashboard: React.FC = () => {
                                setAnnotations([]);
                                setImgDescription('');
                                loadItems();
-                               showToast("Imyitozo yabitswe!", "success");
+                               showToast("Imyitozo y'ifoto yabitswe neza!", "success");
                             }}>Bika Imyitozo</Button>
                             <Button variant="secondary" onClick={() => setTrainingImage(null)}>Siba</Button>
                          </div>
@@ -576,12 +615,12 @@ export const AdminDashboard: React.FC = () => {
                    )}
                 </div>
                 <div className="bg-blue-900 text-white p-8 rounded-2xl shadow-xl space-y-4">
-                   <h4 className="font-bold flex items-center gap-2"><BrainCircuit className="w-5 h-5" /> Uko bikora</h4>
+                   <h4 className="font-bold flex items-center gap-2"><BrainCircuit className="w-5 h-5" /> Uko gutoza bikora</h4>
                    <div className="text-sm text-blue-100 space-y-3 leading-relaxed">
-                      <p>1. Hitamo ifoto irimo ibintu AI ikwiye kumenya (urugero: Ibikoresho by'ubuhinzi by'umwihariko mu Rwanda).</p>
+                      <p>1. Hitamo ifoto irimo ibintu AI ikwiye kumenya (urugero: Ibikoresho by'ubuhinzi by'umwihariko mu Rwanda cyamo ibiribwa).</p>
                       <p>2. Shushanya urukiramende (box) ku kintu ushaka gutoza.</p>
-                      <p>3. Icyo kintu ugihe izina ry'Ikinyarwanda cyangwa irindi jambo ushaka ko AI izakoresha.</p>
-                      <p>4. Bika amakuru. Ibi bizafasha AI gusesengura amashusho neza kurushaho mu gice cya "Amafoto".</p>
+                      <p>3. Icyo kintu ugihe izina ry'Ikinyarwanda cyangwa irindi jambo ushaka ko AI uzakoresha mugusesengura.</p>
+                      <p>4. Bika amakuru. Ibi bizafasha AI gusesengura amashusho neza kurushaho mu gice cyo "Sesengura Amafoto".</p>
                    </div>
                 </div>
              </div>
@@ -600,20 +639,20 @@ export const AdminDashboard: React.FC = () => {
                    <div className="space-y-4">
                       <div>
                          <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Ijambo / Interuro</label>
-                         <input value={voicePhrase} onChange={e => setVoicePhrase(e.target.value)} placeholder="Urugero: Mwaramutse" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
+                         <input value={voicePhrase} onChange={e => setVoicePhrase(e.target.value)} placeholder="Urugero: Muraho neza" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
                       </div>
                       <div>
-                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Imvugirwe (Phonetic)</label>
-                         <input value={voicePhonetic} onChange={e => setVoicePhonetic(e.target.value)} placeholder="Urugero: Mwa-ra-mu-tse" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
+                         <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Uko rivugwa (Phonetic)</label>
+                         <input value={voicePhonetic} onChange={e => setVoicePhonetic(e.target.value)} placeholder="Urugero: Mu-ra-ho ne-za" className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500" />
                       </div>
                       <div>
                          <label className="text-xs font-bold text-stone-400 uppercase block mb-1.5">Ibisobanuro (Context)</label>
-                         <textarea value={voiceUsage} onChange={e => setVoiceUsage(e.target.value)} placeholder="Urugero: Rikoreshwa mu kuramukanya mu gitondo..." className="w-full h-32 p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 resize-none" />
+                         <textarea value={voiceUsage} onChange={e => setVoiceUsage(e.target.value)} placeholder="Rikoreshwa mugusuhuza umuntu mu kinyabupfura..." className="w-full h-32 p-4 bg-stone-50 border border-stone-200 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 resize-none" />
                       </div>
                       <Button className="w-full py-4 bg-amber-600 hover:bg-amber-700" onClick={() => {
                          if(!voicePhrase) return;
                          saveKnowledgeItem({
-                            title: `Voice Rule: ${voicePhrase}`,
+                            title: `Imyitozo y'Ijwi: ${voicePhrase}`,
                             scope: 'VOICE_TRAINING',
                             content: `Phrase: "${voicePhrase}"\nPhonetic: [${voicePhonetic}]\nContext: ${voiceUsage}`
                          });
@@ -628,21 +667,21 @@ export const AdminDashboard: React.FC = () => {
                    <div className="flex items-center justify-between">
                       <h4 className="text-lg font-bold text-stone-800 flex items-center gap-2">
                         <Volume2 className="w-5 h-5 text-amber-600" />
-                        Amabwiriza Abitse ({voiceRules.length})
+                        Amabwiriza y'Ijwi abitse ({voiceRules.length})
                       </h4>
                    </div>
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {voiceRules.length === 0 ? (
                         <div className="col-span-full p-20 text-center bg-white rounded-3xl border border-dashed border-stone-200 text-stone-400 italic font-medium">
-                          Nta mabwiriza y'ijwi arahari.
+                          Nta mabwiriza y'ijwi arahari mu bubiko.
                         </div>
                       ) : (
                         voiceRules.map(rule => (
                           <div key={rule.id} className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 hover:border-amber-300 transition-all flex flex-col justify-between group">
                             <div>
                                <div className="flex justify-between items-start mb-2">
-                                  <h5 className="font-black text-stone-900">{rule.title.replace('Voice Rule: ', '')}</h5>
+                                  <h5 className="font-black text-stone-900">{rule.title.replace("Imyitozo y'Ijwi: ", "")}</h5>
                                   <button onClick={() => handleDelete(rule.id)} className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
                                      <Trash2 className="w-4 h-4" />
                                   </button>
@@ -653,7 +692,7 @@ export const AdminDashboard: React.FC = () => {
                                <p className="text-xs text-stone-500 leading-relaxed italic flex items-start gap-1.5">
                                   <Info className="w-3.5 h-3.5 shrink-0 text-amber-500" />
                                   {rule.content.split('\n')[2]?.replace('Context: ', '')}
-                               </p>
+                                </p>
                             </div>
                           </div>
                         ))
@@ -668,7 +707,7 @@ export const AdminDashboard: React.FC = () => {
              <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 animate-in fade-in">
                 <div className="mb-6 flex justify-between items-center">
                    <h3 className="text-lg font-bold text-stone-900">Sandbox: Kugerageza Amafoto</h3>
-                   <span className="text-[10px] font-black uppercase bg-stone-100 text-stone-500 px-3 py-1 rounded-full border border-stone-200">Admin Preview</span>
+                   <span className="text-[10px] font-black uppercase bg-stone-100 text-stone-500 px-3 py-1 rounded-full border border-stone-200">Ubusobanuro bwa Admin</span>
                 </div>
                 <ImageTools />
              </div>
@@ -679,7 +718,7 @@ export const AdminDashboard: React.FC = () => {
              <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-200 animate-in fade-in min-h-[600px]">
                 <div className="mb-6 flex justify-between items-center">
                    <h3 className="text-lg font-bold text-stone-900">Sandbox: Kugerageza Kuvuga</h3>
-                   <span className="text-[10px] font-black uppercase bg-stone-100 text-stone-500 px-3 py-1 rounded-full border border-stone-200">Admin Preview</span>
+                   <span className="text-[10px] font-black uppercase bg-stone-100 text-stone-500 px-3 py-1 rounded-full border border-stone-200">Ubusobanuro bwa Admin</span>
                 </div>
                 <VoiceConversation />
              </div>

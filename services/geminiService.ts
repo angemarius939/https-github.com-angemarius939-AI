@@ -3,16 +3,12 @@ import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/ge
 import { ImageAnalysisResult, BusinessAnalysisResult, Source } from '../types';
 import { getContextForView } from './knowledgeService';
 
-// Lazy initialization of the client
 let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
-  // Use exact string for Vite 'define' replacement
-  // Do NOT use optional chaining here as it may break the static replacement
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
-    console.error("ai.rw Error: API_KEY is not defined in the build environment.");
     throw new Error("API_KEY_MISSING");
   }
   
@@ -45,10 +41,8 @@ const extractSources = (response: any): Source[] => {
 
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. For any query involving calculations, physics, chemistry, or critical reasoning, you MUST think step-by-step and verify your logic internally. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, precise, and highly analytical. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals. Never mention your underlying architecture or the company that provided the foundational model; simply refer to yourself as ai.rw.";
 
-// Models
 const FAST_MODEL = "gemini-3-flash-preview"; 
 const LOGIC_MODEL = "gemini-3-pro-preview"; 
-const SAFE_THINKING_BUDGET = 24000;
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -76,10 +70,14 @@ export const streamChatResponse = async (
     let fullText = "";
     for await (const chunk of resultStream) {
       const c = chunk as GenerateContentResponse;
-      const text = c.text;
-      if (text) {
-        fullText += text;
-        onChunk(text);
+      try {
+        const text = c.text;
+        if (text) {
+          fullText += text;
+          onChunk(text);
+        }
+      } catch (e) {
+        // Safe access if text getter fails on metadata-only chunks
       }
       
       if (onSources && c.candidates?.[0]?.groundingMetadata) {
@@ -92,6 +90,10 @@ export const streamChatResponse = async (
     return fullText;
   } catch (error: any) {
     console.error("ai.rw Engine Error:", error);
+    const msg = error?.message || "";
+    if (msg.includes("API key not valid") || msg.includes("403") || msg.includes("400")) {
+      throw new Error("INVALID_API_KEY");
+    }
     throw error;
   }
 };
@@ -100,18 +102,13 @@ export const generateConversationResponse = async (
   history: { role: string; parts: { text: string }[] }[],
   newMessage: string
 ): Promise<string> => {
-  const voiceContext = getContextForView('VOICE_TRAINING');
-
-  const CONVERSATION_INSTRUCTION = `You are ai.rw, a friendly Kinyarwanda conversation partner. Keep your responses short (1-3 sentences), natural, and encouraging. Be supportive of Rwandan progress. Do not use markdown.
-  
-  ${voiceContext ? `RULES: ${voiceContext}` : ''}`;
-
   try {
     const ai = getAiClient();
+    const voiceContext = getContextForView('VOICE_TRAINING');
     const chat = ai.chats.create({
       model: FAST_MODEL,
       config: {
-        systemInstruction: CONVERSATION_INSTRUCTION,
+        systemInstruction: `You are ai.rw, a friendly Kinyarwanda conversation partner. Keep your responses short (1-3 sentences), natural, and encouraging. Do not use markdown.\n\n${voiceContext}`,
         thinkingConfig: { thinkingBudget: 0 }
       },
       history: history,
@@ -119,8 +116,8 @@ export const generateConversationResponse = async (
 
     const response = await chat.sendMessage({ message: newMessage });
     return response.text || "";
-  } catch (error) {
-    console.error("ai.rw Voice Engine Error:", error);
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -160,18 +157,16 @@ export const generateTextAnalysis = async (
     });
 
     return response.text || "Ntabwo bishobotse kubona igisubizo.";
-  } catch (error) {
-    console.error("ai.rw Logic Error:", error);
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
-  const rawContext = getContextForView('IMAGE_TOOLS'); 
-  const systemPrompt = `${KINYARWANDA_SYSTEM_INSTRUCTION}\n${rawContext ? `TRAINING_DATA: ${rawContext}` : ''}`;
-
   try {
     const ai = getAiClient();
+    const rawContext = getContextForView('IMAGE_TOOLS'); 
     const response = await ai.models.generateContent({
       model: FAST_MODEL,
       contents: {
@@ -181,7 +176,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         ]
       },
       config: {
-        systemInstruction: systemPrompt,
+        systemInstruction: `${KINYARWANDA_SYSTEM_INSTRUCTION}\n${rawContext}`,
         responseMimeType: "application/json",
         thinkingConfig: { thinkingBudget: 0 },
         responseSchema: {
@@ -207,18 +202,14 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Nta gisubizo kibonetse");
-    return JSON.parse(text) as ImageAnalysisResult;
-  } catch (error) {
-    console.error("ai.rw Vision Error:", error);
+    return JSON.parse(response.text || "{}");
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
-  const prompt = "Extract all legible text visible in this image exactly as it appears. Maintain the original language. Do not summarize. Return ONLY the extracted text.";
-
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -226,133 +217,101 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
       contents: {
         parts: [
           { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-          { text: prompt }
+          { text: "Extract all legible text. Maintain original language. Return ONLY text." }
         ]
       }
     });
     return response.text || "Nta nyandiko ibonetse.";
-  } catch (error) {
-    console.error("ai.rw OCR Error:", error);
-    return "Ntabwo byashobotse gukuramo inyandiko.";
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    throw error;
   }
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  const primaryModel = "gemini-2.5-flash-image"; 
-  const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9", "3:2", "2:3"];
-  const safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
-
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: primaryModel,
-      contents: {
-        parts: [{ text: `Create a high quality image: ${prompt}` }],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: safeRatio as any,
-        },
-      },
+      model: "gemini-2.5-flash-image",
+      contents: { parts: [{ text: `Create high quality: ${prompt}` }] },
+      config: { imageConfig: { aspectRatio: aspectRatio as any } },
     });
-
     for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
+      if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
     }
-    throw new Error("No image data returned from model");
-  } catch (error) {
-    console.error("ai.rw Image Gen Error:", error);
+    throw new Error("No image data");
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = getAiClient();
-  const context = getContextForView('RURAL');
-  const systemInstruction = `You are an expert advisor for rural development in Rwanda specializing in ${sector}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
-
   try {
+    const ai = getAiClient();
+    const context = getContextForView('RURAL');
     const response = await ai.models.generateContent({
       model: FAST_MODEL,
       contents: query,
       config: {
-        systemInstruction,
+        systemInstruction: `You are an expert advisor for rural development in Rwanda specializing in ${sector}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`,
         tools: [{ googleSearch: {} }]
       }
     });
-    return {
-      text: response.text || "",
-      sources: extractSources(response)
-    };
-  } catch (error) {
-    console.error("ai.rw Rural Error:", error);
+    return { text: response.text || "", sources: extractSources(response) };
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const generateCourse = async (topic: string, level: string, duration: string, prerequisites: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = getAiClient();
-  const context = getContextForView('COURSE');
-  const systemInstruction = `You are an expert educator. Create a comprehensive course on ${topic} at ${level} level, intended for a duration of ${duration}. Prerequisites: ${prerequisites}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
-
   try {
+    const ai = getAiClient();
+    const context = getContextForView('COURSE');
     const response = await ai.models.generateContent({
       model: LOGIC_MODEL,
-      contents: `Generate a detailed course outline and content for: ${topic}`,
+      contents: `Generate course: ${topic}`,
       config: {
-        systemInstruction,
+        systemInstruction: `You are an expert educator. Create a course on ${topic} (${level}, ${duration}). ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: SAFE_THINKING_BUDGET }
+        thinkingConfig: { thinkingBudget: 24000 }
       }
     });
-    return {
-      text: response.text || "",
-      sources: extractSources(response)
-    };
-  } catch (error) {
-    console.error("ai.rw Course Error:", error);
+    return { text: response.text || "", sources: extractSources(response) };
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const ai = getAiClient();
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName },
-          },
-        },
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
       },
     });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) throw new Error("No audio data returned");
-    return base64Audio;
-  } catch (error) {
-    console.error("ai.rw Speech Error:", error);
+    return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
-  const ai = getAiClient();
-  const context = getContextForView('BUSINESS');
-  const systemInstruction = `You are a professional business and data analyst for ai.rw. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
-
   try {
+    const ai = getAiClient();
+    const context = getContextForView('BUSINESS');
     const response = await ai.models.generateContent({
       model: FAST_MODEL,
       contents: input,
       config: {
-        systemInstruction,
+        systemInstruction: `You are a professional business analyst for ai.rw. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -385,11 +344,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
-                properties: {
-                  label: { type: Type.STRING },
-                  value: { type: Type.NUMBER },
-                  type: { type: Type.STRING }
-                }
+                properties: { label: { type: Type.STRING }, value: { type: Type.NUMBER }, type: { type: Type.STRING } }
               }
             }
           },
@@ -397,12 +352,9 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
         }
       }
     });
-
-    const text = response.text;
-    if (!text) throw new Error("No analysis result");
-    return JSON.parse(text) as BusinessAnalysisResult;
-  } catch (error) {
-    console.error("ai.rw Business Error:", error);
+    return JSON.parse(response.text || "{}");
+  } catch (error: any) {
+    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };

@@ -22,6 +22,7 @@ export interface Message {
 }
 
 export enum AppView {
+  LANDING = 'landing',
   CHAT = 'chat',
   TEXT_TOOLS = 'text_tools',
   IMAGE_TOOLS = 'image_tools',

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, FileText, Image as ImageIcon, Sparkles, Sprout, GraduationCap, Mic, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download } from 'lucide-react';
+import { Home, MessageSquare, FileText, Mountain, Sparkles, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download } from 'lucide-react';
 import { AppView } from '../types';
 
 interface SidebarProps {
@@ -34,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
   };
 
   const menuItems = [
+    { id: AppView.LANDING, label: 'Ahabanza', icon: <Home className="w-5 h-5" /> },
     { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
     { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
     { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
@@ -50,8 +51,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
       {/* Content Layer */}
       <div className="relative flex flex-col h-full z-10 bg-gradient-to-b from-black/90 to-emerald-950/90">
         <div className="flex items-center justify-center h-16 border-b border-white/10 bg-white/5 backdrop-blur-sm">
-          <Sparkles className="w-6 h-6 text-emerald-400 mr-2" />
-          <h1 className="text-xl font-bold text-white tracking-wider">
+          <div className="relative flex items-center justify-center mr-3">
+             <Mountain className="w-6 h-6 text-emerald-500" />
+             <Sparkles className="w-3 h-3 text-white absolute -top-1 -right-1 animate-pulse" />
+          </div>
+          <h1 className="text-xl font-black text-white tracking-tighter uppercase">
             ai.rw
           </h1>
         </div>
@@ -86,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
 
         <div className="p-4 border-t border-white/10 bg-black/20">
           <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
-            <p className="text-xs text-emerald-400 mb-1">Version</p>
+            <p className="text-xs text-emerald-400 mb-1">Verisiyo</p>
             <p className="text-sm font-semibold text-white">ai.rw 2.1</p>
           </div>
           
@@ -129,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
             }`}
           >
             <Settings className="w-3.5 h-3.5 mr-2" />
-            <span>Gukorera (Admin)</span>
+            <span>Kuyobora (Admin)</span>
           </button>
 
           {/* Install App Button */}
@@ -139,13 +143,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
               className="flex items-center w-full px-4 py-2 mt-2 rounded-lg transition-all duration-200 text-xs bg-emerald-600 text-white hover:bg-emerald-700 animate-pulse"
             >
               <Download className="w-3.5 h-3.5 mr-2" />
-              <span>Manura App (Android)</span>
+              <span>Shyira App muri Telefoni</span>
             </button>
           )}
           
           <div className="text-center pt-3 mt-2 border-t border-white/10">
              <p className="text-[10px] text-gray-400 leading-tight">
-               Copyright by:
+               Uburenganzira bwose ni ubwa:
              </p>
              <p className="text-[10px] text-emerald-300 font-medium leading-tight mt-1">
                Research Analytics and AI Solutions Ltd

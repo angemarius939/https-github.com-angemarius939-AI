@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Menu, X, Loader2 } from 'lucide-react';
+import { Menu, X, Loader2, Home, Mountain, Sparkles } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
 import { ToastProvider } from './components/ToastProvider';
 import { AppView } from './types';
 import { recordVisit } from './services/statsService';
+import { LandingPage } from './components/LandingPage';
 
-// Lazy load non-landing components for faster initial boot
+// Lazy load feature components
 const TextAssistant = lazy(() => import('./components/TextAssistant').then(m => ({ default: m.TextAssistant })));
 const ImageTools = lazy(() => import('./components/ImageTools').then(m => ({ default: m.ImageTools })));
 const RuralAssistant = lazy(() => import('./components/RuralAssistant').then(m => ({ default: m.RuralAssistant })));
@@ -18,19 +19,26 @@ const DecisionAssistant = lazy(() => import('./components/DecisionAssistant').th
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 const LoadingView = () => (
-  <div className="h-full w-full flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm">
-    <Loader2 className="w-8 h-8 text-emerald-500 animate-spin mb-4" />
+  <div className="h-full w-full flex flex-col items-center justify-center bg-white/50">
+    <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-4" />
     <p className="text-emerald-900 font-bold text-xs uppercase tracking-widest">Irimo gufungura...</p>
   </div>
 );
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
+  const [currentView, setCurrentView] = useState<AppView | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
 
   useEffect(() => {
-    // Non-blocking visit recording
+    // Check if landing page is enabled in Admin settings
+    const landingEnabled = localStorage.getItem('ai_rw_landing_enabled') !== 'false'; 
+    if (landingEnabled) {
+      setCurrentView(AppView.LANDING);
+    } else {
+      setCurrentView(AppView.CHAT);
+    }
+    
     recordVisit().catch(console.error);
   }, []);
 
@@ -48,6 +56,7 @@ export default function App() {
 
   const getPageTitle = () => {
     switch (currentView) {
+      case AppView.LANDING: return 'Ahabanza';
       case AppView.CHAT: return 'Ikiganiro';
       case AppView.VOICE_CONVERSATION: return 'Kuvuga';
       case AppView.TEXT_TO_SPEECH: return 'Soma Inyandiko';
@@ -56,80 +65,113 @@ export default function App() {
       case AppView.RURAL_SUPPORT: return 'Iterambere';
       case AppView.DECISION_ASSISTANT: return 'Umujyanama';
       case AppView.COURSE_GENERATOR: return 'Amasomo';
-      case AppView.ADMIN: return 'Admin';
+      case AppView.ADMIN: return 'Ubuyobozi';
       default: return 'ai.rw';
     }
   };
 
-  const renderView = () => {
-    return (
-      <Suspense fallback={<LoadingView />}>
-        {(() => {
-          switch (currentView) {
-            case AppView.CHAT:
-              return <ChatInterface onNavigate={handleViewChange} />;
-            case AppView.VOICE_CONVERSATION:
-              return <VoiceConversation />;
-            case AppView.TEXT_TO_SPEECH:
-              return <TextToSpeech initialText={ttsInitialText} />;
-            case AppView.TEXT_TOOLS:
-              return <TextAssistant onNavigateToTTS={handleNavigateToTTS} />;
-            case AppView.IMAGE_TOOLS:
-              return <ImageTools onNavigateToTTS={handleNavigateToTTS} />;
-            case AppView.RURAL_SUPPORT:
-              return <RuralAssistant />;
-            case AppView.DECISION_ASSISTANT:
-              return <DecisionAssistant />;
-            case AppView.COURSE_GENERATOR:
-              return <CourseGenerator />;
-            case AppView.ADMIN:
-              return <AdminDashboard />;
-            default:
-              return <ChatInterface onNavigate={handleViewChange} />;
-          }
-        })()}
-      </Suspense>
-    );
+  const renderContent = () => {
+    switch (currentView) {
+      case AppView.CHAT:
+        return <ChatInterface onNavigate={handleViewChange} />;
+      case AppView.VOICE_CONVERSATION:
+        return <VoiceConversation />;
+      case AppView.TEXT_TO_SPEECH:
+        return <TextToSpeech initialText={ttsInitialText} />;
+      case AppView.TEXT_TOOLS:
+        return <TextAssistant onNavigateToTTS={handleNavigateToTTS} />;
+      case AppView.IMAGE_TOOLS:
+        return <ImageTools onNavigateToTTS={handleNavigateToTTS} />;
+      case AppView.RURAL_SUPPORT:
+        return <RuralAssistant />;
+      case AppView.DECISION_ASSISTANT:
+        return <DecisionAssistant />;
+      case AppView.COURSE_GENERATOR:
+        return <CourseGenerator />;
+      case AppView.ADMIN:
+        return <AdminDashboard />;
+      default:
+        return <ChatInterface onNavigate={handleViewChange} />;
+    }
   };
 
+  // Initial loading state while we check localStorage
+  if (currentView === null) return <LoadingView />;
+
+  // CRITICAL: Render Landing Page as full-screen if active
+  // This bypasses the dashboard layout entirely for the landing experience.
+  if (currentView === AppView.LANDING) {
+    return (
+      <ToastProvider>
+        <LandingPage onStart={handleViewChange} />
+      </ToastProvider>
+    );
+  }
+
+  // Otherwise render the Dashboard layout
   return (
     <ToastProvider>
-      <div className="flex h-screen bg-stone-100 overflow-hidden font-sans">
+      <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans">
+        {/* Persistent Sidebar (Desktop) */}
         <Sidebar 
           currentView={currentView} 
           onChangeView={handleViewChange} 
           isOpen={isSidebarOpen} 
         />
 
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          <div className="absolute inset-0 rwanda-pattern-light opacity-60 pointer-events-none z-0"></div>
+        <div className="flex-1 flex flex-col min-w-0 relative h-full">
+          {/* Decorative background pattern */}
+          <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
 
-          {/* Mobile Header */}
-          <div className="md:hidden flex items-center justify-between p-4 bg-black text-white border-b border-white/10 relative z-10 shadow-lg">
+          {/* Mobile Navigation Header */}
+          <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
             <div className="flex items-center gap-3">
-               <div className="bg-emerald-500 p-1.5 rounded-lg shadow-sm">
-                 <span className="text-black font-black text-xs">AI.RW</span>
-               </div>
-               <h1 className="text-sm font-black uppercase tracking-widest">{getPageTitle()}</h1>
+               <button 
+                 onClick={() => handleViewChange(AppView.LANDING)}
+                 className="bg-emerald-500 p-2 rounded shadow-inner hover:bg-emerald-400 transition-colors flex items-center justify-center relative"
+               >
+                 <Mountain className="w-4 h-4 text-black" />
+                 <Sparkles className="w-2 h-2 text-emerald-900 absolute -top-0.5 -right-0.5" />
+               </button>
+               <h1 className="text-sm font-black uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
             </div>
             <button 
               onClick={toggleSidebar}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all active:scale-95"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all"
             >
               {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
 
-          <main className="flex-1 overflow-hidden p-3 md:p-8 relative z-10">
-            <div className="h-full bg-white/40 backdrop-blur-sm rounded-[32px] border border-white/40 shadow-2xl overflow-hidden transition-all duration-700 ease-in-out">
-               {renderView()}
+          {/* Desktop Breadcrumb Header */}
+          <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
+             <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
+                <button 
+                  onClick={() => handleViewChange(AppView.LANDING)} 
+                  className="hover:text-emerald-600 transition-colors flex items-center gap-1.5"
+                >
+                   <Mountain className="w-3.5 h-3.5" />
+                   Ahabanza
+                </button>
+                <span>/</span>
+                <span className="text-emerald-600">{getPageTitle()}</span>
+             </div>
+          </header>
+
+          {/* Main Content Viewport */}
+          <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
+            <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden transition-all duration-500">
+               <Suspense fallback={<LoadingView />}>
+                 {renderContent()}
+               </Suspense>
             </div>
           </main>
         </div>
 
+        {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/90 z-20 md:hidden backdrop-blur-md animate-in fade-in"
+            className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
