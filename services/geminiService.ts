@@ -6,6 +6,8 @@ import { getContextForView } from './knowledgeService';
 let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
+  // Vite replaces process.env.API_KEY at build time. 
+  // On Vercel, if not set, it might become the string "undefined".
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
@@ -55,42 +57,68 @@ export const streamChatResponse = async (
     const adminContext = getContextForView('CHAT');
     const systemInstruction = KINYARWANDA_SYSTEM_INSTRUCTION + adminContext;
 
-    const chat = ai.chats.create({
-      model: FAST_MODEL, 
-      config: {
-        systemInstruction: systemInstruction,
-        tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 0 }
-      },
-      history: history,
-    });
+    try {
+      const chat = ai.chats.create({
+        model: FAST_MODEL, 
+        config: {
+          systemInstruction: systemInstruction,
+          tools: [{ googleSearch: {} }],
+          thinkingConfig: { thinkingBudget: 0 }
+        },
+        history: history,
+      });
 
-    const resultStream = await chat.sendMessageStream({ message: newMessage });
+      const resultStream = await chat.sendMessageStream({ message: newMessage });
 
-    let fullText = "";
-    for await (const chunk of resultStream) {
-      const c = chunk as GenerateContentResponse;
-      try {
+      let fullText = "";
+      for await (const chunk of resultStream) {
+        const c = chunk as GenerateContentResponse;
+        try {
+          const text = c.text;
+          if (text) {
+            fullText += text;
+            onChunk(text);
+          }
+        } catch (e) {}
+        
+        if (onSources && c.candidates?.[0]?.groundingMetadata) {
+           const sources = extractSources(c);
+           if (sources.length > 0) {
+             onSources(sources);
+           }
+        }
+      }
+      return fullText;
+    } catch (toolError: any) {
+      // Fallback: If Google Search or tool calling fails (common with some API key tiers),
+      // try a standard chat without tools.
+      console.warn("Retrying without tools due to error:", toolError);
+      
+      const simpleChat = ai.chats.create({
+        model: FAST_MODEL, 
+        config: {
+          systemInstruction: systemInstruction,
+          thinkingConfig: { thinkingBudget: 0 }
+        },
+        history: history,
+      });
+
+      const resultStream = await simpleChat.sendMessageStream({ message: newMessage });
+      let fullText = "";
+      for await (const chunk of resultStream) {
+        const c = chunk as GenerateContentResponse;
         const text = c.text;
         if (text) {
           fullText += text;
           onChunk(text);
         }
-      } catch (e) {
-        // Safe access if text getter fails on metadata-only chunks
       }
-      
-      if (onSources && c.candidates?.[0]?.groundingMetadata) {
-         const sources = extractSources(c);
-         if (sources.length > 0) {
-           onSources(sources);
-         }
-      }
+      return fullText;
     }
-    return fullText;
   } catch (error: any) {
     console.error("ai.rw Engine Error:", error);
     const msg = error?.message || "";
+    if (msg === "API_KEY_MISSING") throw error;
     if (msg.includes("API key not valid") || msg.includes("403") || msg.includes("400")) {
       throw new Error("INVALID_API_KEY");
     }
@@ -117,6 +145,7 @@ export const generateConversationResponse = async (
     const response = await chat.sendMessage({ message: newMessage });
     return response.text || "";
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -158,6 +187,7 @@ export const generateTextAnalysis = async (
 
     return response.text || "Ntabwo bishobotse kubona igisubizo.";
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -204,6 +234,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 
     return JSON.parse(response.text || "{}");
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -223,6 +254,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     });
     return response.text || "Nta nyandiko ibonetse.";
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -241,6 +273,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
     }
     throw new Error("No image data");
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -260,6 +293,7 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     });
     return { text: response.text || "", sources: extractSources(response) };
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -280,6 +314,7 @@ export const generateCourse = async (topic: string, level: string, duration: str
     });
     return { text: response.text || "", sources: extractSources(response) };
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -298,6 +333,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
     });
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }
@@ -354,6 +390,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     });
     return JSON.parse(response.text || "{}");
   } catch (error: any) {
+    if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
     throw error;
   }

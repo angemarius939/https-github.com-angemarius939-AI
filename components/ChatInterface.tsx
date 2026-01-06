@@ -49,10 +49,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   // Immediate scroll on first load and when messages significantly change
   useEffect(() => {
     if (!isSearchOpen) {
-      // Use 'auto' for immediate snap during streaming updates to prevent jitter
-      // but 'smooth' for general message addition
       const behavior = isStreaming ? 'auto' : 'smooth';
-      scrollToBottom(behavior);
+      // Small timeout to ensure DOM has updated after state change
+      const timer = setTimeout(() => scrollToBottom(behavior), 10);
+      return () => clearTimeout(timer);
     }
   }, [messages, isSearchOpen, isStreaming]);
 
@@ -143,6 +143,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     } catch (error: any) {
       console.error("Chat error:", error);
       let errorMessage = 'Habaye ikibazo mu gushaka igisubizo. Ongera ugerageze mukanya.';
+      
+      if (error?.message === "API_KEY_MISSING") {
+        errorMessage = 'Habaye ikibazo: API_KEY ntigaragara muri Vercel Settings. Nyamuneka yishyiremo kugira ngo porogaramu ikore.';
+      } else if (error?.message === "INVALID_API_KEY") {
+        errorMessage = 'Habaye ikibazo: API_KEY ukoresha ntabwo yemewe cyangwa ntabwo ikora. Nyamuneka yigenzure.';
+      }
+      
       setMessages(prev => prev.filter(m => m.id !== modelMsgId).concat([{
         id: Date.now().toString(), role: MessageRole.ERROR, text: errorMessage, timestamp: Date.now()
       }]));
