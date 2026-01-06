@@ -32,8 +32,14 @@ export default function App() {
   const [ttsInitialText, setTtsInitialText] = useState('');
 
   useEffect(() => {
-    const landingEnabled = localStorage.getItem('ai_rw_landing_enabled') !== 'false'; 
-    setCurrentView(landingEnabled ? AppView.LANDING : AppView.CHAT);
+    // Explicitly check for landing page enablement, defaulting to true if not set
+    const landingPreference = localStorage.getItem('ai_rw_landing_enabled');
+    const isLandingEnabled = landingPreference !== 'false'; 
+    
+    // Ensure we start at LANDING if enabled, otherwise go to CHAT
+    setCurrentView(isLandingEnabled ? AppView.LANDING : AppView.CHAT);
+    
+    // Log the visit for analytics
     recordVisit().catch(console.error);
   }, []);
 
@@ -47,6 +53,8 @@ export default function App() {
   const handleViewChange = (view: AppView) => {
     setCurrentView(view);
     setIsSidebarOpen(false);
+    // Smooth scroll to top when changing views
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getPageTitle = () => {
@@ -81,6 +89,8 @@ export default function App() {
   };
 
   if (currentView === null) return <LoadingView />;
+
+  // If we are in Landing View, we render only the Landing Page without the sidebar layout
   if (currentView === AppView.LANDING) {
     return (
       <ToastProvider>
@@ -94,7 +104,10 @@ export default function App() {
       <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans">
         <Sidebar currentView={currentView} onChangeView={handleViewChange} isOpen={isSidebarOpen} />
         <div className="flex-1 flex flex-col min-w-0 relative h-full">
+          {/* Background Pattern Overlay */}
           <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
+          
+          {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
             <div className="flex items-center gap-3">
                <button onClick={() => handleViewChange(AppView.LANDING)}>
@@ -106,6 +119,8 @@ export default function App() {
               {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
+
+          {/* Desktop Breadcrumbs Header */}
           <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
              <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
                 <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
@@ -116,6 +131,8 @@ export default function App() {
                 <span className="text-emerald-600">{getPageTitle()}</span>
              </div>
           </header>
+
+          {/* Main Content Viewport */}
           <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
             <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
                <Suspense fallback={<LoadingView />}>
@@ -124,6 +141,8 @@ export default function App() {
             </div>
           </main>
         </div>
+
+        {/* Overlay for mobile sidebar */}
         {isSidebarOpen && <div className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in" onClick={() => setIsSidebarOpen(false)} />}
       </div>
     </ToastProvider>

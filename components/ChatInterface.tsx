@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, Home } from 'lucide-react';
 import { Message, MessageRole, Source, AppView } from '../types';
 import { streamChatResponse } from '../services/geminiService';
@@ -25,15 +25,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const textBeforeListening = useRef('');
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
-  const hasPlayedReceiveSound = useRef(false);
 
   const quickFeatures = [
     { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
@@ -43,25 +40,50 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-pink-100 text-pink-700' },
   ];
 
+  // Derived state for filtered messages
+  const filteredMessages = useMemo(() => {
+    if (!isSearchOpen || !searchQuery.trim()) return messages;
+    const query = searchQuery.toLowerCase();
+    return messages.filter(msg => msg.text.toLowerCase().includes(query));
+  }, [messages, isSearchOpen, searchQuery]);
+
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+    }
   };
 
+  // Auto-scroll logic for new messages and streaming content
   useEffect(() => {
-    if (!isSearchOpen) {
+    // Only auto-scroll if we are not in search mode (so user doesn't lose their place)
+    if (!isSearchOpen || !searchQuery) {
       const behavior = isStreaming ? 'auto' : 'smooth';
-      const timer = setTimeout(() => scrollToBottom(behavior), 10);
-      return () => clearTimeout(timer);
+      const frameId = requestAnimationFrame(() => {
+        scrollToBottom(behavior);
+      });
+      return () => cancelAnimationFrame(frameId);
     }
-  }, [messages, isSearchOpen, isStreaming]);
+  }, [messages, isStreaming, isSearchOpen, searchQuery]);
+
+  // Handle initial mount scroll
+  useEffect(() => {
+    const timer = setTimeout(() => scrollToBottom('auto'), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isStreaming) return;
+    
+    // Clear search if open when sending a new message to show context
+    if (isSearchOpen) {
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
+
     const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text: inputValue, timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsStreaming(true);
-    hasPlayedReceiveSound.current = false;
 
     const history = messages.map(m => ({
       role: m.role === MessageRole.USER ? 'user' : 'model',
@@ -98,6 +120,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const confirmClearChat = () => {
     setMessages([{ id: Date.now().toString(), role: MessageRole.MODEL, text: 'Ikiganiro gishya cyatangiye!', timestamp: Date.now() }]);
     setIsClearConfirmOpen(false);
+    setSearchQuery('');
+    setIsSearchOpen(false);
   };
 
   return (
@@ -122,10 +146,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
                 placeholder="Shakisha mu kiganiro..." 
-                className="w-full pl-9 pr-4 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white" 
+                className="w-full pl-9 pr-4 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white font-medium" 
               />
+              {searchQuery && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                  {filteredMessages.length} results
+                </div>
+              )}
             </div>
-            <Button variant="ghost" onClick={() => setIsSearchOpen(false)} className="text-red-500"><X className="w-5 h-5" /></Button>
+            <Button variant="ghost" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="text-red-500"><X className="w-5 h-5" /></Button>
           </div>
         ) : (
           <div className="flex items-center justify-between w-full">
@@ -143,8 +172,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50 relative">
-        {messages.map((msg) => (
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50 relative custom-scrollbar">
+        {filteredMessages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex max-w-[90%] md:max-w-[85%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center mx-2 shadow-sm ${msg.role === MessageRole.USER ? 'bg-emerald-600' : 'bg-emerald-800'}`}>
@@ -153,11 +182,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
               <div className={`p-4 md:p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-bottom-2 ${msg.role === MessageRole.USER ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'}`}>
                 <FormattedText text={msg.text} searchQuery={searchQuery} />
                 {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} className="mt-4" />}
+                <div className={`text-[9px] mt-2 font-bold opacity-40 ${msg.role === MessageRole.USER ? 'text-white text-right' : 'text-stone-400'}`}>
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             </div>
           </div>
         ))}
-        {messages.length <= 1 && !searchQuery && (
+        
+        {/* Empty state for search */}
+        {isSearchOpen && searchQuery && filteredMessages.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-stone-400">
+            <Search className="w-12 h-12 mb-4 opacity-10" />
+            <p className="font-bold text-sm uppercase tracking-widest">Nta kintu cyabonetse kuri "{searchQuery}"</p>
+          </div>
+        )}
+
+        {messages.length <= 1 && !searchQuery && !isSearchOpen && (
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 animate-in fade-in duration-700 delay-300">
             {quickFeatures.map((feat, idx) => (
               <button key={idx} onClick={() => onNavigate?.(feat.view)} className={`flex flex-col items-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all hover:-translate-y-2 ${feat.color} bg-opacity-5 hover:bg-opacity-10`}>
@@ -172,7 +213,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
 
       <div className="p-4 md:p-6 bg-white border-t border-emerald-100">
         <div className="flex items-end gap-3 max-w-4xl mx-auto">
-          <textarea value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Baza ai.rw icyo wifuza..." className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50" disabled={isStreaming} />
+          <textarea 
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder="Baza ai.rw icyo wifuza..." 
+            className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all" 
+            disabled={isStreaming} 
+          />
           <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isStreaming} isLoading={isStreaming} className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-xl"><Send className="w-6 h-6" /></Button>
         </div>
       </div>

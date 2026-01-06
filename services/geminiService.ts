@@ -50,6 +50,7 @@ const extractSources = (response: any): Source[] => {
 };
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
+const PRO_MODEL = "gemini-3-pro-preview";
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -125,7 +126,6 @@ export const streamChatResponse = async (
   }
 };
 
-// Added: generateConversationResponse for non-streaming voice conversation chat turns
 export const generateConversationResponse = async (
   history: { role: string; parts: { text: string }[] }[],
   newMessage: string
@@ -136,7 +136,6 @@ export const generateConversationResponse = async (
     const adminContext = getContextForView('VOICE_TRAINING');
     const systemInstruction = config.systemInstruction + adminContext;
 
-    // Ensure the message is not duplicated in history if already added by the caller
     const cleanHistory = history.length > 0 && history[history.length - 1].parts[0].text === newMessage
       ? history.slice(0, -1)
       : history;
@@ -206,7 +205,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
       config: {
         systemInstruction: `You are a professional business analyst for ai.rw. Answer in Kinyarwanda. ${config.systemInstruction} ${context}`,
         responseMimeType: "application/json",
-        temperature: 0.1, // Keep analysis predictable
+        temperature: 0.1, 
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -369,16 +368,25 @@ export const generateCourse = async (topic: string, level: string, duration: str
   try {
     const ai = getAiClient();
     const context = getContextForView('COURSE');
-    const prompt = `Detailed course: ${topic}. Level: ${level}, Duration: ${duration}. Kinyarwanda.`;
+    const prompt = `Detailed educational course on: ${topic}. 
+Urwego: ${level}, Igihe: ${duration}, Ibisabwa mbere: ${prerequisites}. 
+
+Requirements: 
+- Answer entirely in Kinyarwanda.
+- Structure using Markdown with clear headers like "## 1. Intangiriro", "## 2. Ingingo z'ingenzi", etc.
+- Include a quiz section and a summary.
+- Act as a master world-class educator.
+- Be highly descriptive and accurate.`;
+
     const response = await ai.models.generateContent({
-      model: FAST_MODEL,
+      model: PRO_MODEL,
       contents: prompt,
       config: {
-        systemInstruction: `You are an educator. ${context}`,
+        systemInstruction: `You are an expert educator for ai.rw. Provide deep, factual, and structured educational material for Rwandans. ${context}`,
         tools: [{ googleSearch: {} }]
       }
     });
-    return { text: response.text || "", sources: extractSources(response) };
+    return { text: response.text || "Habaye ikibazo mu gutegura iri somo.", sources: extractSources(response) };
   } catch (error: any) {
     throw error;
   }
