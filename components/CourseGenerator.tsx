@@ -5,7 +5,8 @@ import {
   History, Target, Layers, Book, BrainCircuit, 
   ArrowRight, Printer, Layout, FileText, Link, 
   ChevronRight, HelpCircle, Download, Lightbulb, 
-  Bookmark, Copy, Check, Menu, X, Sparkles, Map
+  Bookmark, Copy, Check, Menu, X, Sparkles, Map,
+  ChevronDown, BookMarked
 } from 'lucide-react';
 import { generateCourse } from '../services/geminiService';
 import { Button } from './Button';
@@ -14,6 +15,14 @@ import { useToast } from './ToastProvider';
 import { ProgressBar } from './ProgressBar';
 import { FormattedText } from './FormattedText';
 import { SourcesToggle } from './SourcesToggle';
+
+// Improved Sprout icon placeholder replacement
+// Moved to the top to avoid "used before declaration" error in exampleTopics
+const Sprout = (props: any) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 20h10" /><path d="M10 20V8a3 3 0 0 0-3-3 3 3 0 0 0-3 3v12" /><path d="M14 20V6a3 3 0 0 1 3-3 3 3 0 0 1 3 3v14" />
+  </svg>
+);
 
 interface CourseHistoryItem {
   id: string;
@@ -50,21 +59,22 @@ export const CourseGenerator: React.FC = () => {
   const { showToast } = useToast();
 
   const exampleTopics = [
-    { label: "Ubuhinzi bwa Kijyambere", icon: Sparkles },
+    { label: "Ubuhinzi bwa Kijyambere", icon: Sprout },
     { label: "Imicungire y'Imari", icon: Layout },
     { label: "Ikoranabuhanga ry'Ibanze", icon: BrainCircuit },
     { label: "Kwiga Icyongereza", icon: Book },
     { label: "Umutekano kuri Internet", icon: Target }
   ];
 
-  const getSectionTheme = (title: string): ParsedSection['theme'] => {
+  const getSectionTheme = (title: string, index: number): ParsedSection['theme'] => {
     const t = title.toLowerCase();
-    if (t.includes('ibibazo') || t.includes('quiz') || t.includes('imyitozo')) return 'amber';
+    if (t.includes('ibibazo') || t.includes('quiz') || t.includes('imyitozo')) return 'rose';
     if (t.includes('mfashanyigisho') || t.includes('resource') || t.includes('ibitabo')) return 'blue';
-    if (t.includes('intangiriro') || t.includes('intro')) return 'indigo';
+    if (t.includes('intangiriro') || t.includes('intro')) return 'emerald';
     if (t.includes('incamake') || t.includes('outline')) return 'violet';
-    if (t.includes('ingero') || t.includes('example')) return 'rose';
-    return 'emerald';
+    
+    const themes: ParsedSection['theme'][] = ['emerald', 'indigo', 'blue', 'violet', 'rose', 'amber'];
+    return themes[index % themes.length];
   };
 
   const getThemeStyles = (theme: ParsedSection['theme']) => {
@@ -73,6 +83,7 @@ export const CourseGenerator: React.FC = () => {
       case 'blue': return { border: 'border-blue-100', bg: 'bg-blue-50', text: 'text-blue-900', icon: 'bg-blue-100 text-blue-700', accent: 'bg-blue-500' };
       case 'indigo': return { border: 'border-indigo-100', bg: 'bg-indigo-50', text: 'text-indigo-900', icon: 'bg-indigo-100 text-indigo-700', accent: 'bg-indigo-500' };
       case 'rose': return { border: 'border-rose-100', bg: 'bg-rose-50', text: 'text-rose-900', icon: 'bg-rose-100 text-rose-700', accent: 'bg-rose-500' };
+      case 'violet': return { border: 'border-violet-100', bg: 'bg-violet-50', text: 'text-violet-900', icon: 'bg-violet-100 text-violet-700', accent: 'bg-violet-500' };
       default: return { border: 'border-emerald-100', bg: 'bg-emerald-50', text: 'text-emerald-900', icon: 'bg-emerald-100 text-emerald-700', accent: 'bg-emerald-500' };
     }
   };
@@ -82,17 +93,32 @@ export const CourseGenerator: React.FC = () => {
       setParsedSections([]);
       return;
     }
-    const rawSections = courseContent.split(/(?=## \d+\.|## [A-Z]|#{2,3} )/g);
+
+    // Fixed robust parsing logic
+    // Split by any level 2 header that starts at a new line
+    const rawSections = courseContent.split(/\n(?=##\s)/g);
+    
     const sections: ParsedSection[] = rawSections
-      .map(section => {
-        const match = section.match(/#{2,3}\s+(?:(\d+\.)\s*)?(.*?)\n([\s\S]*)/);
+      .map((section, index) => {
+        // Match header line and content
+        const match = section.match(/^##\s+(.*)\n([\s\S]*)$/);
         if (match) {
-          const title = match[2].trim();
+          const title = match[1].trim();
+          const content = match[2].trim();
           return {
-            title: title,
-            content: match[3].trim(),
-            id: title.toLowerCase().replace(/[^a-z0-9]/g, ''),
-            theme: getSectionTheme(title)
+            title,
+            content,
+            id: `section-${index}`,
+            theme: getSectionTheme(title, index)
+          };
+        }
+        // Fallback for first section if it doesn't have a header but is text
+        if (index === 0 && section.trim() && !section.startsWith('##')) {
+          return {
+            title: "Intangiriro y'Isomo",
+            content: section.trim(),
+            id: 'section-0',
+            theme: 'emerald'
           };
         }
         return null;
@@ -129,7 +155,7 @@ export const CourseGenerator: React.FC = () => {
         timestamp: Date.now()
       };
       setHistory(prev => [newItem, ...prev]);
-      showToast('Isomo ryateguwe!', 'success');
+      showToast('Isomo ryateguwe neza!', 'success');
     } catch (error: any) {
       showToast('Habaye ikibazo gutegura isomo.', 'error');
     } finally {
@@ -141,7 +167,24 @@ export const CourseGenerator: React.FC = () => {
     setActiveSection(id);
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const offset = 100; // Account for fixed header
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      const elementPosition = elementRect - bodyRect;
+      const offsetPosition = elementPosition - offset;
+
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      } else {
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
     }
   };
 
@@ -258,7 +301,7 @@ export const CourseGenerator: React.FC = () => {
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden relative" ref={scrollContainerRef}>
+        <main className="flex-1 flex flex-col h-full overflow-hidden relative">
           
           {/* Top Navbar */}
           {courseContent && (
@@ -286,7 +329,7 @@ export const CourseGenerator: React.FC = () => {
           <div className="flex-1 flex overflow-hidden">
             
             {/* Scrollable Content Container (Center) */}
-            <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
               {!courseContent ? (
                 <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-12 animate-in fade-in duration-1000">
                   <div className="relative">
@@ -369,7 +412,7 @@ export const CourseGenerator: React.FC = () => {
                                     <div className={`${styles.bg} px-8 py-6 border-b border-stone-50 flex justify-between items-center`}>
                                        <h3 className={`text-xl md:text-2xl font-black uppercase tracking-tighter ${styles.text}`}>{section.title}</h3>
                                        <div className={`p-2.5 rounded-xl ${styles.icon} shadow-inner`}>
-                                         {section.theme === 'amber' ? <HelpCircle className="w-5 h-5" /> : section.theme === 'indigo' ? <Sparkles className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                                         {section.theme === 'rose' ? <HelpCircle className="w-5 h-5" /> : section.theme === 'indigo' ? <Sparkles className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                                        </div>
                                     </div>
                                     <div className="p-8 md:p-12 prose prose-emerald max-w-none">
@@ -386,9 +429,9 @@ export const CourseGenerator: React.FC = () => {
               )}
             </div>
 
-            {/* Table of Contents - Now on the RIGHT side for natural reading flow (Desktop) */}
+            {/* Table of Contents - Sticky on the RIGHT side for natural reading flow (Desktop) */}
             {courseContent && parsedSections.length > 0 && (
-              <div className="hidden xl:block w-72 shrink-0 h-full border-l border-emerald-50 bg-white/30 backdrop-blur-sm p-8 overflow-y-auto custom-scrollbar">
+              <div className="hidden xl:block w-80 shrink-0 h-full border-l border-emerald-50 bg-white/30 backdrop-blur-sm p-8 overflow-y-auto custom-scrollbar">
                 <div className="sticky top-0 space-y-8">
                   <div className="flex items-center gap-3 px-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -409,9 +452,18 @@ export const CourseGenerator: React.FC = () => {
                   
                   <div className="pt-8 px-2">
                      <div className="p-6 rounded-3xl bg-emerald-950 text-white space-y-4 shadow-xl">
-                        <Map className="w-6 h-6 text-emerald-400" />
-                        <p className="text-[10px] font-bold text-emerald-100 leading-relaxed uppercase tracking-wider">Urwego rwa {level}</p>
-                        <p className="text-[9px] opacity-60">Iri somo ryateguwe na ai.rw Academic Engine.</p>
+                        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                          <BookMarked className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-emerald-100 leading-relaxed uppercase tracking-wider">Urwego rwa {level === 'beginner' ? 'Intangiriro' : level === 'intermediate' ? 'Hagati' : 'Icyisumbuye'}</p>
+                          <p className="text-[9px] opacity-60">Iri somo ryateguwe na ai.rw Academic Engine.</p>
+                        </div>
+                        <div className="pt-2">
+                          <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="text-[9px] font-black uppercase text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1">
+                            Subira hejuru <ArrowRight className="w-3 h-3 -rotate-90" />
+                          </button>
+                        </div>
                      </div>
                   </div>
                 </div>

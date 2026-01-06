@@ -373,8 +373,9 @@ Urwego: ${level}, Igihe: ${duration}, Ibisabwa mbere: ${prerequisites}.
 
 Requirements: 
 - Answer entirely in Kinyarwanda.
-- Structure using Markdown with clear headers like "## 1. Intangiriro", "## 2. Ingingo z'ingenzi", etc.
-- Include a quiz section and a summary.
+- Structure using Markdown with clear level 2 headers (##) for each main section.
+- EVERY main section must start with a line like "## Section Name".
+- Include a quiz section at the end.
 - Act as a master world-class educator.
 - Be highly descriptive and accurate.`;
 
@@ -382,7 +383,7 @@ Requirements:
       model: PRO_MODEL,
       contents: prompt,
       config: {
-        systemInstruction: `You are an expert educator for ai.rw. Provide deep, factual, and structured educational material for Rwandans. ${context}`,
+        systemInstruction: `You are an expert educator for ai.rw. Provide deep, factual, and structured educational material for Rwandans. Use consistent Markdown formatting with ## for sections. ${context}`,
         tools: [{ googleSearch: {} }]
       }
     });
