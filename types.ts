@@ -14,9 +14,9 @@ export interface Message {
   id: string;
   role: MessageRole;
   text: string;
-  image?: string; // Base64 string for displayed images
+  image?: string; 
   timestamp: number;
-  reaction?: string; // New field for storing emoji reactions
+  reaction?: string; 
   sources?: Source[];
   isSourcesVisible?: boolean;
 }
@@ -34,7 +34,7 @@ export enum AppView {
   ADMIN = 'admin'
 }
 
-export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING';
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING' | 'LEGAL' | 'TECHNICAL';
 
 export interface KnowledgeItem {
   id: string;
@@ -42,12 +42,22 @@ export interface KnowledgeItem {
   content: string;
   scope: KnowledgeScope;
   dateAdded: number;
+  fileType?: string;
+  wordCount?: number;
+}
+
+export interface ModelConfig {
+  systemInstruction: string;
+  temperature: number;
+  topP: number;
+  topK: number;
+  thinkingBudget: number;
 }
 
 export interface AnnotationBox {
   label: string;
   description?: string;
-  box_2d: number[]; // [ymin, xmin, ymax, xmax] normalized 0-1000
+  box_2d: number[]; 
 }
 
 export interface ImageTrainingData {
@@ -55,26 +65,9 @@ export interface ImageTrainingData {
   annotations: AnnotationBox[];
 }
 
-export interface VoiceTrainingData {
-  phrase: string;
-  phonetic?: string;
-  usageContext: string;
-}
-
-export interface TextToolResult {
-  original: string;
-  result: string;
-  action: string;
-}
-
-export interface GeneratedImage {
-  url: string;
-  prompt: string;
-}
-
 export interface DetectedObject {
   label: string;
-  box_2d: number[]; // [ymin, xmin, ymax, xmax]
+  box_2d: number[]; 
 }
 
 export interface ImageAnalysisResult {
@@ -82,7 +75,7 @@ export interface ImageAnalysisResult {
   confidenceScore: number;
   keyObservations: string[];
   imageType: string;
-  detectedObjects?: DetectedObject[]; // New field for object detection
+  detectedObjects?: DetectedObject[];
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -90,12 +83,12 @@ export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
 export interface ChartDataPoint {
   label: string;
   value: number;
-  type: string; // Changed from union to string for generic support
+  type: string;
 }
 
 export interface BusinessAnalysisResult {
-  summary: string; // Can contain Markdown tables
-  isFinancial: boolean; // Flag to distinguish business vs generic data
+  summary: string;
+  isFinancial: boolean;
   financials?: {
     revenue: number;
     expense: number;
@@ -107,8 +100,8 @@ export interface BusinessAnalysisResult {
     value: string;
     color?: string;
   }[];
-  risks: string[]; // Used as "Challenges" for generic
-  advice: string[]; // Used as "Recommendations" for generic
+  risks: string[];
+  advice: string[];
   chartData: ChartDataPoint[];
 }
 
