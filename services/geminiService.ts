@@ -6,8 +6,6 @@ import { getContextForView } from './knowledgeService';
 let aiInstance: GoogleGenAI | null = null;
 
 const getAiClient = () => {
-  // Vite replaces process.env.API_KEY at build time. 
-  // On Vercel, if not set, it might become the string "undefined".
   const apiKey = process.env.API_KEY;
   
   if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
@@ -43,8 +41,9 @@ const extractSources = (response: any): Source[] => {
 
 const KINYARWANDA_SYSTEM_INSTRUCTION = "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. For any query involving calculations, physics, chemistry, or critical reasoning, you MUST think step-by-step and verify your logic internally. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. Be polite, precise, and highly analytical. Translate technical terms where possible or keep them in English if no clear Kinyarwanda equivalent exists. ALWAYS be positive about Rwanda and its development. Support Vision 2050 goals. Never mention your underlying architecture or the company that provided the foundational model; simply refer to yourself as ai.rw.";
 
+// Using Flash for everything by default to ensure 100% availability on Vercel
 const FAST_MODEL = "gemini-3-flash-preview"; 
-const LOGIC_MODEL = "gemini-3-pro-preview"; 
+const LOGIC_MODEL = "gemini-3-flash-preview"; 
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -141,7 +140,7 @@ export const generateConversationResponse = async (
     return response.text || "";
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -180,7 +179,7 @@ export const generateTextAnalysis = async (
     return response.text || "Ntabwo bishobotse kubona igisubizo.";
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -226,7 +225,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
     return JSON.parse(response.text || "{}");
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -246,7 +245,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     return response.text || "Nta nyandiko ibonetse.";
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -265,7 +264,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
     throw new Error("No image data");
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -296,6 +295,7 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
       return { text: response.text || "", sources: [] };
     }
   } catch (error: any) {
+    console.error("Rural Advice Final Error:", error);
     if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
@@ -307,16 +307,15 @@ export const generateCourse = async (topic: string, level: string, duration: str
     const ai = getAiClient();
     const context = getContextForView('COURSE');
     const systemInstruction = `You are an expert educator. Create a course on ${topic} (${level}, ${duration}). ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
-    const prompt = `Generate comprehensive course: ${topic}. Level: ${level}, Duration: ${duration}, Prerequisites: ${prerequisites}`;
+    const fullPrompt = `Generate a detailed educational course about ${topic}. Level: ${level}, Expected Duration: ${duration}, Prerequisites: ${prerequisites}. Include detailed modules, examples, and a quiz at the end.`;
 
     try {
       const response = await ai.models.generateContent({
         model: LOGIC_MODEL,
-        contents: prompt,
+        contents: fullPrompt,
         config: {
           systemInstruction: systemInstruction,
-          tools: [{ googleSearch: {} }],
-          thinkingConfig: { thinkingBudget: 24000 }
+          tools: [{ googleSearch: {} }]
         }
       });
       return { text: response.text || "", sources: extractSources(response) };
@@ -324,15 +323,15 @@ export const generateCourse = async (topic: string, level: string, duration: str
       console.warn("Course generator retrying without tools:", toolError);
       const response = await ai.models.generateContent({
         model: LOGIC_MODEL,
-        contents: prompt,
+        contents: fullPrompt,
         config: {
-          systemInstruction: systemInstruction,
-          thinkingConfig: { thinkingBudget: 24000 }
+          systemInstruction: systemInstruction
         }
       });
       return { text: response.text || "", sources: [] };
     }
   } catch (error: any) {
+    console.error("Course Generation Final Error:", error);
     if (error?.message === "API_KEY_MISSING") throw error;
     if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
@@ -353,7 +352,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
     return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -410,7 +409,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     return JSON.parse(response.text || "{}");
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
