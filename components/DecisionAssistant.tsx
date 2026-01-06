@@ -81,14 +81,14 @@ export const DecisionAssistant: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Urugero: Uyu munsi nagurishije... Cyangwa: Abanyeshuri batsinze..."
-              className="w-full h-48 p-4 border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 resize-none text-stone-800 text-sm leading-relaxed mb-4"
+              className="w-full h-64 p-5 border-2 border-emerald-100 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none resize-none text-stone-800 text-lg leading-relaxed mb-4 bg-slate-50/50"
             />
             
             <Button 
               onClick={handleAnalyze} 
               isLoading={isLoading} 
               disabled={!input.trim()}
-              className="w-full"
+              className="w-full h-14 text-lg font-bold"
             >
               Sesengura
             </Button>
@@ -141,22 +141,25 @@ export const DecisionAssistant: React.FC = () => {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Summary Card */}
-              <div className="bg-emerald-900 text-white rounded-2xl p-6 shadow-lg relative group">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-bold flex items-center">
-                    <Lightbulb className="w-5 h-5 mr-2 text-yellow-400" />
-                    Incamake
-                  </h3>
-                  <button 
-                    onClick={handleCopy}
-                    className="p-1.5 rounded-md hover:bg-white/10 text-emerald-100 transition-colors"
-                    title="Koporora"
-                  >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-                <div className="text-emerald-100 leading-relaxed">
-                  <FormattedText text={result.summary} className="text-emerald-100" />
+              <div className="bg-emerald-900 text-white rounded-[32px] p-8 md:p-10 shadow-2xl relative group border border-emerald-800 overflow-hidden">
+                <div className="absolute top-0 right-0 p-32 bg-white opacity-[0.03] rounded-full transform translate-x-10 -translate-y-10 blur-3xl"></div>
+                <div className="relative z-10">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-black flex items-center uppercase tracking-wider">
+                      <Lightbulb className="w-6 h-6 mr-3 text-yellow-400" />
+                      Incamake
+                    </h3>
+                    <button 
+                      onClick={handleCopy}
+                      className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all transform active:scale-95"
+                      title="Koporora"
+                    >
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <div className="text-white text-lg md:text-xl font-medium">
+                    <FormattedText text={result.summary} className="text-white" />
+                  </div>
                 </div>
               </div>
 

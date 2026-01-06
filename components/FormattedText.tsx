@@ -17,9 +17,6 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
     const safeQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     
     // Negative lookahead to ensure we are not inside an HTML tag
-    // This looks for safeQuery ONLY if it's followed by 0 or more non-angle-bracket characters 
-    // that are then followed by either the end of the string or an opening bracket.
-    // Basically: it ensures the match isn't part of a <tag attribute="...">
     const regex = new RegExp(`(${safeQuery})(?![^<]*>)`, 'gi');
     
     return htmlContent.replace(regex, '<mark class="bg-yellow-200 text-stone-900 rounded-sm px-0.5 font-bold shadow-sm">$1</mark>');
@@ -33,9 +30,9 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
       // LaTeX Math support: Inline $math$
       .replace(/\$([^\$]+)\$/g, '<code class="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded font-mono text-xs border border-emerald-100">$1</code>')
       // Bold **text**
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-emerald-900">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold">$1</strong>')
       // Italic *text*
-      .replace(/\*(.*?)\*/g, '<em class="italic text-stone-700">$1</em>')
+      .replace(/\*(.*?)\*/g, '<em class="italic opacity-90">$1</em>')
       // Inline Code `text`
       .replace(/`([^`]+)`/g, '<code class="bg-stone-100 px-1.5 py-0.5 rounded text-emerald-700 font-mono text-xs border border-stone-200">$1</code>');
     
@@ -45,7 +42,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
   const parts = text.split(/(```[\s\S]*?```)/g);
 
   return (
-    <div className={`space-y-4 text-stone-800 leading-relaxed ${className}`}>
+    <div className={`space-y-4 leading-relaxed ${className}`}>
       {parts.map((part, index) => {
         if (part.startsWith('```')) {
           const match = part.match(/```(\w*)\n?([\s\S]*?)```/);
@@ -91,9 +88,9 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
              const level = trimmed.match(/^(#{1,3})\s/)?.[1].length || 1;
              const content = trimmed.replace(/^#{1,3}\s/, '');
              const HeaderTag = level === 1 ? 'h2' : level === 2 ? 'h3' : 'h4';
-             const classes = level === 1 ? 'text-3xl font-black text-emerald-950 mt-10 mb-5 tracking-tight' 
-                           : level === 2 ? 'text-2xl font-bold text-emerald-900 mt-8 mb-4'
-                           : 'text-xl font-bold text-emerald-800 mt-6 mb-3';
+             const classes = level === 1 ? 'text-3xl font-black mt-10 mb-5 tracking-tight' 
+                           : level === 2 ? 'text-2xl font-bold mt-8 mb-4'
+                           : 'text-xl font-bold mt-6 mb-3';
              
              return React.createElement(HeaderTag, {
                 key: `${index}-${bIndex}`,
@@ -107,7 +104,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
             return (
               <ul key={`${index}-${bIndex}`} className="space-y-3 my-4 pl-4">
                 {items.map((item, i) => (
-                  <li key={i} className="flex items-start text-stone-700 group">
+                  <li key={i} className="flex items-start group">
                     <span className="mt-2.5 mr-4 flex-shrink-0 w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform"></span>
                     <span className="text-base" dangerouslySetInnerHTML={{ __html: parseInline(item.replace(/^[\*\-]\s/, '')) }} />
                   </li>
@@ -119,9 +116,9 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           if (trimmed.match(/^\d+\.\s/m)) {
             const items = trimmed.split(/\n/).filter(l => l.trim().match(/^\d+\.\s/));
             return (
-              <ol key={`${index}-${bIndex}`} className="list-decimal ml-8 space-y-3 my-4 marker:text-emerald-600 marker:font-black text-base">
+              <ol key={`${index}-${bIndex}`} className="list-decimal ml-8 space-y-3 my-4 marker:text-emerald-500 marker:font-black text-base">
                 {items.map((item, i) => (
-                  <li key={i} className="pl-2 text-stone-700" dangerouslySetInnerHTML={{ __html: parseInline(item.replace(/^\d+\.\s/, '')) }} />
+                  <li key={i} className="pl-2" dangerouslySetInnerHTML={{ __html: parseInline(item.replace(/^\d+\.\s/, '')) }} />
                 ))}
               </ol>
             );
@@ -139,7 +136,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
              });
 
              return (
-               <div key={`${index}-${bIndex}`} className="my-8 w-full overflow-hidden rounded-3xl border border-stone-200 shadow-xl bg-white">
+               <div key={`${index}-${bIndex}`} className="my-8 w-full overflow-hidden rounded-3xl border border-stone-200 shadow-xl bg-white text-stone-800">
                  <div className="overflow-x-auto custom-scrollbar">
                    <table className="min-w-full text-left text-sm">
                      <thead>
@@ -176,7 +173,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           }
 
           return (
-            <p key={`${index}-${bIndex}`} className="mb-4 text-base md:text-lg leading-relaxed text-stone-700" dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }} />
+            <p key={`${index}-${bIndex}`} className="mb-4 text-base md:text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }} />
           );
         });
       })}
