@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Sprout, Briefcase, HandPlatter, Send, Loader2, Zap, Smartphone, CloudSun, Copy, Check } from 'lucide-react';
 import { generateRuralAdvice } from '../services/geminiService';
@@ -64,8 +65,17 @@ export const RuralAssistant: React.FC = () => {
       setAdvice(result.text);
       setSources(result.sources);
       showToast('Inama yabonetse!', 'success');
-    } catch (error) {
-      setAdvice("Habaye ikibazo kubona inama.");
+    } catch (error: any) {
+      console.error("Rural Advice Error:", error);
+      let errorMessage = "Habaye ikibazo kubona inama. Ongera ugerageze mukanya.";
+      
+      if (error?.message === "API_KEY_MISSING") {
+        errorMessage = "Habaye ikibazo: API_KEY ntigaragara muri Vercel Settings.";
+      } else if (error?.message === "INVALID_API_KEY") {
+        errorMessage = "Habaye ikibazo: API_KEY ukoresha ntabwo yemewe cyangwa ntabwo ikora.";
+      }
+      
+      setAdvice(errorMessage);
       showToast('Habaye ikibazo.', 'error');
     } finally {
       setIsLoading(false);
@@ -120,12 +130,12 @@ export const RuralAssistant: React.FC = () => {
             onClick={() => { setSector(item.id as any); setAdvice(''); setSources([]); }}
             className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
               sector === item.id
-                ? `border-${item.color}-500 bg-${item.color}-50 shadow-md transform scale-105`
-                : `border-slate-200 bg-white hover:border-${item.color}-300 hover:bg-${item.color}-50/50`
+                ? `border-emerald-500 bg-emerald-50 shadow-md transform scale-105`
+                : `border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50`
             }`}
           >
-            <item.icon className={`w-6 h-6 mb-1 ${sector === item.id ? `text-${item.color}-600` : 'text-slate-400'}`} />
-            <span className={`text-[10px] md:text-xs font-semibold ${sector === item.id ? `text-${item.color}-800` : 'text-slate-600'}`}>{item.label}</span>
+            <item.icon className={`w-6 h-6 mb-1 ${sector === item.id ? `text-emerald-600` : 'text-slate-400'}`} />
+            <span className={`text-[10px] md:text-xs font-semibold ${sector === item.id ? `text-emerald-800` : 'text-slate-600'}`}>{item.label}</span>
           </button>
         ))}
       </div>
@@ -139,7 +149,6 @@ export const RuralAssistant: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="space-y-3">
           <label className="text-xs font-semibold text-emerald-600 uppercase tracking-wide flex items-center">
             <Zap className="w-3.5 h-3.5 mr-1.5 fill-current" />
@@ -198,8 +207,6 @@ export const RuralAssistant: React.FC = () => {
                 </button>
               </h4>
               <FormattedText text={advice} />
-              
-              {/* Show Sources Toggle */}
               <SourcesToggle sources={sources} />
             </div>
           ) : (

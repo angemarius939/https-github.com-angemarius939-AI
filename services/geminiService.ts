@@ -90,10 +90,7 @@ export const streamChatResponse = async (
       }
       return fullText;
     } catch (toolError: any) {
-      // Fallback: If Google Search or tool calling fails (common with some API key tiers),
-      // try a standard chat without tools.
       console.warn("Retrying without tools due to error:", toolError);
-      
       const simpleChat = ai.chats.create({
         model: FAST_MODEL, 
         config: {
@@ -102,7 +99,6 @@ export const streamChatResponse = async (
         },
         history: history,
       });
-
       const resultStream = await simpleChat.sendMessageStream({ message: newMessage });
       let fullText = "";
       for await (const chunk of resultStream) {
@@ -141,7 +137,6 @@ export const generateConversationResponse = async (
       },
       history: history,
     });
-
     const response = await chat.sendMessage({ message: newMessage });
     return response.text || "";
   } catch (error: any) {
@@ -162,7 +157,6 @@ export const generateTextAnalysis = async (
     case 'informal': toneInstruction = "ukoresheje imvugo isanzwe"; break;
     case 'friendly': toneInstruction = "ukoresheje imvugo ya gicuti"; break;
   }
-
   let finalPrompt = "";
   if (type === 'summarize') {
     finalPrompt = `Summarize the following text in Kinyarwanda (Incamake) ${toneInstruction}: \n\n${prompt}`;
@@ -173,7 +167,6 @@ export const generateTextAnalysis = async (
   } else if (type === 'detect') {
     finalPrompt = `Identify the language of the following text. Answer in Kinyarwanda: \n\n${prompt}`;
   }
-
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
@@ -184,7 +177,6 @@ export const generateTextAnalysis = async (
         thinkingConfig: { thinkingBudget: 0 }
       }
     });
-
     return response.text || "Ntabwo bishobotse kubona igisubizo.";
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
@@ -231,7 +223,6 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         }
       }
     });
-
     return JSON.parse(response.text || "{}");
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
@@ -283,18 +274,30 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
   try {
     const ai = getAiClient();
     const context = getContextForView('RURAL');
-    const response = await ai.models.generateContent({
-      model: FAST_MODEL,
-      contents: query,
-      config: {
-        systemInstruction: `You are an expert advisor for rural development in Rwanda specializing in ${sector}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`,
-        tools: [{ googleSearch: {} }]
-      }
-    });
-    return { text: response.text || "", sources: extractSources(response) };
+    const systemInstruction = `You are an expert advisor for rural development in Rwanda specializing in ${sector}. ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
+    
+    try {
+      const response = await ai.models.generateContent({
+        model: FAST_MODEL,
+        contents: query,
+        config: {
+          systemInstruction: systemInstruction,
+          tools: [{ googleSearch: {} }]
+        }
+      });
+      return { text: response.text || "", sources: extractSources(response) };
+    } catch (toolError: any) {
+      console.warn("Rural Advice retrying without tools:", toolError);
+      const response = await ai.models.generateContent({
+        model: FAST_MODEL,
+        contents: query,
+        config: { systemInstruction: systemInstruction }
+      });
+      return { text: response.text || "", sources: [] };
+    }
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
@@ -303,19 +306,35 @@ export const generateCourse = async (topic: string, level: string, duration: str
   try {
     const ai = getAiClient();
     const context = getContextForView('COURSE');
-    const response = await ai.models.generateContent({
-      model: LOGIC_MODEL,
-      contents: `Generate course: ${topic}`,
-      config: {
-        systemInstruction: `You are an expert educator. Create a course on ${topic} (${level}, ${duration}). ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`,
-        tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 24000 }
-      }
-    });
-    return { text: response.text || "", sources: extractSources(response) };
+    const systemInstruction = `You are an expert educator. Create a course on ${topic} (${level}, ${duration}). ${KINYARWANDA_SYSTEM_INSTRUCTION} ${context}`;
+    const prompt = `Generate comprehensive course: ${topic}. Level: ${level}, Duration: ${duration}, Prerequisites: ${prerequisites}`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: LOGIC_MODEL,
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction,
+          tools: [{ googleSearch: {} }],
+          thinkingConfig: { thinkingBudget: 24000 }
+        }
+      });
+      return { text: response.text || "", sources: extractSources(response) };
+    } catch (toolError: any) {
+      console.warn("Course generator retrying without tools:", toolError);
+      const response = await ai.models.generateContent({
+        model: LOGIC_MODEL,
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction,
+          thinkingConfig: { thinkingBudget: 24000 }
+        }
+      });
+      return { text: response.text || "", sources: [] };
+    }
   } catch (error: any) {
     if (error?.message === "API_KEY_MISSING") throw error;
-    if (error?.message?.includes("API key")) throw new Error("INVALID_API_KEY");
+    if (error?.message?.includes("API key") || error?.message?.includes("403") || error?.message?.includes("400")) throw new Error("INVALID_API_KEY");
     throw error;
   }
 };
