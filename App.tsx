@@ -23,17 +23,21 @@ import { AdminDashboard } from './components/AdminDashboard';
 const LoadingView = () => (
   <div className="h-full w-full flex flex-col items-center justify-center bg-white">
     <div className="relative">
-      <div className="w-20 h-20 border-4 border-emerald-50 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className="w-24 h-24 border-4 border-emerald-50 border-t-emerald-500 rounded-3xl animate-spin"></div>
       <div className="absolute inset-0 flex items-center justify-center">
         <Logo size="sm" />
       </div>
     </div>
-    <p className="text-emerald-900 font-black text-[10px] uppercase tracking-[0.3em] mt-8 animate-pulse">ai.rw Irimo gufungura...</p>
+    <div className="mt-8 flex flex-col items-center space-y-2">
+      <p className="text-emerald-900 font-black text-[10px] uppercase tracking-[0.3em] animate-pulse">ai.rw Irimo gufungura...</p>
+      <div className="h-0.5 w-12 bg-emerald-100 rounded-full overflow-hidden">
+        <div className="h-full bg-emerald-500 w-1/2 animate-[shimmer_1.5s_infinite]"></div>
+      </div>
+    </div>
   </div>
 );
 
 export default function App() {
-  // Always start at Landing Page as requested
   const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
@@ -44,14 +48,15 @@ export default function App() {
     const init = async () => {
       try {
         // Record visit asynchronously
-        recordVisit().catch(e => console.warn("Tracking failed", e));
+        await recordVisit();
         
-        // We force Landing Page on first mount to satisfy "bring back the landing page"
+        // Default to Landing Page for every new mount to ensure user sees the "Home"
         setCurrentView(AppView.LANDING);
       } catch (e) {
         console.error("Initialization error:", e);
       } finally {
-        setIsInitializing(false);
+        // Small delay for smooth transition
+        setTimeout(() => setIsInitializing(false), 800);
       }
     };
     init();
@@ -63,6 +68,7 @@ export default function App() {
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const completeOnboarding = () => {

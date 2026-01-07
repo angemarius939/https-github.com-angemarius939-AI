@@ -28,7 +28,6 @@ const getApiKey = () => {
 const cleanJsonString = (str: string | undefined): string => {
   if (!str) return "{}";
   const trimmed = str.trim();
-  // Attempt to find the first '{' and last '}'
   const firstBrace = trimmed.indexOf('{');
   const lastBrace = trimmed.lastIndexOf('}');
   const firstBracket = trimmed.indexOf('[');
@@ -129,24 +128,24 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('BUSINESS');
   
-  const prompt = `Analyze the following business or educational data and provide a structured report in Kinyarwanda. 
-  Data to analyze: "${input}"
+  const prompt = `Sesengura amakuru akurikira y'ubucuruzi cyangwa imibare, hanyuma utange raporo irambuye mu Kinyarwanda. 
+  Amakuru: "${input}"
   
-  Ensure the response is strictly valid JSON following the provided schema.`;
+  Ugomba gusubiza mu buryo bwa JSON yonyine ukurikije iyi miterere (schema).`;
 
   const response = await ai.models.generateContent({
     model: PRO_MODEL,
-    contents: prompt,
+    contents: [{ parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: `Uri umusesenguzi kabuhariwe wa ai.rw. Tanga isesengura ryimbitse mu Kinyarwanda gusa. Subiza mu buryo bwa JSON yonyine. ${context}`,
+      systemInstruction: `Uri umusesenguzi w'ubwenge (Business Analyst) wa ai.rw mu Rwanda. Isesengura ryawe rigomba kuba ryimbitse kandi rishingiye ku mibare n'ukuri. Subiza mu Kinyarwanda gusa. ${context}`,
       responseMimeType: "application/json",
       temperature: 0.2, 
-      thinkingConfig: { thinkingBudget: 4000 },
+      thinkingConfig: { thinkingBudget: 16000 },
       responseSchema: {
         type: Type.OBJECT,
         properties: {
           summary: { type: Type.STRING, description: "Incamake y'isesengura mu Kinyarwanda." },
-          isFinancial: { type: Type.BOOLEAN, description: "Niba amakuru arimo imibare y'amafaranga." },
+          isFinancial: { type: Type.BOOLEAN, description: "Niba amakuru arimo imibare y'amafaranga cyangwa inyungu." },
           financials: {
             type: Type.OBJECT,
             properties: {
@@ -163,12 +162,12 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
               properties: {
                 label: { type: Type.STRING },
                 value: { type: Type.STRING },
-                color: { type: Type.STRING }
+                color: { type: Type.STRING, description: "emerald, blue, or orange" }
               }
             }
           },
-          risks: { type: Type.ARRAY, items: { type: Type.STRING } },
-          advice: { type: Type.ARRAY, items: { type: Type.STRING } },
+          risks: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Imbogamizi n'ibyago byagaragaye." },
+          advice: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Inama zo gukemura ibibazo cyangwa gutera imbere." },
           chartData: {
             type: Type.ARRAY,
             items: {
@@ -176,7 +175,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
               properties: { 
                 label: { type: Type.STRING }, 
                 value: { type: Type.NUMBER }, 
-                type: { type: Type.STRING, description: "revenue, expense, profit, or other" } 
+                type: { type: Type.STRING, description: "revenue, expense, cyangwa profit" } 
               }
             }
           }
@@ -192,7 +191,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     return JSON.parse(jsonStr);
   } catch (e) {
     console.error("JSON Parsing Error in Business Analysis:", e, "Raw text:", text);
-    throw new Error("Ibisubizo bya server ntibishoboye gusomwa neza.");
+    throw new Error("Ibisubizo ntibishoboye gusomwa neza. Ongera ugerageze.");
   }
 };
 
@@ -217,20 +216,24 @@ export const generateCourse = async (topic: string, level: string, duration: str
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('COURSE');
   
-  const prompt = `Kora isomo rirambuye ku ngingo ikurikira:
+  const prompt = `Tegura isomo rirambuye kandi rishingiye ku bumenyi nyabwo ku ngingo ikurikira:
   - Ingingo: ${topic}
   - Urwego: ${level}
-  - Igihe: ${duration}
-  - Ibyo umuntu agomba kuba azi: ${prerequisites}
+  - Igihe bizafata: ${duration}
+  - Ibyo umuntu agomba kuba azi mbere: ${prerequisites || 'Nta na kimwe'}
   
-  Tegura isomo riri mu bice (Sections) kandi rikoresha Ikinyarwanda cy'umwimerere.`;
+  Isomo rigomba kuba rifite:
+  1. Intangiriro (Introduction)
+  2. Ibice by'ingenzi (Core Modules) bifite ibisobanuro birambuye.
+  3. Imyitozo (Practical exercises)
+  4. Umwanzuro n'inama zo gukomeza (Conclusion & Next steps)`;
 
   const response = await ai.models.generateContent({
     model: PRO_MODEL,
-    contents: prompt,
+    contents: [{ parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw. Kora isomo rirambuye kandi rishingiye ku bumenyi bwizewe mu Kinyarwanda gusa. ${context}`,
-      thinkingConfig: { thinkingBudget: 8000 }
+      systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw. Kora isomo rirambuye cyane, ukoresha Ikinyarwanda gikungahaye kandi cyumvikana neza. ${context}`,
+      thinkingConfig: { thinkingBudget: 24000 }
     }
   });
   return { text: response.text || "", sources: extractSources(response) };

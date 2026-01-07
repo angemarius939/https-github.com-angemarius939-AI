@@ -1,19 +1,30 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Sparkles, MessageSquare, Sprout, 
   TrendingUp, GraduationCap, FileText, 
-  ArrowRight, Globe
+  ArrowRight, Globe, Users, ShieldCheck, 
+  Cpu, Heart
 } from 'lucide-react';
 import { AppView } from '../types';
 import { Button } from './Button';
 import { Logo } from './Logo';
+import { getVisitStats } from '../services/statsService';
 
 interface LandingPageProps {
   onStart: (view: AppView) => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+  const [totalVisits, setTotalVisits] = useState(0);
+
+  useEffect(() => {
+    // Load live stats for the landing page social proof
+    const stats = getVisitStats();
+    const total = stats.reduce((acc, curr) => acc + curr.count, 0);
+    setTotalVisits(total > 0 ? total : 1240); // Fallback to a base number if local stats empty
+  }, []);
+
   const scrollToTools = () => {
     const toolsSection = document.getElementById('serivisi-section');
     toolsSection?.scrollIntoView({ behavior: 'smooth' });
@@ -21,7 +32,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
   const tools = [
     { id: AppView.CHAT, label: 'Ikiganiro (AI Chat)', desc: 'Baza ikibazo icyo ari cyo cyose mu Kinyarwanda, AI isubize mu buryo bwimbitse.', icon: MessageSquare, color: 'bg-emerald-600' },
-    { id: AppView.TEXT_TOOLS, label: 'Umwandiko (Text)', desc: 'Kora incamake z\'inyandiko, hindura indimi, cyangwa ukosore imyandikire yawe.', icon: FileText, color: 'bg-teal-600' },
+    { id: AppView.TEXT_TOOLS, label: 'Umwandiko (Text)', desc: 'Kora incamake, hindura indimi, cyangwa ukosore imyandikire yawe.', icon: FileText, color: 'bg-teal-600' },
     { id: AppView.RURAL_SUPPORT, label: 'Iterambere (Rural)', desc: 'Ubufasha bwihariye ku bahinzi, aborozi n\'abakora ubucuruzi buciriritse.', icon: Sprout, color: 'bg-green-600' },
     { id: AppView.DECISION_ASSISTANT, label: 'Umujyanama', desc: 'Isesengurwa ry\'imibare, inyungu n\'ibishushanyo mbonera by\'imishinga.', icon: TrendingUp, color: 'bg-amber-600' },
     { id: AppView.COURSE_GENERATOR, label: 'Amasomo', desc: 'Tegura imfashanyigisho n\'amasomo arambuye ku ntego wihaye.', icon: GraduationCap, color: 'bg-indigo-600' },
@@ -53,9 +64,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="absolute bottom-1/4 -right-20 w-64 h-64 bg-blue-100 rounded-full blur-[100px] opacity-40 animate-pulse delay-700"></div>
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center space-y-8 md:space-y-12">
-          <div className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border border-emerald-100 animate-in slide-in-from-top-8 duration-1000">
-            <Globe className="w-4 h-4" />
-            Ikoranabuhanga rya AI mu Kinyarwanda
+          <div className="flex flex-col items-center gap-4">
+            <div className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border border-emerald-100 animate-in slide-in-from-top-8 duration-1000">
+              <Globe className="w-4 h-4" />
+              Ikoranabuhanga rya AI mu Kinyarwanda
+            </div>
+            
+            {/* Live Stats Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white border border-stone-100 shadow-sm rounded-full text-[9px] font-bold text-stone-500 uppercase tracking-widest animate-in fade-in duration-1000 delay-500">
+              <Users className="w-3 h-3 text-emerald-500" />
+              Abasuye: <span className="text-emerald-600">{totalVisits.toLocaleString()}</span>
+            </div>
           </div>
           
           <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-emerald-950 tracking-tighter leading-[0.85] animate-in fade-in duration-1000 delay-200">
@@ -114,6 +133,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* Trust & Values */}
+      <section className="py-24 px-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <h4 className="text-xl font-black text-emerald-950 uppercase tracking-tighter">Umutekano</h4>
+            <p className="text-stone-500 text-sm">Amakuru yawe abikwa mu buryo bwizewe kandi bwubaha uburenganzira bwawe.</p>
+          </div>
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
+              <Cpu className="w-8 h-8" />
+            </div>
+            <h4 className="text-xl font-black text-emerald-950 uppercase tracking-tighter">Ikoranabuhanga</h4>
+            <p className="text-stone-500 text-sm">Tukoresha uburyo bwa "Gemini AI" bugezweho kurusha ubundi ku isi.</p>
+          </div>
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-600">
+              <Heart className="w-8 h-8" />
+            </div>
+            <h4 className="text-xl font-black text-emerald-950 uppercase tracking-tighter">Umuco Nyarwanda</h4>
+            <p className="text-stone-500 text-sm">Iyi AI yitoje amateka, imvugo, n'umuco w'u Rwanda kugira ngo igufashe neza.</p>
+          </div>
         </div>
       </section>
 

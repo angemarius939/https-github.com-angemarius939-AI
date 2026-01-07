@@ -35,13 +35,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const examplePrompts = [
-    "Ni ryari rero bahinga ibigori mu Rwanda?",
-    "Nandikira ibaruwa isaba akazi k'ubwarimu.",
-    "Sobanura amateka y'ubutwari bw'Abanyarwanda.",
-    "Ni izihe nama wagira umuntu ushaka gutangira ubucuruzi buto?"
-  ];
-
   const quickFeatures = [
     { view: AppView.LANDING, icon: Home, label: 'Ahabanza', color: 'bg-slate-100 text-slate-700' },
     { view: AppView.RURAL_SUPPORT, icon: Sprout, label: "Iterambere ry'Icyaro", color: 'bg-emerald-100 text-emerald-700' },
@@ -244,24 +237,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
 
           {messages.length <= 1 && !searchQuery && !isSearchOpen && (
             <div className="space-y-8 mt-4 animate-in fade-in duration-700 delay-300">
-              <div className="bg-white border border-emerald-100 rounded-3xl p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lightbulb className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-emerald-900">Ugerageze kubaza:</h3>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {examplePrompts.map((prompt, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(prompt)}
-                      className="text-left p-4 rounded-2xl bg-slate-50 border border-emerald-50 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 transition-all active:scale-[0.98]"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {quickFeatures.map((feat, idx) => (
                   <button 
