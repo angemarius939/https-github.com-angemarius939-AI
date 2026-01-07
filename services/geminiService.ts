@@ -26,22 +26,41 @@ const getAiClient = () => {
 };
 
 const cleanJsonString = (str: string): string => {
-  // Remove markdown code blocks if present
+  if (!str) return "{}";
+  // Robustly find the first { or [ and the last } or ]
+  const firstBrace = str.indexOf('{');
+  const lastBrace = str.lastIndexOf('}');
+  const firstBracket = str.indexOf('[');
+  const lastBracket = str.lastIndexOf(']');
+
+  let start = -1;
+  let end = -1;
+
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    start = firstBrace;
+    end = lastBrace;
+  } else if (firstBracket !== -1) {
+    start = firstBracket;
+    end = lastBracket;
+  }
+
+  if (start !== -1 && end !== -1 && end > start) {
+    return str.substring(start, end + 1).trim();
+  }
+  
   return str.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
 const extractSources = (response: any): Source[] => {
   const sources: Source[] = [];
-  const candidates = response.candidates || [];
-  for (const candidate of candidates) {
-    const chunks = candidate.groundingMetadata?.groundingChunks || [];
-    for (const chunk of chunks) {
-      if (chunk.web) {
-        sources.push({
-          title: chunk.web.title || "Web Source",
-          uri: chunk.web.uri
-        });
-      }
+  // Handling standard generateContent response grounding
+  const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  for (const chunk of chunks) {
+    if (chunk.web) {
+      sources.push({
+        title: chunk.web.title || "Web Source",
+        uri: chunk.web.uri
+      });
     }
   }
   const uniqueSources = new Map<string, Source>();
@@ -50,7 +69,7 @@ const extractSources = (response: any): Source[] => {
 };
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
-const PRO_MODEL = "gemini-3-flash-preview"; // Switching to Flash for better stability on free tier
+const PRO_MODEL = "gemini-3-pro-preview"; // Upgrading to Pro for complex logic tasks
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 export const streamChatResponse = async (
@@ -82,13 +101,11 @@ export const streamChatResponse = async (
     let fullText = "";
     for await (const chunk of resultStream) {
       const c = chunk as GenerateContentResponse;
-      try {
-        const text = c.text;
-        if (text) {
-          fullText += text;
-          onChunk(text);
-        }
-      } catch (e) {}
+      const text = c.text;
+      if (text) {
+        fullText += text;
+        onChunk(text);
+      }
       if (onSources && c.candidates?.[0]?.groundingMetadata) {
          const sources = extractSources(c);
          if (sources.length > 0) onSources(sources);
@@ -170,10 +187,10 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     const config = getModelConfig();
     const context = getContextForView('BUSINESS');
     const response = await ai.models.generateContent({
-      model: FAST_MODEL,
-      contents: input,
+      model: PRO_MODEL, // Using Pro for complex data analysis
+      contents: `Perform a detailed professional business analysis for this input: ${input}`,
       config: {
-        systemInstruction: `You are a professional business analyst for ai.rw. Answer in Kinyarwanda. ${config.systemInstruction} ${context}`,
+        systemInstruction: `You are a professional business analyst for ai.rw in Rwanda. You MUST provide valid JSON only. ${config.systemInstruction} ${context}`,
         responseMimeType: "application/json",
         temperature: 0.1, 
         responseSchema: {
@@ -215,8 +232,11 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
         }
       }
     });
-    return JSON.parse(cleanJsonString(response.text || "{}"));
+    
+    const cleaned = cleanJsonString(response.text || "{}");
+    return JSON.parse(cleaned);
   } catch (error: any) {
+    console.error("Business Analysis Error:", error);
     throw error;
   }
 };
@@ -251,7 +271,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         ]
       },
       config: {
-        systemInstruction: `You are ai.rw image expert.\n${context}`,
+        systemInstruction: `You are ai.rw image expert. Return JSON only.\n${context}`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -322,9 +342,9 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     const context = getContextForView('RURAL');
     const response = await ai.models.generateContent({
       model: FAST_MODEL,
-      contents: query,
+      contents: `Sector: ${sector}. Query: ${query}`,
       config: {
-        systemInstruction: `You are a rural advisor for Rwanda in ${sector}. Answer in Kinyarwanda. ${context}`,
+        systemInstruction: `You are a professional rural advisor in Rwanda for the ${sector} sector. Provide actionable, specific advice in Kinyarwanda. Use Google Search to get current local info. ${context}`,
         tools: [{ googleSearch: {} }]
       }
     });
@@ -338,22 +358,19 @@ export const generateCourse = async (topic: string, level: string, duration: str
   try {
     const ai = getAiClient();
     const context = getContextForView('COURSE');
-    const prompt = `Detailed educational course on: ${topic}. 
-Urwego: ${level}, Igihe: ${duration}, Ibisabwa mbere: ${prerequisites}. 
-
-Requirements: 
-- Answer entirely in Kinyarwanda.
-- Structure using Markdown with clear level 2 headers (##) for each main section.
-- EVERY main section must start with a line like "## Section Name".
-- Include a quiz section at the end.
-- Act as a master world-class educator.
-- Be highly descriptive and accurate.`;
+    const prompt = `Topic: ${topic}. Level: ${level}, Duration: ${duration}, Prerequisites: ${prerequisites}.
+    
+Instructions:
+1. Provide a massive, world-class educational course.
+2. Structure with '## Section Name' headers.
+3. Use deep, factual Kinyarwanda.
+4. Include a final quiz.`;
 
     const response = await ai.models.generateContent({
-      model: PRO_MODEL,
+      model: PRO_MODEL, // Upgrading to Pro for deeper educational content
       contents: prompt,
       config: {
-        systemInstruction: `You are an expert educator for ai.rw. Provide deep, factual, and structured educational material for Rwandans. Use consistent Markdown formatting with ## for sections. ${context}`,
+        systemInstruction: `You are a world-class university educator for ai.rw. Deliver structured, factual educational material in Kinyarwanda. Use consistent '## Header' formatting. ${context}`,
         tools: [{ googleSearch: {} }]
       }
     });

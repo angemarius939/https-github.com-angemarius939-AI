@@ -23,10 +23,14 @@ export const DecisionAssistant: React.FC = () => {
     setCopied(false);
     try {
       const data = await generateBusinessAnalysis(input);
+      if (!data || !data.summary) {
+        throw new Error("Invalid response format");
+      }
       setResult(data);
       showToast('Isesengura ryarangiye!', 'success');
     } catch (error: any) {
-      showToast('Habaye ikibazo.', 'error');
+      console.error("UI Analysis Error:", error);
+      showToast('Habaye ikibazo mu gusesengura amakuru. Gerageza gusubiramo neza.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +76,6 @@ export const DecisionAssistant: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Input */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6">
             <h3 className="font-semibold text-emerald-900 mb-4">Andika Amakuru (Data)</h3>
@@ -127,7 +130,6 @@ export const DecisionAssistant: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Output */}
         <div className="lg:col-span-2 space-y-6">
           {!result ? (
             <div className="bg-stone-50 rounded-2xl border border-stone-200 border-dashed h-full min-h-[400px] flex flex-col items-center justify-center text-stone-400 p-8 text-center">
@@ -139,8 +141,6 @@ export const DecisionAssistant: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              {/* Summary Card */}
               <div className="bg-emerald-900 text-white rounded-[32px] p-8 md:p-10 shadow-2xl relative group border border-emerald-800 overflow-hidden">
                 <div className="absolute top-0 right-0 p-32 bg-white opacity-[0.03] rounded-full transform translate-x-10 -translate-y-10 blur-3xl"></div>
                 <div className="relative z-10">
@@ -163,7 +163,6 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               </div>
 
-              {/* KPI Cards */}
               {result.isFinancial && result.financials ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 relative overflow-hidden group hover:shadow-md transition-shadow">
@@ -233,7 +232,6 @@ export const DecisionAssistant: React.FC = () => {
                 </div>
               )}
 
-              {/* Graphics Section */}
               {result.chartData && result.chartData.length > 0 && (
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
                   <div className="flex justify-between items-center mb-6">
@@ -246,7 +244,7 @@ export const DecisionAssistant: React.FC = () => {
                               onClick={() => setChartType('bar')}
                               className={`p-1.5 rounded-md transition-all ${chartType === 'bar' ? 'bg-white shadow text-emerald-700' : 'text-stone-500 hover:text-stone-700'}`}
                           >
-                              <Microscope className="w-4 h-4" />
+                              <Activity className="w-4 h-4" />
                           </button>
                       </div>
                   </div>
