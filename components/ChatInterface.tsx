@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, ImageIcon, MessageSquare, ArrowDown, Lightbulb } from 'lucide-react';
+import { Send, User, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, ImageIcon, ArrowDown } from 'lucide-react';
 import { Message, MessageRole, Source, AppView } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
@@ -26,8 +26,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
@@ -60,31 +62,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const handleScroll = () => {
     if (!scrollAreaRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+    // Buffer of 100px to detect if we're "at the bottom"
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
     setShouldAutoScroll(isAtBottom);
   };
 
-  // Improved scroll effect: listens to changes in message count and content during streaming
+  // Effect to scroll on new messages
   useEffect(() => {
     if (shouldAutoScroll || isStreaming) {
       scrollToBottom(isStreaming ? 'auto' : 'smooth');
     }
-  }, [messages.length, isStreaming, messages[messages.length - 1]?.text]);
+  }, [messages.length]);
 
-  // Handle Resize for mobile keyboards etc.
+  // Use ResizeObserver for content growth during streaming
   useEffect(() => {
-    if (!scrollAreaRef.current) return;
+    if (!contentRef.current) return;
     const observer = new ResizeObserver(() => {
-      if (shouldAutoScroll) scrollToBottom('auto');
+      if (shouldAutoScroll || isStreaming) {
+        scrollToBottom('auto');
+      }
     });
-    observer.observe(scrollAreaRef.current);
+    observer.observe(contentRef.current);
     return () => observer.disconnect();
-  }, [shouldAutoScroll]);
+  }, [shouldAutoScroll, isStreaming]);
 
-  // Initial focus
+  // Initial setup
   useEffect(() => {
     inputRef.current?.focus();
-    scrollToBottom('auto');
+    setTimeout(() => scrollToBottom('auto'), 100);
   }, []);
 
   const handleSendMessage = async (textOverride?: string) => {
@@ -179,11 +184,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 placeholder="Shakisha mu kiganiro..." 
                 className="w-full pl-9 pr-12 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-500/10 bg-white font-medium" 
               />
-              {searchQuery && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded shadow-sm border border-emerald-200">
-                   {filteredMessages.length} ibisubizo
-                </div>
-              )}
             </div>
             <Button variant="ghost" onClick={() => { setIsSearchOpen(false); setSearchQuery(''); }} className="text-red-500"><X className="w-5 h-5" /></Button>
           </div>
@@ -206,7 +206,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative custom-scrollbar scroll-smooth"
       >
-        <div className="space-y-6 min-h-full flex flex-col justify-end">
+        <div ref={contentRef} className="space-y-6 min-h-full flex flex-col justify-end">
           {filteredMessages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
               <div className={`flex max-w-[90%] md:max-w-[85%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -239,12 +239,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
             </div>
           ))}
           
+          {messages.length <= 1 && !searchQuery && !isSearchOpen && (
+            <div className="space-y-12 mt-4 animate-in fade-in duration-700 delay-300">
+              <div className="text-center">
+                 <p className="text-[10px] font-black text-emerald-900/30 uppercase tracking-[0.4em] mb-4">Serivisi Zihariye</p>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {quickFeatures.map((feat, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => onNavigate?.(feat.view)} 
+                      className={`flex flex-col items-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all hover:-translate-y-2 hover:shadow-md ${feat.color} bg-opacity-5 hover:bg-opacity-10`}
+                    >
+                      <div className={`p-4 rounded-2xl mb-4 ${feat.color} bg-opacity-20`}>
+                        <feat.icon className="w-8 h-8" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-center">{feat.label}</span>
+                    </button>
+                  ))}
+                 </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} className="h-4 clear-both" />
         </div>
 
         {!shouldAutoScroll && messages.length > 3 && !isSearchOpen && (
           <button 
-            onClick={() => scrollToBottom('smooth')}
+            onClick={() => { setShouldAutoScroll(true); scrollToBottom('smooth'); }}
             className="fixed bottom-32 right-8 md:right-12 p-3 bg-white text-emerald-600 rounded-full shadow-2xl border border-emerald-100 hover:bg-emerald-50 transition-all animate-bounce"
           >
             <ArrowDown className="w-6 h-6" />

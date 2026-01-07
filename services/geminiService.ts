@@ -13,8 +13,12 @@ const DEFAULT_CONFIG: ModelConfig = {
 
 const getModelConfig = (): ModelConfig => {
   if (typeof window === 'undefined') return DEFAULT_CONFIG;
-  const stored = localStorage.getItem('ai_rw_model_config');
-  return stored ? JSON.parse(stored) : DEFAULT_CONFIG;
+  try {
+    const stored = localStorage.getItem('ai_rw_model_config');
+    return stored ? JSON.parse(stored) : DEFAULT_CONFIG;
+  } catch (e) {
+    return DEFAULT_CONFIG;
+  }
 };
 
 const cleanJsonString = (str: string | undefined): string => {
@@ -72,7 +76,10 @@ export const streamChatResponse = async (
   onChunk: (text: string) => void,
   onSources?: (sources: Source[]) => void
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY || "";
+  if (!apiKey) throw new Error("API_KEY is missing from environment.");
+  
+  const ai = new GoogleGenAI({ apiKey });
   const config = getModelConfig();
   const context = getContextForView('CHAT');
 
@@ -113,7 +120,7 @@ export const streamChatResponse = async (
 };
 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const context = getContextForView('BUSINESS');
   
   const prompt = `Sesengura ubu bucuruzi kandi utange isesengura mu Kinyarwanda: "${input}". 
@@ -141,7 +148,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const context = getContextForView('RURAL');
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
@@ -155,7 +162,7 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
 };
 
 export const generateCourse = async (topic: string, level: string, duration: string, prerequisites: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const context = getContextForView('COURSE');
   
   const prompt = `Tegura isomo rirambuye mu Kinyarwanda:
@@ -179,7 +186,7 @@ export const generateCourse = async (topic: string, level: string, duration: str
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const response = await ai.models.generateContent({
     model: TTS_MODEL,
     contents: [{ parts: [{ text }] }],
@@ -192,7 +199,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
 };
 
 export const generateTextAnalysis = async (prompt: string, type: string, tone: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
@@ -202,7 +209,7 @@ export const generateTextAnalysis = async (prompt: string, type: string, tone: s
 };
 
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
@@ -229,7 +236,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 };
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
@@ -243,7 +250,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: { parts: [{ text: prompt }] },
@@ -256,7 +263,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
 };
 
 export const generateConversationResponse = async (history: any[], newMessage: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
   const contents = [...history, { role: 'user', parts: [{ text: newMessage }] }];
   const response = await ai.models.generateContent({
     model: FAST_MODEL,

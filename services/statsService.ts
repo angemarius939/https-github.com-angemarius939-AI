@@ -6,13 +6,16 @@ const STORAGE_KEY = 'ai_rw_visit_stats';
 export const recordVisit = async () => {
   if (typeof window === 'undefined') return;
   
-  if (sessionStorage.getItem('visited_session')) return;
-  
-  let countryCode = 'RW'; // Default to Rwanda for speed
   try {
-    // Fast timeout for geolocation to avoid blocking load
+    if (sessionStorage.getItem('visited_session')) return;
+  } catch (e) {
+    // Session storage might be blocked in some private modes
+  }
+  
+  let countryCode = 'RW';
+  try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
     
     const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
     clearTimeout(timeoutId);
@@ -22,33 +25,37 @@ export const recordVisit = async () => {
         countryCode = data.country_code || 'RW';
     }
   } catch (e) {
-    // Fail silently to keep app fast
+    // Fail silently
   }
 
-  const today = new Date().toISOString().split('T')[0];
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const stats: Record<string, DailyStats> = stored ? JSON.parse(stored) : {};
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const stats: Record<string, DailyStats> = stored ? JSON.parse(stored) : {};
 
-  if (!stats[today]) {
-    stats[today] = { date: today, count: 0, countries: {} };
+    if (!stats[today]) {
+      stats[today] = { date: today, count: 0, countries: {} };
+    }
+    
+    if (!stats[today].countries) {
+        stats[today].countries = {};
+    }
+
+    stats[today].count += 1;
+    stats[today].countries[countryCode] = (stats[today].countries[countryCode] || 0) + 1;
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+    sessionStorage.setItem('visited_session', 'true');
+  } catch (e) {
+    // Storage might be full or blocked
   }
-  
-  if (!stats[today].countries) {
-      stats[today].countries = {};
-  }
-
-  stats[today].count += 1;
-  stats[today].countries[countryCode] = (stats[today].countries[countryCode] || 0) + 1;
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-  sessionStorage.setItem('visited_session', 'true');
 };
 
 export const getVisitStats = (): DailyStats[] => {
     if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
     try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return [];
       const stats: Record<string, DailyStats> = JSON.parse(stored);
       return Object.values(stats)
         .sort((a, b) => b.date.localeCompare(a.date))
@@ -60,10 +67,10 @@ export const getVisitStats = (): DailyStats[] => {
 
 export const getCountryAggregate = (): CountryStats[] => {
     if (typeof window === 'undefined') return [];
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    
     try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return [];
+      
       const stats: Record<string, DailyStats> = JSON.parse(stored);
       const agg: Record<string, number> = {};
       
