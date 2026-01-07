@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, Home, Image as ImageIcon, MessageSquare, ArrowDown, Lightbulb } from 'lucide-react';
+import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, ImageIcon, MessageSquare, ArrowDown, Lightbulb } from 'lucide-react';
 import { Message, MessageRole, Source, AppView } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
@@ -19,7 +19,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      text: 'Muraho! Nitwa **ai.rw**, umufasha wawe mu Kinyarwanda. \n\nNagufasha iki uyu munsi? Hitamo muri serivisi ziri hasi cyangwa unyandikire hano.',
+      text: 'Muraho! Nitwa **ai.rw**, umufasha wawe mu Kinyarwanda. \n\nUbu turi mu **Kiganiro**. Nagufasha iki uyu munsi? Hitamo muri serivisi zihariye ziri hasi cyangwa unyandikire hano maze tuganire.',
       timestamp: Date.now()
     }
   ]);
@@ -28,6 +28,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -36,9 +37,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const quickFeatures = [
-    { view: AppView.LANDING, icon: Home, label: 'Ahabanza', color: 'bg-slate-100 text-slate-700' },
-    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: "Iterambere ry'Icyaro", color: 'bg-emerald-100 text-emerald-700' },
-    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama mu Myanzuro', color: 'bg-blue-100 text-blue-700' },
+    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: "Iterambere", color: 'bg-emerald-100 text-emerald-700' },
+    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-blue-100 text-blue-700' },
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
     { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-amber-100 text-amber-700' },
     { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-rose-100 text-rose-700' },
@@ -60,25 +60,30 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const handleScroll = () => {
     if (!scrollAreaRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
     setShouldAutoScroll(isAtBottom);
   };
 
+  // Improved scroll effect: listens to changes in message count and content during streaming
+  useEffect(() => {
+    if (shouldAutoScroll || isStreaming) {
+      scrollToBottom(isStreaming ? 'auto' : 'smooth');
+    }
+  }, [messages.length, isStreaming, messages[messages.length - 1]?.text]);
+
+  // Handle Resize for mobile keyboards etc.
   useEffect(() => {
     if (!scrollAreaRef.current) return;
-
     const observer = new ResizeObserver(() => {
-      if (shouldAutoScroll || isStreaming) {
-        scrollToBottom(isStreaming ? 'auto' : 'smooth');
-      }
+      if (shouldAutoScroll) scrollToBottom('auto');
     });
-
-    const content = scrollAreaRef.current.firstElementChild;
-    if (content) observer.observe(content);
+    observer.observe(scrollAreaRef.current);
     return () => observer.disconnect();
-  }, [shouldAutoScroll, isStreaming]);
+  }, [shouldAutoScroll]);
 
+  // Initial focus
   useEffect(() => {
+    inputRef.current?.focus();
     scrollToBottom('auto');
   }, []);
 
@@ -97,10 +102,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     setIsStreaming(true);
     setShouldAutoScroll(true);
 
-    const history = messages.map(m => ({
-      role: m.role === MessageRole.USER ? 'user' : 'model',
-      parts: [{ text: m.text }]
-    }));
+    const history = messages
+      .filter(m => m.role !== MessageRole.ERROR)
+      .map(m => ({
+        role: m.role === MessageRole.USER ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      }));
 
     const modelMsgId = (Date.now() + 1).toString();
     setStreamingMessageId(modelMsgId);
@@ -117,15 +124,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, sources: Array.from(uniqueSources.values()) } : m));
       });
     } catch (error: any) {
-      let errorMessage = 'Habaye ikibazo mu gushaka igisubizo. Ongera ugerageze mukanya.';
-      if (error?.message === "API_KEY_MISSING") errorMessage = 'Habaye ikibazo: API_KEY ntigaragara muri Vercel Settings.';
-      else if (error?.message === "INVALID_API_KEY") errorMessage = 'Habaye ikibazo: API_KEY ukoresha ntabwo ikora.';
+      const errorMessage = 'Habaye ikibazo mu gushaka igisubizo. Ongera ugerageze mukanya.';
       setMessages(prev => prev.filter(m => m.id !== modelMsgId).concat([{
         id: Date.now().toString(), role: MessageRole.ERROR, text: errorMessage, timestamp: Date.now()
       }]));
+      showToast(errorMessage, 'error');
     } finally { 
       setIsStreaming(false); 
       setStreamingMessageId(null);
+      inputRef.current?.focus();
     }
   };
 
@@ -134,6 +141,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     setIsClearConfirmOpen(false);
     setSearchQuery('');
     setIsSearchOpen(false);
+    inputRef.current?.focus();
   };
 
   const handleCopyMessage = (id: string, text: string) => {
@@ -182,10 +190,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
-              <button onClick={() => onNavigate?.(AppView.LANDING)} className="transition-transform active:scale-95">
-                <Logo size="sm" />
-              </button>
-              <h2 className="text-lg font-black text-emerald-950 uppercase tracking-tighter">ai.rw</h2>
+              <Logo size="sm" />
+              <h2 className="text-lg font-black text-emerald-950 uppercase tracking-tighter">ai.rw <span className="text-emerald-500 ml-1 opacity-50">• Ikiganiro</span></h2>
             </div>
             <div className="flex gap-1">
               <Button variant="ghost" onClick={() => setIsSearchOpen(true)} title="Shakisha"><Search className="w-5 h-5 text-emerald-700" /></Button>
@@ -207,7 +213,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 <div className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center mx-2 shadow-sm ${msg.role === MessageRole.USER ? 'bg-emerald-600' : 'bg-emerald-800'}`}>
                   {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
                 </div>
-                <div className={`group relative p-4 md:p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-bottom-2 ${msg.role === MessageRole.USER ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'}`}>
+                <div className={`group relative p-4 md:p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-bottom-2 ${
+                  msg.role === MessageRole.USER ? 'bg-emerald-600 text-white rounded-tr-none' : 
+                  msg.role === MessageRole.ERROR ? 'bg-red-50 text-red-700 border border-red-100 rounded-tl-none' :
+                  'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'
+                }`}>
                   {msg.role === MessageRole.MODEL && msg.text && (
                     <button 
                       onClick={() => handleCopyMessage(msg.id, msg.text)}
@@ -219,7 +229,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                   )}
                   
                   <FormattedText text={msg.text} searchQuery={searchQuery} />
-                  {/* Fix: use msg.sources instead of undefined sources variable */}
                   {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} className="mt-4" />}
                   
                   <div className={`text-[9px] mt-2 font-bold opacity-40 ${msg.role === MessageRole.USER ? 'text-white text-right' : 'text-stone-400'}`}>
@@ -230,31 +239,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
             </div>
           ))}
           
-          {isSearchOpen && searchQuery && filteredMessages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-stone-400 flex-1">
-              <Search className="w-12 h-12 mb-4 opacity-10" />
-              <p className="font-bold text-sm uppercase tracking-widest">Nta kintu cyabonetse kuri "{searchQuery}"</p>
-            </div>
-          )}
-
-          {messages.length <= 1 && !searchQuery && !isSearchOpen && (
-            <div className="space-y-8 mt-4 animate-in fade-in duration-700 delay-300">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {quickFeatures.map((feat, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => onNavigate?.(feat.view)} 
-                    className={`flex flex-col items-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all hover:-translate-y-2 hover:shadow-md ${feat.color} bg-opacity-5 hover:bg-opacity-10`}
-                  >
-                    <div className={`p-4 rounded-2xl mb-4 ${feat.color} bg-opacity-20`}>
-                      <feat.icon className="w-8 h-8" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-center">{feat.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           <div ref={messagesEndRef} className="h-4 clear-both" />
         </div>
 
@@ -271,6 +255,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
       <div className="p-4 md:p-6 bg-white border-t border-emerald-100">
         <div className="flex items-end gap-3 max-w-4xl mx-auto">
           <textarea 
+            ref={inputRef}
             value={inputValue} 
             onChange={(e) => setInputValue(e.target.value)} 
             onKeyDown={(e) => {

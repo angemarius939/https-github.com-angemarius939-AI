@@ -21,24 +21,20 @@ import { DecisionAssistant } from './components/DecisionAssistant';
 import { AdminDashboard } from './components/AdminDashboard';
 
 const LoadingView = () => (
-  <div className="h-full w-full flex flex-col items-center justify-center bg-white">
-    <div className="relative">
+  <div className="h-full w-full flex flex-col items-center justify-center bg-white p-6 text-center">
+    <div className="relative mb-8">
       <div className="w-24 h-24 border-4 border-emerald-50 border-t-emerald-500 rounded-3xl animate-spin"></div>
       <div className="absolute inset-0 flex items-center justify-center">
         <Logo size="sm" />
       </div>
     </div>
-    <div className="mt-8 flex flex-col items-center space-y-2">
-      <p className="text-emerald-900 font-black text-[10px] uppercase tracking-[0.3em] animate-pulse">ai.rw Irimo gufungura...</p>
-      <div className="h-0.5 w-12 bg-emerald-100 rounded-full overflow-hidden">
-        <div className="h-full bg-emerald-500 w-1/2 animate-[shimmer_1.5s_infinite]"></div>
-      </div>
-    </div>
+    <p className="text-emerald-900 font-black text-xs uppercase tracking-[0.3em] animate-pulse">ai.rw Irimo gufungura...</p>
   </div>
 );
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
+  // Start on LANDING for a complete first-page experience
+  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -47,16 +43,16 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        await recordVisit();
+        // Run stats in background to avoid blocking
+        recordVisit().catch(err => console.debug("Stats skip:", err));
         
         const hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
         if (!hasSeenOnboarding) {
           setShowOnboarding(true);
         }
-      } catch (e) {
-        console.error("Initialization error:", e);
       } finally {
-        setTimeout(() => setIsInitializing(false), 800);
+        // Short artificial delay to ensure smooth transition
+        setTimeout(() => setIsInitializing(false), 500);
       }
     };
     init();
@@ -65,6 +61,7 @@ export default function App() {
   const completeOnboarding = () => {
     setShowOnboarding(false);
     localStorage.setItem('ai_rw_onboarding_seen', 'true');
+    setCurrentView(AppView.CHAT); // Go straight to chat after onboarding
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -82,7 +79,7 @@ export default function App() {
 
   const getPageTitle = () => {
     switch (currentView) {
-      case AppView.LANDING: return 'Ahabanza (Mbonerazuba)';
+      case AppView.LANDING: return 'Ahabanza';
       case AppView.CHAT: return 'Ikiganiro';
       case AppView.VOICE_CONVERSATION: return 'Kuvuga';
       case AppView.TEXT_TO_SPEECH: return 'Soma Inyandiko';
@@ -108,7 +105,7 @@ export default function App() {
       case AppView.DECISION_ASSISTANT: return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR: return <CourseGenerator />;
       case AppView.ADMIN: return <AdminDashboard onNavigate={handleViewChange} />;
-      default: return <ChatInterface onNavigate={handleViewChange} />;
+      default: return <LandingPage onStart={handleViewChange} />;
     }
   };
 
@@ -144,7 +141,7 @@ export default function App() {
           {/* Desktop Navigation Header */}
           <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
              <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
-                <button onClick={() => handleViewChange(AppView.CHAT)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
+                <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
                    <Logo size="sm" />
                    ai.rw
                 </button>

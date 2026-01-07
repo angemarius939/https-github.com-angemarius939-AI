@@ -17,14 +17,6 @@ const getModelConfig = (): ModelConfig => {
   return stored ? JSON.parse(stored) : DEFAULT_CONFIG;
 };
 
-const getApiKey = () => {
-  const key = process.env.API_KEY;
-  if (!key || key === 'process.env.API_KEY' || key === 'undefined' || key === 'null') {
-    return '';
-  }
-  return key;
-};
-
 const cleanJsonString = (str: string | undefined): string => {
   if (!str) return "{}";
   const trimmed = str.trim();
@@ -80,10 +72,7 @@ export const streamChatResponse = async (
   onChunk: (text: string) => void,
   onSources?: (sources: Source[]) => void
 ): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const config = getModelConfig();
   const context = getContextForView('CHAT');
 
@@ -93,27 +82,27 @@ export const streamChatResponse = async (
   ];
 
   try {
-    const resultStream = await ai.models.generateContentStream({
+    const responseStream = await ai.models.generateContentStream({
       model: FAST_MODEL,
       contents,
       config: {
         systemInstruction: config.systemInstruction + context,
         temperature: config.temperature,
-        // Enable Google Search grounding to populate groundingMetadata
+        topP: config.topP,
+        topK: config.topK,
         tools: [{ googleSearch: {} }],
       }
     });
 
     let fullText = "";
-    for await (const chunk of resultStream) {
-      const c = chunk as GenerateContentResponse;
-      const text = c.text;
+    for await (const chunk of responseStream) {
+      const text = chunk.text;
       if (text) {
         fullText += text;
         onChunk(text);
       }
-      if (onSources && c.candidates?.[0]?.groundingMetadata) {
-         onSources(extractSources(c));
+      if (onSources && chunk.candidates?.[0]?.groundingMetadata) {
+        onSources(extractSources(chunk));
       }
     }
     return fullText;
@@ -124,20 +113,18 @@ export const streamChatResponse = async (
 };
 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = getContextForView('BUSINESS');
   
-  const prompt = `Sesengura ubu bucuruzi: "${input}". 
+  const prompt = `Sesengura ubu bucuruzi kandi utange isesengura mu Kinyarwanda: "${input}". 
   Tanga igisubizo cya JSON yonyine:
   {
-    "summary": "incamake",
-    "isFinancial": true/false,
+    "summary": "incamake irambuye mu Kinyarwanda",
+    "isFinancial": true,
     "financials": {"revenue": 0, "expense": 0, "profit": 0, "currency": "RWF"},
-    "risks": ["kibazo1"],
-    "advice": ["inama1"],
-    "chartData": [{"label": "izina", "value": 0, "type": "revenue/expense/profit"}]
+    "risks": ["kibazo1", "kibazo2"],
+    "advice": ["inama1", "inama2"],
+    "chartData": [{"label": "Izina", "value": 0, "type": "revenue"}]
   }`;
 
   const response = await ai.models.generateContent({
@@ -154,16 +141,13 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = getContextForView('RURAL');
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
-      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama mu Kinyarwanda. ${context}`,
-      // Enable Google Search grounding
+      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika mu Kinyarwanda. ${context}`,
       tools: [{ googleSearch: {} }],
     }
   });
@@ -171,18 +155,16 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
 };
 
 export const generateCourse = async (topic: string, level: string, duration: string, prerequisites: string): Promise<{ text: string, sources: Source[] }> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const context = getContextForView('COURSE');
   
-  const prompt = `Kora isomo rirambuye:
+  const prompt = `Tegura isomo rirambuye mu Kinyarwanda:
   - Ingingo: ${topic}
   - Urwego: ${level}
   - Igihe: ${duration}
-  - Prerequisites: ${prerequisites}
+  - Ibisabwa mbere: ${prerequisites}
   
-  Isomo rigomba kuba rifite: Intangiriro, Ibice by'ingenzi, Imyitozo, n'Umwanzuro. Koresha Ikinyarwanda gikungahaye.`;
+  Isomo rigomba kuba rifite: Intangiriro, Amasomo nyirizina (Modules), Imyitozo, n'Umwanzuro.`;
 
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
@@ -190,7 +172,6 @@ export const generateCourse = async (topic: string, level: string, duration: str
     config: {
       systemInstruction: `Uri umwalimu kuri ai.rw. Subiza mu Kinyarwanda gusa. ${context}`,
       temperature: 0.7,
-      // Enable Google Search grounding
       tools: [{ googleSearch: {} }],
     }
   });
@@ -198,9 +179,7 @@ export const generateCourse = async (topic: string, level: string, duration: str
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: TTS_MODEL,
     contents: [{ parts: [{ text }] }],
@@ -213,9 +192,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
 };
 
 export const generateTextAnalysis = async (prompt: string, type: string, tone: string): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
@@ -225,9 +202,7 @@ export const generateTextAnalysis = async (prompt: string, type: string, tone: s
 };
 
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
@@ -254,9 +229,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 };
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
@@ -270,9 +243,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: { parts: [{ text: prompt }] },
@@ -285,14 +256,12 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
 };
 
 export const generateConversationResponse = async (history: any[], newMessage: string): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API_KEY_MISSING");
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const contents = [...history, { role: 'user', parts: [{ text: newMessage }] }];
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents,
-    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito." }
+    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito kandi gishimishije." }
   });
   return response.text || "";
 };
