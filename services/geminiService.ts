@@ -4,7 +4,7 @@ import { ImageAnalysisResult, BusinessAnalysisResult, Source, ModelConfig } from
 import { getContextForView } from './knowledgeService';
 
 const DEFAULT_CONFIG: ModelConfig = {
-  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Uri impuguke mu bumenyi n'ikoranabuhanga. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Iyo uvuze izina ryawe, vuga ai.rw.",
+  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda.",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
@@ -99,6 +99,8 @@ export const streamChatResponse = async (
       config: {
         systemInstruction: config.systemInstruction + context,
         temperature: config.temperature,
+        // Enable Google Search grounding to populate groundingMetadata
+        tools: [{ googleSearch: {} }],
       }
     });
 
@@ -127,70 +129,28 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('BUSINESS');
   
-  const prompt = `Sesengura amakuru akurikira y'ubucuruzi cyangwa imibare, hanyuma utange raporo irambuye mu Kinyarwanda. 
-  Amakuru: "${input}"
-  
-  Ugomba gusubiza mu buryo bwa JSON yonyine ukurikije iyi miterere (schema).`;
+  const prompt = `Sesengura ubu bucuruzi: "${input}". 
+  Tanga igisubizo cya JSON yonyine:
+  {
+    "summary": "incamake",
+    "isFinancial": true/false,
+    "financials": {"revenue": 0, "expense": 0, "profit": 0, "currency": "RWF"},
+    "risks": ["kibazo1"],
+    "advice": ["inama1"],
+    "chartData": [{"label": "izina", "value": 0, "type": "revenue/expense/profit"}]
+  }`;
 
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: `Uri umusesenguzi w'ubwenge (Business Analyst) wa ai.rw mu Rwanda. Isesengura ryawe rigomba kuba ryimbitse kandi rishingiye ku mibare n'ukuri. Subiza mu Kinyarwanda gusa. ${context}`,
+      systemInstruction: `Uri umusesenguzi wa ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa. ${context}`,
       responseMimeType: "application/json",
-      temperature: 0.2, 
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          summary: { type: Type.STRING, description: "Incamake y'isesengura mu Kinyarwanda." },
-          isFinancial: { type: Type.BOOLEAN, description: "Niba amakuru arimo imibare y'amafaranga cyangwa inyungu." },
-          financials: {
-            type: Type.OBJECT,
-            properties: {
-              revenue: { type: Type.NUMBER },
-              expense: { type: Type.NUMBER },
-              profit: { type: Type.NUMBER },
-              currency: { type: Type.STRING }
-            }
-          },
-          kpiCards: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                label: { type: Type.STRING },
-                value: { type: Type.STRING },
-                color: { type: Type.STRING, description: "emerald, blue, or orange" }
-              }
-            }
-          },
-          risks: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Imbogamizi n'ibyago byagaragaye." },
-          advice: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Inama zo gukemura ibibazo cyangwa gutera imbere." },
-          chartData: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: { 
-                label: { type: Type.STRING }, 
-                value: { type: Type.NUMBER }, 
-                type: { type: Type.STRING, description: "revenue, expense, cyangwa profit" } 
-              }
-            }
-          }
-        },
-        required: ["summary", "isFinancial", "risks", "advice", "chartData"]
-      }
+      temperature: 0.1
     }
   });
   
-  const text = response.text;
-  const jsonStr = cleanJsonString(text);
-  try {
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    console.error("JSON Parsing Error in Business Analysis:", e, "Raw text:", text);
-    throw new Error("Ibisubizo ntibishoboye gusomwa neza. Ongera ugerageze.");
-  }
+  return JSON.parse(cleanJsonString(response.text));
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
@@ -202,7 +162,9 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     model: FAST_MODEL,
     contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
-      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika kandi zumvikana mu Kinyarwanda. ${context}`,
+      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama mu Kinyarwanda. ${context}`,
+      // Enable Google Search grounding
+      tools: [{ googleSearch: {} }],
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
@@ -214,23 +176,22 @@ export const generateCourse = async (topic: string, level: string, duration: str
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('COURSE');
   
-  const prompt = `Tegura isomo rirambuye kandi rishingiye ku bumenyi nyabwo ku ngingo ikurikira:
+  const prompt = `Kora isomo rirambuye:
   - Ingingo: ${topic}
   - Urwego: ${level}
-  - Igihe bizafata: ${duration}
-  - Ibyo umuntu agomba kuba azi mbere: ${prerequisites || 'Nta na kimwe'}
+  - Igihe: ${duration}
+  - Prerequisites: ${prerequisites}
   
-  Isomo rigomba kuba rifite:
-  1. Intangiriro (Introduction)
-  2. Ibice by'ingenzi (Core Modules) bifite ibisobanuro birambuye.
-  3. Imyitozo (Practical exercises)
-  4. Umwanzuro n'inama zo gukomeza (Conclusion & Next steps)`;
+  Isomo rigomba kuba rifite: Intangiriro, Ibice by'ingenzi, Imyitozo, n'Umwanzuro. Koresha Ikinyarwanda gikungahaye.`;
 
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw. Kora isomo rirambuye cyane, ukoresha Ikinyarwanda gikungahaye kandi cyumvikana neza. ${context}`,
+      systemInstruction: `Uri umwalimu kuri ai.rw. Subiza mu Kinyarwanda gusa. ${context}`,
+      temperature: 0.7,
+      // Enable Google Search grounding
+      tools: [{ googleSearch: {} }],
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
@@ -258,7 +219,7 @@ export const generateTextAnalysis = async (prompt: string, type: string, tone: s
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
-    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw. Koresha amategeko y'imyandikire y'Ikinyarwanda." }
+    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw." }
   });
   return response.text || "";
 };
@@ -283,17 +244,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
           description: { type: Type.STRING },
           confidenceScore: { type: Type.NUMBER },
           keyObservations: { type: Type.ARRAY, items: { type: Type.STRING } },
-          imageType: { type: Type.STRING },
-          detectedObjects: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                label: { type: Type.STRING },
-                box_2d: { type: Type.ARRAY, items: { type: Type.NUMBER } }
-              }
-            }
-          }
+          imageType: { type: Type.STRING }
         },
         required: ["description", "confidenceScore", "keyObservations", "imageType"]
       }
@@ -311,7 +262,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     contents: {
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: "Kuramo umwandiko mu Kinyarwanda cyangwa izindi ndimi." }
+        { text: "Kuramo umwandiko mu Kinyarwanda." }
       ]
     }
   });
@@ -341,7 +292,7 @@ export const generateConversationResponse = async (history: any[], newMessage: s
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents,
-    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito kandi gishimishije." }
+    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito." }
   });
   return response.text || "";
 };

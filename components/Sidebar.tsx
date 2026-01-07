@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Home, MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download } from 'lucide-react';
+import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download } from 'lucide-react';
 import { AppView } from '../types';
 import { Logo } from './Logo';
 
@@ -34,7 +34,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
   };
 
   const menuItems = [
-    { id: AppView.LANDING, label: 'Ahabanza', icon: <Home className="w-5 h-5" /> },
     { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
     { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
     { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
@@ -48,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
       <div className="absolute inset-0 rwanda-pattern opacity-10 pointer-events-none"></div>
       
       <div className="relative flex flex-col h-full z-10 bg-gradient-to-b from-black/90 to-emerald-950/90">
-        <div className="flex items-center px-6 h-20 border-b border-white/10 bg-white/5 backdrop-blur-sm">
+        <div className="flex items-center px-6 h-20 border-b border-white/10 bg-white/5 backdrop-blur-sm cursor-pointer" onClick={() => onChangeView(AppView.CHAT)}>
           <Logo size="sm" className="mr-3" />
           <h1 className="text-xl font-black text-white tracking-tighter uppercase">
             ai.rw

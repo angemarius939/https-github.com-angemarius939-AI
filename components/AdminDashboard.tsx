@@ -1,27 +1,24 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Lock, Plus, Trash2, Database, Save, LogOut, ImageIcon, 
-  FileText, X, AlertCircle, BarChart, Sprout, 
-  Mic, Activity, ChevronRight, Filter,
-  Volume2, Info, Eye, EyeOff, Layout, ShieldCheck, Upload, FileJson, 
-  FileSearch, History, Sliders, Zap, Check, Edit3, Trash, Music, Settings, LayoutDashboard, BrainCircuit, FlaskConical, Headphones, TestTube, Microscope
+  Lock, Plus, Trash2, Database, LogOut, ImageIcon, 
+  ChevronRight, Activity, LayoutDashboard, Settings, 
+  Mic, TestTube, BarChart, Sliders, Layout, Eye
 } from 'lucide-react';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { 
-  saveKnowledgeItem, saveBulkKnowledgeItems, getKnowledgeItems, 
-  deleteKnowledgeItem, deleteBulkKnowledgeItems 
+  saveKnowledgeItem, getKnowledgeItems, 
+  deleteKnowledgeItem 
 } from '../services/knowledgeService';
 import { getVisitStats, getCountryAggregate } from '../services/statsService';
 import { 
-  KnowledgeItem, KnowledgeScope, DailyStats, CountryStats, ModelConfig 
+  KnowledgeItem, KnowledgeScope, DailyStats, CountryStats, ModelConfig, AppView 
 } from '../types';
 import { ImageTools } from './ImageTools';
 import { VoiceConversation } from './VoiceConversation';
-import { FormattedText } from './FormattedText';
 
-type AdminTab = 'dashboard' | 'knowledge' | 'documents' | 'model_config' | 'test_image' | 'test_voice' | 'settings';
+type AdminTab = 'dashboard' | 'knowledge' | 'model_config' | 'test_image' | 'test_voice' | 'landing_preview' | 'settings';
 
 const DEFAULT_CONFIG: ModelConfig = {
   systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Uri impuguke mu bumenyi n'ikoranabuhanga. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Iyo uvuze izina ryawe, vuga ai.rw.",
@@ -31,14 +28,17 @@ const DEFAULT_CONFIG: ModelConfig = {
   thinkingBudget: 0
 };
 
-export const AdminDashboard: React.FC = () => {
+interface AdminDashboardProps {
+  onNavigate?: (view: AppView) => void;
+}
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [items, setItems] = useState<KnowledgeItem[]>([]);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterScope, setFilterScope] = useState<KnowledgeScope | 'ALL_SCOPES'>('ALL_SCOPES');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [modelConfig, setModelConfig] = useState<ModelConfig>(DEFAULT_CONFIG);
   const [visitStats, setVisitStats] = useState<DailyStats[]>([]);
   const [countryStats, setCountryStats] = useState<CountryStats[]>([]);
@@ -146,17 +146,19 @@ export const AdminDashboard: React.FC = () => {
         <nav className="flex-1 p-6 space-y-1.5 overflow-y-auto">
           <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3">Dashboard</div>
           <SidebarItem tab="dashboard" icon={LayoutDashboard} label="Imbonerahamwe" />
+          
           <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3 mt-8">Amakuru yo Kwigisha</div>
           <SidebarItem tab="knowledge" icon={Database} label="Ububiko bw'Amakuru" />
-          <SidebarItem tab="documents" icon={Upload} label="Inyandiko (Bulk)" color="blue" />
           
+          <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3 mt-8">Gucunga Ahabanza</div>
+          <SidebarItem tab="landing_preview" icon={Layout} label="Ahabanza (Preview)" color="amber" />
+
           <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3 mt-8">Ibirimo Gutegurwa</div>
           <SidebarItem tab="test_image" icon={ImageIcon} label="Gupima Amafoto" color="indigo" />
           <SidebarItem tab="test_voice" icon={Mic} label="Gupima Ijwi" color="rose" />
 
           <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3 mt-8">Sisitemu</div>
           <SidebarItem tab="model_config" icon={Sliders} label="Config & Prompts" color="amber" />
-          <SidebarItem tab="settings" icon={Settings} label="Igenamiterere" />
         </nav>
         <div className="p-6 border-t border-stone-100 bg-stone-50/50">
           <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center justify-center gap-2 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-all text-xs font-black uppercase tracking-widest"><LogOut className="w-4 h-4" />Sohoka</button>
@@ -179,17 +181,6 @@ export const AdminDashboard: React.FC = () => {
                      <div className="text-[10px] text-stone-400 font-black uppercase tracking-widest mt-1">Amakuru ahari</div>
                   </div>
                </div>
-               <div className="bg-white p-10 rounded-[40px] shadow-sm border border-stone-100">
-                  <h3 className="text-xl font-black text-emerald-950 mb-8 uppercase tracking-tighter flex items-center gap-3"><BarChart className="w-6 h-6 text-emerald-600" />Analytics y'Ikoreshwa</h3>
-                  <div className="h-64 flex items-end gap-3 border-b border-stone-100 pb-4">
-                     {visitStats.slice(0, 10).reverse().map((day, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
-                           <div className="w-full bg-emerald-500/80 rounded-xl transition-all hover:bg-emerald-500" style={{ height: `${(day.count / Math.max(...visitStats.map(d => d.count), 1)) * 100}%`, minHeight: '8px' }}></div>
-                           <div className="text-[9px] text-stone-400 font-black uppercase tracking-widest truncate w-full text-center">{new Date(day.date).toLocaleDateString(undefined, {weekday: 'short'})}</div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
             </div>
           )}
 
@@ -200,12 +191,6 @@ export const AdminDashboard: React.FC = () => {
                      <h3 className="text-xl font-black text-stone-950 mb-8 flex items-center gap-3 uppercase tracking-tighter"><Plus className="w-6 h-6 text-emerald-600" />Ongeramo Amakuru</h3>
                      <div className="space-y-6">
                         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Umutwe (Ex: Ubuhinzi)..." className="w-full p-4 bg-stone-50 border-2 border-stone-100 rounded-2xl outline-none font-bold" />
-                        <select value={scope} onChange={e => setScope(e.target.value as KnowledgeScope)} className="w-full p-4 bg-stone-50 border-2 border-stone-100 rounded-2xl outline-none font-bold">
-                           <option value="ALL">Global (Hose)</option>
-                           <option value="CHAT">Chat</option>
-                           <option value="RURAL">Rural</option>
-                           <option value="BUSINESS">Business</option>
-                        </select>
                         <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Amakuru rero..." className="w-full h-48 p-4 bg-stone-50 border-2 border-stone-100 rounded-2xl outline-none resize-none" />
                         <Button onClick={handleSaveText} className="w-full py-5 rounded-2xl shadow-xl font-black uppercase tracking-widest">Bika Amakuru</Button>
                      </div>
@@ -230,28 +215,37 @@ export const AdminDashboard: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'test_image' && (
-             <div className="animate-in fade-in duration-500 bg-white rounded-[40px] p-8 border border-stone-100 shadow-sm">
-                <div className="mb-6 flex items-center gap-3 border-b border-stone-100 pb-4">
-                   <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center"><TestTube className="w-6 h-6" /></div>
-                   <div>
-                      <h3 className="text-xl font-black text-stone-900 uppercase tracking-tighter">Sandbox: Amafoto</h3>
-                      <p className="text-sm text-stone-500 font-medium">Irebere uko gusesengura no guhanga amafoto bikora mbere yo kubishyira hanze.</p>
+          {activeTab === 'landing_preview' && (
+             <div className="animate-in fade-in duration-500 space-y-6">
+                <div className="bg-amber-50 p-6 rounded-3xl border border-amber-200 flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center"><Eye className="w-6 h-6" /></div>
+                      <div>
+                         <h3 className="font-black text-amber-950 uppercase tracking-tighter">Ibonekeza rya Ahabanza</h3>
+                         <p className="text-sm text-amber-700">Iyi ni porojeti yo hanze abantu babonaga mbere. Kanda buto yo iburyo niba ushaka kuyerekana abantu bose.</p>
+                      </div>
+                   </div>
+                   <Button onClick={() => onNavigate?.(AppView.LANDING)} className="bg-amber-600 hover:bg-amber-700">Fungura Preview</Button>
+                </div>
+                <div className="rounded-[40px] overflow-hidden border border-stone-200 shadow-2xl h-[600px] bg-white relative">
+                   <div className="absolute inset-0 flex items-center justify-center bg-stone-100/50 backdrop-blur-sm z-10">
+                      <div className="text-center p-8 bg-white rounded-3xl shadow-xl border border-stone-200 max-w-sm">
+                         <Layout className="w-12 h-12 text-stone-300 mx-auto mb-4" />
+                         <p className="text-stone-600 font-bold">Kanda "Fungura Preview" hejuru kugira ngo ubone imiterere yose ya Ahabanza.</p>
+                      </div>
                    </div>
                 </div>
+             </div>
+          )}
+
+          {activeTab === 'test_image' && (
+             <div className="animate-in fade-in duration-500 bg-white rounded-[40px] p-8 border border-stone-100 shadow-sm">
                 <ImageTools />
              </div>
           )}
 
           {activeTab === 'test_voice' && (
              <div className="animate-in fade-in duration-500 bg-white rounded-[40px] p-8 border border-stone-100 shadow-sm min-h-[600px]">
-                <div className="mb-6 flex items-center gap-3 border-b border-stone-100 pb-4">
-                   <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Mic className="w-6 h-6" /></div>
-                   <div>
-                      <h3 className="text-xl font-black text-stone-900 uppercase tracking-tighter">Sandbox: Ijwi (Voice)</h3>
-                      <p className="text-sm text-stone-500 font-medium">Pima ikiganiro cy'ijwi mu Kinyarwanda hano.</p>
-                   </div>
-                </div>
                 <VoiceConversation />
              </div>
           )}

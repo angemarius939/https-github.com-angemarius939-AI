@@ -42,6 +42,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
     { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-amber-100 text-amber-700' },
     { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-rose-100 text-rose-700' },
+    { view: AppView.IMAGE_TOOLS, icon: ImageIcon, label: 'Amafoto', color: 'bg-purple-100 text-purple-700' },
   ];
 
   const filteredMessages = useMemo(() => {
@@ -218,6 +219,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                   )}
                   
                   <FormattedText text={msg.text} searchQuery={searchQuery} />
+                  {/* Fix: use msg.sources instead of undefined sources variable */}
                   {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} className="mt-4" />}
                   
                   <div className={`text-[9px] mt-2 font-bold opacity-40 ${msg.role === MessageRole.USER ? 'text-white text-right' : 'text-stone-400'}`}>

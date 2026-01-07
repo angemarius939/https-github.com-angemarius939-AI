@@ -38,7 +38,7 @@ const LoadingView = () => (
 );
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
+  const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -47,29 +47,20 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Record visit asynchronously
         await recordVisit();
         
-        // Default to Landing Page for every new mount to ensure user sees the "Home"
-        setCurrentView(AppView.LANDING);
+        const hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
+        if (!hasSeenOnboarding) {
+          setShowOnboarding(true);
+        }
       } catch (e) {
         console.error("Initialization error:", e);
       } finally {
-        // Small delay for smooth transition
         setTimeout(() => setIsInitializing(false), 800);
       }
     };
     init();
   }, []);
-
-  const handleStartApp = (view: AppView = AppView.CHAT) => {
-    setCurrentView(view);
-    const hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const completeOnboarding = () => {
     setShowOnboarding(false);
@@ -91,7 +82,7 @@ export default function App() {
 
   const getPageTitle = () => {
     switch (currentView) {
-      case AppView.LANDING: return 'Ahabanza';
+      case AppView.LANDING: return 'Ahabanza (Mbonerazuba)';
       case AppView.CHAT: return 'Ikiganiro';
       case AppView.VOICE_CONVERSATION: return 'Kuvuga';
       case AppView.TEXT_TO_SPEECH: return 'Soma Inyandiko';
@@ -107,6 +98,7 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentView) {
+      case AppView.LANDING: return <LandingPage onStart={handleViewChange} />;
       case AppView.CHAT: return <ChatInterface onNavigate={handleViewChange} />;
       case AppView.VOICE_CONVERSATION: return <VoiceConversation />;
       case AppView.TEXT_TO_SPEECH: return <TextToSpeech initialText={ttsInitialText} />;
@@ -115,7 +107,7 @@ export default function App() {
       case AppView.RURAL_SUPPORT: return <RuralAssistant />;
       case AppView.DECISION_ASSISTANT: return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR: return <CourseGenerator />;
-      case AppView.ADMIN: return <AdminDashboard />;
+      case AppView.ADMIN: return <AdminDashboard onNavigate={handleViewChange} />;
       default: return <ChatInterface onNavigate={handleViewChange} />;
     }
   };
@@ -124,56 +116,52 @@ export default function App() {
 
   return (
     <ToastProvider>
-      {currentView === AppView.LANDING ? (
-        <LandingPage onStart={handleStartApp} />
-      ) : (
-        <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans relative">
-          {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+      <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans relative">
+        {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+        
+        <Sidebar 
+          currentView={currentView} 
+          onChangeView={handleViewChange} 
+          isOpen={isSidebarOpen} 
+        />
+        
+        <div className="flex-1 flex flex-col min-w-0 relative h-full">
+          <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
           
-          <Sidebar 
-            currentView={currentView} 
-            onChangeView={handleViewChange} 
-            isOpen={isSidebarOpen} 
-          />
-          
-          <div className="flex-1 flex flex-col min-w-0 relative h-full">
-            <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
-            
-            {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
-              <div className="flex items-center gap-3">
-                 <button onClick={() => handleViewChange(AppView.LANDING)}>
-                   <Logo size="sm" variant="light" className="shadow-inner" />
-                 </button>
-                 <h1 className="text-sm font-black uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
-              </div>
-              <button onClick={toggleSidebar} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all">
-                {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
+            <div className="flex items-center gap-3">
+               <button onClick={() => handleViewChange(AppView.CHAT)}>
+                 <Logo size="sm" variant="light" className="shadow-inner" />
+               </button>
+               <h1 className="text-sm font-black uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
             </div>
-
-            {/* Desktop Navigation Header */}
-            <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
-               <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
-                  <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
-                     <Logo size="sm" />
-                     Ahabanza
-                  </button>
-                  <span>/</span>
-                  <span className="text-emerald-600">{getPageTitle()}</span>
-               </div>
-            </header>
-
-            <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
-              <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
-                 {renderContent()}
-              </div>
-            </main>
+            <button onClick={toggleSidebar} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all">
+              {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
 
-          {isSidebarOpen && <div className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in" onClick={() => setIsSidebarOpen(false)} />}
+          {/* Desktop Navigation Header */}
+          <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
+             <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
+                <button onClick={() => handleViewChange(AppView.CHAT)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
+                   <Logo size="sm" />
+                   ai.rw
+                </button>
+                <span>/</span>
+                <span className="text-emerald-600">{getPageTitle()}</span>
+             </div>
+          </header>
+
+          <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
+            <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
+               {renderContent()}
+            </div>
+          </main>
         </div>
-      )}
+
+        {isSidebarOpen && <div className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in" onClick={() => setIsSidebarOpen(false)} />}
+      </div>
     </ToastProvider>
   );
 }
