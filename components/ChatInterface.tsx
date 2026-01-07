@@ -62,19 +62,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const handleScroll = () => {
     if (!scrollAreaRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
-    // Buffer of 100px to detect if we're "at the bottom"
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
     setShouldAutoScroll(isAtBottom);
   };
 
-  // Effect to scroll on new messages
   useEffect(() => {
     if (shouldAutoScroll || isStreaming) {
       scrollToBottom(isStreaming ? 'auto' : 'smooth');
     }
   }, [messages.length]);
 
-  // Use ResizeObserver for content growth during streaming
   useEffect(() => {
     if (!contentRef.current) return;
     const observer = new ResizeObserver(() => {
@@ -86,7 +83,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     return () => observer.disconnect();
   }, [shouldAutoScroll, isStreaming]);
 
-  // Initial setup
   useEffect(() => {
     inputRef.current?.focus();
     setTimeout(() => scrollToBottom('auto'), 100);
@@ -120,13 +116,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
 
     try {
       let currentText = '';
-      const uniqueSources = new Map<string, Source>();
       await streamChatResponse(history, textToSend, (chunk) => {
         currentText += chunk;
         setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: currentText } : m));
       }, (newSources) => {
-        newSources.forEach(s => uniqueSources.set(s.uri, s));
-        setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, sources: Array.from(uniqueSources.values()) } : m));
+        setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, sources: newSources } : m));
       });
     } catch (error: any) {
       const errorMessage = 'Habaye ikibazo mu gushaka igisubizo. Ongera ugerageze mukanya.';

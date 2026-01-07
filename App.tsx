@@ -42,22 +42,22 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Run stats without blocking the UI
+        // Run stats in background
         recordVisit().catch(() => {});
         
         let hasSeenOnboarding = false;
         try {
           hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
         } catch (e) {
-          console.warn("Storage access denied:", e);
+          console.warn("Storage access issue:", e);
         }
         
         if (!hasSeenOnboarding) {
           setShowOnboarding(true);
         }
       } finally {
-        // Guaranteed finish to initialization
-        setTimeout(() => setIsInitializing(false), 300);
+        // Small delay for smooth UI transition
+        setTimeout(() => setIsInitializing(false), 500);
       }
     };
     init();
@@ -68,7 +68,7 @@ export default function App() {
     try {
       localStorage.setItem('ai_rw_onboarding_seen', 'true');
     } catch (e) {}
-    setCurrentView(AppView.CHAT);
+    // Stay on current view (LANDING) instead of forcing CHAT
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -132,6 +132,7 @@ export default function App() {
         <div className="flex-1 flex flex-col min-w-0 relative h-full">
           <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
           
+          {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
             <div className="flex items-center gap-3">
                <button onClick={() => handleViewChange(AppView.CHAT)}>
@@ -144,6 +145,7 @@ export default function App() {
             </button>
           </div>
 
+          {/* Desktop Navigation Header */}
           <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
              <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
                 <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">

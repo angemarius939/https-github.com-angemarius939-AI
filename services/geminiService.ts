@@ -62,9 +62,7 @@ const extractSources = (response: any): Source[] => {
       }
     }
   }
-  const uniqueSources = new Map<string, Source>();
-  sources.forEach(s => uniqueSources.set(s.uri, s));
-  return Array.from(uniqueSources.values());
+  return sources;
 };
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
@@ -97,7 +95,7 @@ export const streamChatResponse = async (
         temperature: config.temperature,
         topP: config.topP,
         topK: config.topK,
-        tools: [{ googleSearch: {} }],
+        // Removed googleSearch tool to avoid 403 errors on some API keys
       }
     });
 
@@ -155,7 +153,6 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
       systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika mu Kinyarwanda. ${context}`,
-      tools: [{ googleSearch: {} }],
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
@@ -179,7 +176,6 @@ export const generateCourse = async (topic: string, level: string, duration: str
     config: {
       systemInstruction: `Uri umwalimu kuri ai.rw. Subiza mu Kinyarwanda gusa. ${context}`,
       temperature: 0.7,
-      tools: [{ googleSearch: {} }],
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
