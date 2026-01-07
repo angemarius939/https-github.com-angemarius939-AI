@@ -23,22 +23,39 @@ export const DecisionAssistant: React.FC = () => {
     setCopied(false);
     try {
       const data = await generateBusinessAnalysis(input);
-      if (!data || !data.summary) {
+      if (!data || typeof data !== 'object') {
         throw new Error("Invalid response format");
       }
       
-      // Ensure financials are numbers
-      if (data.financials) {
-        data.financials.revenue = Number(data.financials.revenue) || 0;
-        data.financials.expense = Number(data.financials.expense) || 0;
-        data.financials.profit = Number(data.financials.profit) || 0;
+      // Safety checks for required fields
+      const summary = data.summary || "Nta ncamake yabonetse.";
+      const risks = Array.isArray(data.risks) ? data.risks : [];
+      const advice = Array.isArray(data.advice) ? data.advice : [];
+      const chartData = Array.isArray(data.chartData) ? data.chartData : [];
+
+      // Ensure financials are numbers if they exist
+      let financials = undefined;
+      if (data.isFinancial && data.financials) {
+        financials = {
+          revenue: Number(data.financials.revenue) || 0,
+          expense: Number(data.financials.expense) || 0,
+          profit: Number(data.financials.profit) || 0,
+          currency: data.financials.currency || 'RWF'
+        };
       }
 
-      setResult(data);
+      setResult({
+        ...data,
+        summary,
+        risks,
+        advice,
+        chartData,
+        financials
+      });
       showToast('Isesengura ryarangiye!', 'success');
     } catch (error: any) {
       console.error("UI Analysis Error:", error);
-      showToast('Habaye ikibazo mu gusesengura amakuru. Gerageza gusubiramo neza.', 'error');
+      showToast(error.message || 'Habaye ikibazo mu gusesengura amakuru.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +157,7 @@ export const DecisionAssistant: React.FC = () => {
 
         <div className="lg:col-span-2 space-y-6">
           {!result ? (
-            <div className="bg-stone-50 rounded-2xl border border-stone-200 border-dashed h-full min-h-[400px] flex flex-col items-center justify-center text-stone-400 p-8 text-center">
+            <div className="bg-stone-50 rounded-2xl border border-stone-200 border-dashed h-full min-h-[400px] flex flex-col items-center justify-center text-stone-400 p-8 text-center" style={{ minHeight: '600px' }}>
               <Microscope className="w-16 h-16 mb-4 opacity-20" />
               <p className="text-lg font-medium text-stone-500">Nta sesengura rirahari</p>
               <p className="text-sm mt-2 max-w-sm">

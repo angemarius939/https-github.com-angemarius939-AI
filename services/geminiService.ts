@@ -25,14 +25,18 @@ const getApiKey = () => {
   return key;
 };
 
-const cleanJsonString = (str: string): string => {
+const cleanJsonString = (str: string | undefined): string => {
   if (!str) return "{}";
-  const firstBrace = str.indexOf('{');
-  const lastBrace = str.lastIndexOf('}');
-  const firstBracket = str.indexOf('[');
-  const lastBracket = str.lastIndexOf(']');
+  const trimmed = str.trim();
+  // Attempt to find the first '{' and last '}'
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+  
   let start = -1;
   let end = -1;
+  
   if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
     start = firstBrace;
     end = lastBrace;
@@ -40,16 +44,12 @@ const cleanJsonString = (str: string): string => {
     start = firstBracket;
     end = lastBracket;
   }
+  
   if (start !== -1 && end !== -1 && end > start) {
-    try {
-      const jsonCandidate = str.substring(start, end + 1).trim();
-      JSON.parse(jsonCandidate);
-      return jsonCandidate;
-    } catch (e) {
-      return str.replace(/```json/g, '').replace(/```/g, '').trim();
-    }
+    return trimmed.substring(start, end + 1);
   }
-  return str.replace(/```json/g, '').replace(/```/g, '').trim();
+  
+  return trimmed.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
 const extractSources = (response: any): Source[] => {
@@ -128,18 +128,25 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   if (!apiKey) throw new Error("API_KEY_MISSING");
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('BUSINESS');
+  
+  const prompt = `Analyze the following business or educational data and provide a structured report in Kinyarwanda. 
+  Data to analyze: "${input}"
+  
+  Ensure the response is strictly valid JSON following the provided schema.`;
+
   const response = await ai.models.generateContent({
     model: PRO_MODEL,
-    contents: [{ role: 'user', parts: [{ text: `Analyze this data: ${input}` }] }],
+    contents: prompt,
     config: {
-      systemInstruction: `Uri umusesenguzi wa ai.rw. Tanga isesengura mu Kinyarwanda. Return valid JSON only. ${context}`,
+      systemInstruction: `Uri umusesenguzi kabuhariwe wa ai.rw. Tanga isesengura ryimbitse mu Kinyarwanda gusa. Subiza mu buryo bwa JSON yonyine. ${context}`,
       responseMimeType: "application/json",
-      temperature: 0.1, 
+      temperature: 0.2, 
+      thinkingConfig: { thinkingBudget: 4000 },
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          summary: { type: Type.STRING },
-          isFinancial: { type: Type.BOOLEAN },
+          summary: { type: Type.STRING, description: "Incamake y'isesengura mu Kinyarwanda." },
+          isFinancial: { type: Type.BOOLEAN, description: "Niba amakuru arimo imibare y'amafaranga." },
           financials: {
             type: Type.OBJECT,
             properties: {
@@ -166,7 +173,11 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
-              properties: { label: { type: Type.STRING }, value: { type: Type.NUMBER }, type: { type: Type.STRING } }
+              properties: { 
+                label: { type: Type.STRING }, 
+                value: { type: Type.NUMBER }, 
+                type: { type: Type.STRING, description: "revenue, expense, profit, or other" } 
+              }
             }
           }
         },
@@ -174,7 +185,15 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
       }
     }
   });
-  return JSON.parse(cleanJsonString(response.text || "{}"));
+  
+  const text = response.text;
+  const jsonStr = cleanJsonString(text);
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error("JSON Parsing Error in Business Analysis:", e, "Raw text:", text);
+    throw new Error("Ibisubizo bya server ntibishoboye gusomwa neza.");
+  }
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
@@ -184,9 +203,9 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
   const context = getContextForView('RURAL');
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
-    contents: [{ role: 'user', parts: [{ text: `Sector: ${sector}. Query: ${query}` }] }],
+    contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
-      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika mu Kinyarwanda. ${context}`,
+      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika kandi zumvikana mu Kinyarwanda. ${context}`,
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
@@ -197,11 +216,21 @@ export const generateCourse = async (topic: string, level: string, duration: str
   if (!apiKey) throw new Error("API_KEY_MISSING");
   const ai = new GoogleGenAI({ apiKey });
   const context = getContextForView('COURSE');
+  
+  const prompt = `Kora isomo rirambuye ku ngingo ikurikira:
+  - Ingingo: ${topic}
+  - Urwego: ${level}
+  - Igihe: ${duration}
+  - Ibyo umuntu agomba kuba azi: ${prerequisites}
+  
+  Tegura isomo riri mu bice (Sections) kandi rikoresha Ikinyarwanda cy'umwimerere.`;
+
   const response = await ai.models.generateContent({
     model: PRO_MODEL,
-    contents: [{ role: 'user', parts: [{ text: `Topic: ${topic}` }] }],
+    contents: prompt,
     config: {
-      systemInstruction: `Uri umwalimu kuri ai.rw. Kora isomo rirambuye mu Kinyarwanda. ${context}`,
+      systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw. Kora isomo rirambuye kandi rishingiye ku bumenyi bwizewe mu Kinyarwanda gusa. ${context}`,
+      thinkingConfig: { thinkingBudget: 8000 }
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
@@ -215,7 +244,6 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
     model: TTS_MODEL,
     contents: [{ parts: [{ text }] }],
     config: {
-      // Fix: Corrected typo from responseModalalities to responseModalities
       responseModalities: [Modality.AUDIO],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
     },
@@ -229,8 +257,8 @@ export const generateTextAnalysis = async (prompt: string, type: string, tone: s
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
-    contents: [{ role: 'user', parts: [{ text: `Task: ${type}. Text: ${prompt}` }] }],
-    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw." }
+    contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
+    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw. Koresha amategeko y'imyandikire y'Ikinyarwanda." }
   });
   return response.text || "";
 };
@@ -302,7 +330,7 @@ export const generateImage = async (prompt: string, aspectRatio: string = "1:1")
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
-  throw new Error("No image data");
+  throw new Error("Nta foto yabonetse.");
 };
 
 export const generateConversationResponse = async (history: any[], newMessage: string): Promise<string> => {

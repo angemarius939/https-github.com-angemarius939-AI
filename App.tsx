@@ -33,6 +33,7 @@ const LoadingView = () => (
 );
 
 export default function App() {
+  // Always start at Landing Page as requested
   const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
@@ -45,15 +46,11 @@ export default function App() {
         // Record visit asynchronously
         recordVisit().catch(e => console.warn("Tracking failed", e));
         
-        // Use Landing Page by default
-        const landingPref = localStorage.getItem('ai_rw_landing_enabled');
-        const isLandingEnabled = landingPref !== 'false';
-        setCurrentView(isLandingEnabled ? AppView.LANDING : AppView.CHAT);
+        // We force Landing Page on first mount to satisfy "bring back the landing page"
+        setCurrentView(AppView.LANDING);
       } catch (e) {
         console.error("Initialization error:", e);
-        setCurrentView(AppView.LANDING);
       } finally {
-        // Remove loader
         setIsInitializing(false);
       }
     };
