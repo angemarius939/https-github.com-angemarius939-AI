@@ -1,18 +1,20 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, Home } from 'lucide-react';
+import { Send, User, Mic, MicOff, Search, X, AlertTriangle, Copy, Check, RefreshCw, Sparkles, TrendingUp, Sprout, GraduationCap, FileText, AudioLines, Home, Image as ImageIcon, MessageSquare, ArrowDown, Lightbulb } from 'lucide-react';
 import { Message, MessageRole, Source, AppView } from '../types';
 import { streamChatResponse } from '../services/geminiService';
 import { Button } from './Button';
 import { FormattedText } from './FormattedText';
 import { SourcesToggle } from './SourcesToggle';
 import { Logo } from './Logo';
+import { useToast } from './ToastProvider';
 
 interface ChatInterfaceProps {
   onNavigate?: (view: AppView) => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -26,18 +28,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
+  const examplePrompts = [
+    "Ni ryari rero bahinga ibigori mu Rwanda?",
+    "Nandikira ibaruwa isaba akazi k'ubwarimu.",
+    "Sobanura amateka y'ubutwari bw'Abanyarwanda.",
+    "Ni izihe nama wagira umuntu ushaka gutangira ubucuruzi buto?"
+  ];
+
   const quickFeatures = [
-    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: 'Iterambere', color: 'bg-green-100 text-green-700' },
-    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama', color: 'bg-amber-100 text-amber-700' },
+    { view: AppView.LANDING, icon: Home, label: 'Ahabanza', color: 'bg-slate-100 text-slate-700' },
+    { view: AppView.RURAL_SUPPORT, icon: Sprout, label: "Iterambere ry'Icyaro", color: 'bg-emerald-100 text-emerald-700' },
+    { view: AppView.DECISION_ASSISTANT, icon: TrendingUp, label: 'Umujyanama mu Myanzuro', color: 'bg-blue-100 text-blue-700' },
     { view: AppView.COURSE_GENERATOR, icon: GraduationCap, label: 'Amasomo', color: 'bg-indigo-100 text-indigo-700' },
-    { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-teal-100 text-teal-700' },
-    { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-pink-100 text-pink-700' },
+    { view: AppView.TEXT_TOOLS, icon: FileText, label: 'Umwandiko', color: 'bg-amber-100 text-amber-700' },
+    { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-rose-100 text-rose-700' },
   ];
 
   const filteredMessages = useMemo(() => {
@@ -46,48 +57,51 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     return messages.filter(msg => msg.text.toLowerCase().includes(query));
   }, [messages, isSearchOpen, searchQuery]);
 
-  // Robust auto-scroll logic
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
     }
   };
 
-  // Scroll on message list changes or search toggle
+  const handleScroll = () => {
+    if (!scrollAreaRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShouldAutoScroll(isAtBottom);
+  };
+
   useEffect(() => {
-    if (!isSearchOpen || !searchQuery) {
-      // Use requestAnimationFrame to ensure DOM is rendered
-      const handle = requestAnimationFrame(() => {
+    if (!scrollAreaRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      if (shouldAutoScroll || isStreaming) {
         scrollToBottom(isStreaming ? 'auto' : 'smooth');
-      });
-      return () => cancelAnimationFrame(handle);
-    }
-  }, [messages.length, isStreaming, isSearchOpen]);
+      }
+    });
 
-  // Handle updates while streaming content
-  useEffect(() => {
-    if (isStreaming && streamingMessageId) {
-      scrollToBottom('auto');
-    }
-  }, [messages.find(m => m.id === streamingMessageId)?.text]);
+    const content = scrollAreaRef.current.firstElementChild;
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
+  }, [shouldAutoScroll, isStreaming]);
 
-  // Scroll to bottom on initial load
   useEffect(() => {
     scrollToBottom('auto');
   }, []);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isStreaming) return;
+  const handleSendMessage = async (textOverride?: string) => {
+    const textToSend = textOverride || inputValue;
+    if (!textToSend.trim() || isStreaming) return;
     
     if (isSearchOpen) {
       setIsSearchOpen(false);
       setSearchQuery('');
     }
 
-    const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text: inputValue, timestamp: Date.now() };
+    const userMsg: Message = { id: Date.now().toString(), role: MessageRole.USER, text: textToSend, timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsStreaming(true);
+    setShouldAutoScroll(true);
 
     const history = messages.map(m => ({
       role: m.role === MessageRole.USER ? 'user' : 'model',
@@ -101,7 +115,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     try {
       let currentText = '';
       const uniqueSources = new Map<string, Source>();
-      await streamChatResponse(history, userMsg.text, (chunk) => {
+      await streamChatResponse(history, textToSend, (chunk) => {
         currentText += chunk;
         setMessages(prev => prev.map(m => m.id === modelMsgId ? { ...m, text: currentText } : m));
       }, (newSources) => {
@@ -111,7 +125,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     } catch (error: any) {
       let errorMessage = 'Habaye ikibazo mu gushaka igisubizo. Ongera ugerageze mukanya.';
       if (error?.message === "API_KEY_MISSING") errorMessage = 'Habaye ikibazo: API_KEY ntigaragara muri Vercel Settings.';
-      else if (error?.message === "INVALID_API_KEY") errorMessage = 'Habaye ikibazo: API_KEY ukoresha ntabwo yemewe cyangwa ntabwo ikora.';
+      else if (error?.message === "INVALID_API_KEY") errorMessage = 'Habaye ikibazo: API_KEY ukoresha ntabwo ikora.';
       setMessages(prev => prev.filter(m => m.id !== modelMsgId).concat([{
         id: Date.now().toString(), role: MessageRole.ERROR, text: errorMessage, timestamp: Date.now()
       }]));
@@ -128,14 +142,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     setIsSearchOpen(false);
   };
 
+  const handleCopyMessage = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMessageId(id);
+    showToast('Byakoporowe!', 'info');
+    setTimeout(() => setCopiedMessageId(null), 2000);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-sm overflow-hidden border border-emerald-100 relative">
       {isClearConfirmOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 border border-emerald-50">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-500 mx-auto"><AlertTriangle className="w-6 h-6" /></div>
-            <h3 className="text-lg font-bold">Siba Ikiganiro?</h3>
-            <div className="flex gap-3 w-full"><Button variant="secondary" className="flex-1" onClick={() => setIsClearConfirmOpen(false)}>Oya</Button><Button variant="danger" className="flex-1" onClick={confirmClearChat}>Yego</Button></div>
+            <h3 className="text-lg font-black text-stone-900">Gusiba Ikiganiro?</h3>
+            <p className="text-sm text-stone-500">Ibi bintu ntibishobora kugarurwa.</p>
+            <div className="flex gap-3 w-full">
+              <Button variant="secondary" className="flex-1" onClick={() => setIsClearConfirmOpen(false)}>Oya</Button>
+              <Button variant="danger" className="flex-1" onClick={confirmClearChat}>Yego, Siba</Button>
+            </div>
           </div>
         </div>
       )}
@@ -150,11 +175,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 value={searchQuery} 
                 onChange={(e) => setSearchQuery(e.target.value)} 
                 placeholder="Shakisha mu kiganiro..." 
-                className="w-full pl-9 pr-4 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white font-medium" 
+                className="w-full pl-9 pr-12 py-2 text-sm border border-emerald-200 rounded-lg focus:outline-none focus:ring-4 focus:ring-emerald-500/10 bg-white font-medium" 
               />
               {searchQuery && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                   {filteredMessages.length} results
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded shadow-sm border border-emerald-200">
+                   {filteredMessages.length} ibisubizo
                 </div>
               )}
             </div>
@@ -169,49 +194,101 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
               <h2 className="text-lg font-black text-emerald-950 uppercase tracking-tighter">ai.rw</h2>
             </div>
             <div className="flex gap-1">
-              <Button variant="ghost" onClick={() => setIsSearchOpen(true)}><Search className="w-5 h-5 text-emerald-700" /></Button>
-              <Button variant="ghost" onClick={() => setIsClearConfirmOpen(true)}><RefreshCw className="w-5 h-5 text-stone-400" /></Button>
+              <Button variant="ghost" onClick={() => setIsSearchOpen(true)} title="Shakisha"><Search className="w-5 h-5 text-emerald-700" /></Button>
+              <Button variant="ghost" onClick={() => setIsClearConfirmOpen(true)} title="Siba byose"><RefreshCw className="w-5 h-5 text-stone-400" /></Button>
             </div>
           </div>
         )}
       </div>
 
-      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50 relative custom-scrollbar scroll-smooth">
-        {filteredMessages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-[90%] md:max-w-[85%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center mx-2 shadow-sm ${msg.role === MessageRole.USER ? 'bg-emerald-600' : 'bg-emerald-800'}`}>
-                {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
-              </div>
-              <div className={`p-4 md:p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-bottom-2 ${msg.role === MessageRole.USER ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'}`}>
-                <FormattedText text={msg.text} searchQuery={searchQuery} />
-                {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} className="mt-4" />}
-                <div className={`text-[9px] mt-2 font-bold opacity-40 ${msg.role === MessageRole.USER ? 'text-white text-right' : 'text-stone-400'}`}>
-                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      <div 
+        ref={scrollAreaRef} 
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative custom-scrollbar scroll-smooth"
+      >
+        <div className="space-y-6 min-h-full flex flex-col justify-end">
+          {filteredMessages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
+              <div className={`flex max-w-[90%] md:max-w-[85%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center mx-2 shadow-sm ${msg.role === MessageRole.USER ? 'bg-emerald-600' : 'bg-emerald-800'}`}>
+                  {msg.role === MessageRole.USER ? <User className="w-5 h-5 text-white" /> : <Sparkles className="w-5 h-5 text-white" />}
+                </div>
+                <div className={`group relative p-4 md:p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-bottom-2 ${msg.role === MessageRole.USER ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-white text-stone-800 border border-emerald-100 rounded-tl-none'}`}>
+                  {msg.role === MessageRole.MODEL && msg.text && (
+                    <button 
+                      onClick={() => handleCopyMessage(msg.id, msg.text)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-emerald-50 text-emerald-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-100"
+                      title="Koporora"
+                    >
+                      {copiedMessageId === msg.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  )}
+                  
+                  <FormattedText text={msg.text} searchQuery={searchQuery} />
+                  {msg.sources && msg.sources.length > 0 && <SourcesToggle sources={msg.sources} className="mt-4" />}
+                  
+                  <div className={`text-[9px] mt-2 font-bold opacity-40 ${msg.role === MessageRole.USER ? 'text-white text-right' : 'text-stone-400'}`}>
+                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-        
-        {isSearchOpen && searchQuery && filteredMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-stone-400">
-            <Search className="w-12 h-12 mb-4 opacity-10" />
-            <p className="font-bold text-sm uppercase tracking-widest">Nta kintu cyabonetse kuri "{searchQuery}"</p>
-          </div>
-        )}
+          ))}
+          
+          {isSearchOpen && searchQuery && filteredMessages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 text-stone-400 flex-1">
+              <Search className="w-12 h-12 mb-4 opacity-10" />
+              <p className="font-bold text-sm uppercase tracking-widest">Nta kintu cyabonetse kuri "{searchQuery}"</p>
+            </div>
+          )}
 
-        {messages.length <= 1 && !searchQuery && !isSearchOpen && (
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 animate-in fade-in duration-700 delay-300">
-            {quickFeatures.map((feat, idx) => (
-              <button key={idx} onClick={() => onNavigate?.(feat.view)} className={`flex flex-col items-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all hover:-translate-y-2 ${feat.color} bg-opacity-5 hover:bg-opacity-10`}>
-                <div className={`p-4 rounded-2xl mb-4 ${feat.color} bg-opacity-20`}><feat.icon className="w-8 h-8" /></div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-center">{feat.label}</span>
-              </button>
-            ))}
-          </div>
+          {messages.length <= 1 && !searchQuery && !isSearchOpen && (
+            <div className="space-y-8 mt-4 animate-in fade-in duration-700 delay-300">
+              <div className="bg-white border border-emerald-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Lightbulb className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-emerald-900">Ugerageze kubaza:</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {examplePrompts.map((prompt, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(prompt)}
+                      className="text-left p-4 rounded-2xl bg-slate-50 border border-emerald-50 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:border-emerald-200 transition-all active:scale-[0.98]"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {quickFeatures.map((feat, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => onNavigate?.(feat.view)} 
+                    className={`flex flex-col items-center p-6 rounded-[32px] border border-emerald-100 shadow-sm transition-all hover:-translate-y-2 hover:shadow-md ${feat.color} bg-opacity-5 hover:bg-opacity-10`}
+                  >
+                    <div className={`p-4 rounded-2xl mb-4 ${feat.color} bg-opacity-20`}>
+                      <feat.icon className="w-8 h-8" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-center">{feat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} className="h-4 clear-both" />
+        </div>
+
+        {!shouldAutoScroll && messages.length > 3 && !isSearchOpen && (
+          <button 
+            onClick={() => scrollToBottom('smooth')}
+            className="fixed bottom-32 right-8 md:right-12 p-3 bg-white text-emerald-600 rounded-full shadow-2xl border border-emerald-100 hover:bg-emerald-50 transition-all animate-bounce"
+          >
+            <ArrowDown className="w-6 h-6" />
+          </button>
         )}
-        <div ref={messagesEndRef} className="h-4 clear-both" />
       </div>
 
       <div className="p-4 md:p-6 bg-white border-t border-emerald-100">
@@ -226,10 +303,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
               }
             }}
             placeholder="Baza ai.rw icyo wifuza..." 
-            className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all font-medium" 
+            className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all font-medium resize-none" 
             disabled={isStreaming} 
           />
-          <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isStreaming} isLoading={isStreaming} className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-xl"><Send className="w-6 h-6" /></Button>
+          <Button 
+            onClick={() => handleSendMessage()} 
+            disabled={!inputValue.trim() || isStreaming} 
+            isLoading={isStreaming} 
+            className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-xl flex-shrink-0"
+          >
+            <Send className="w-6 h-6" />
+          </Button>
         </div>
       </div>
     </div>

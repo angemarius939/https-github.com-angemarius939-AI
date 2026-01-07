@@ -11,8 +11,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      // Ensure a basic process.env structure exists to prevent crashes, 
-      // but do not initialize keys that need to be injected by the build tool.
       if (typeof window.process === "undefined") {
         window.process = { env: {} };
       }
@@ -54,7 +52,6 @@
         background-repeat: repeat;
       }
 
-      /* Ultra-light fast loader */
       #initial-loader {
         position: fixed;
         inset: 0;
@@ -83,6 +80,14 @@
         text-transform: uppercase;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
+
+      @keyframes pulse-subtle {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.85; transform: scale(1.02); }
+      }
+      .animate-pulse-subtle {
+        animation: pulse-subtle 2s ease-in-out infinite;
+      }
     </style>
   <script type="importmap">
 {
@@ -106,9 +111,8 @@
        <div class="loader-text">ai.rw</div>
     </div>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="./index.tsx"></script>
     <script>
-      // Remove loader once React starts mounting
       window.addEventListener('load', () => {
         const loader = document.getElementById('initial-loader');
         if(loader) {

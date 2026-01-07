@@ -26,6 +26,14 @@ export const DecisionAssistant: React.FC = () => {
       if (!data || !data.summary) {
         throw new Error("Invalid response format");
       }
+      
+      // Ensure financials are numbers
+      if (data.financials) {
+        data.financials.revenue = Number(data.financials.revenue) || 0;
+        data.financials.expense = Number(data.financials.expense) || 0;
+        data.financials.profit = Number(data.financials.profit) || 0;
+      }
+
       setResult(data);
       showToast('Isesengura ryarangiye!', 'success');
     } catch (error: any) {

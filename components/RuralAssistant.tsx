@@ -124,20 +124,23 @@ export const RuralAssistant: React.FC = () => {
           { id: 'services', label: 'Serivisi', icon: HandPlatter, color: 'orange' },
           { id: 'technology', label: 'Ikoranabuhanga', icon: Smartphone, color: 'purple' },
           { id: 'climate', label: 'Ikirere', icon: CloudSun, color: 'teal' },
-        ].map((item) => (
-           <button
-            key={item.id}
-            onClick={() => { setSector(item.id as any); setAdvice(''); setSources([]); }}
-            className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
-              sector === item.id
-                ? `border-emerald-500 bg-emerald-50 shadow-md transform scale-105`
-                : `border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50`
-            }`}
-          >
-            <item.icon className={`w-6 h-6 mb-1 ${sector === item.id ? `text-emerald-600` : 'text-slate-400'}`} />
-            <span className={`text-[10px] md:text-xs font-semibold ${sector === item.id ? `text-emerald-800` : 'text-slate-600'}`}>{item.label}</span>
-          </button>
-        ))}
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => { setSector(item.id as any); setAdvice(''); setSources([]); }}
+              className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                sector === item.id
+                  ? `border-emerald-500 bg-emerald-50 shadow-md transform scale-105`
+                  : `border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50`
+              }`}
+            >
+              <Icon className={`w-6 h-6 mb-1 ${sector === item.id ? `text-emerald-600` : 'text-slate-400'}`} />
+              <span className={`text-[10px] md:text-xs font-semibold ${sector === item.id ? `text-emerald-800` : 'text-slate-600'}`}>{item.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 space-y-4 flex-1 flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
