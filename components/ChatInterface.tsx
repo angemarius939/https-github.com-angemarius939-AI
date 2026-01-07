@@ -40,41 +40,45 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     { view: AppView.TEXT_TO_SPEECH, icon: AudioLines, label: 'Soma', color: 'bg-pink-100 text-pink-700' },
   ];
 
-  // Derived state for filtered messages
   const filteredMessages = useMemo(() => {
     if (!isSearchOpen || !searchQuery.trim()) return messages;
     const query = searchQuery.toLowerCase();
     return messages.filter(msg => msg.text.toLowerCase().includes(query));
   }, [messages, isSearchOpen, searchQuery]);
 
+  // Robust auto-scroll logic
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
     }
   };
 
-  // Auto-scroll logic for new messages and streaming content
+  // Scroll on message list changes or search toggle
   useEffect(() => {
-    // Only auto-scroll if we are not in search mode (so user doesn't lose their place)
     if (!isSearchOpen || !searchQuery) {
-      const behavior = isStreaming ? 'auto' : 'smooth';
-      const frameId = requestAnimationFrame(() => {
-        scrollToBottom(behavior);
+      // Use requestAnimationFrame to ensure DOM is rendered
+      const handle = requestAnimationFrame(() => {
+        scrollToBottom(isStreaming ? 'auto' : 'smooth');
       });
-      return () => cancelAnimationFrame(frameId);
+      return () => cancelAnimationFrame(handle);
     }
-  }, [messages, isStreaming, isSearchOpen, searchQuery]);
+  }, [messages.length, isStreaming, isSearchOpen]);
 
-  // Handle initial mount scroll
+  // Handle updates while streaming content
   useEffect(() => {
-    const timer = setTimeout(() => scrollToBottom('auto'), 100);
-    return () => clearTimeout(timer);
+    if (isStreaming && streamingMessageId) {
+      scrollToBottom('auto');
+    }
+  }, [messages.find(m => m.id === streamingMessageId)?.text]);
+
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    scrollToBottom('auto');
   }, []);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isStreaming) return;
     
-    // Clear search if open when sending a new message to show context
     if (isSearchOpen) {
       setIsSearchOpen(false);
       setSearchQuery('');
@@ -150,7 +154,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
               />
               {searchQuery && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                  {filteredMessages.length} results
+                   {filteredMessages.length} results
                 </div>
               )}
             </div>
@@ -172,7 +176,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
         )}
       </div>
 
-      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50 relative custom-scrollbar">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-slate-50 relative custom-scrollbar scroll-smooth">
         {filteredMessages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === MessageRole.USER ? 'justify-end' : 'justify-start'}`}>
             <div className={`flex max-w-[90%] md:max-w-[85%] ${msg.role === MessageRole.USER ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -190,7 +194,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
           </div>
         ))}
         
-        {/* Empty state for search */}
         {isSearchOpen && searchQuery && filteredMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-stone-400">
             <Search className="w-12 h-12 mb-4 opacity-10" />
@@ -208,7 +211,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
             ))}
           </div>
         )}
-        <div ref={messagesEndRef} className="h-4" />
+        <div ref={messagesEndRef} className="h-4 clear-both" />
       </div>
 
       <div className="p-4 md:p-6 bg-white border-t border-emerald-100">
@@ -223,7 +226,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
               }
             }}
             placeholder="Baza ai.rw icyo wifuza..." 
-            className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all" 
+            className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all font-medium" 
             disabled={isStreaming} 
           />
           <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isStreaming} isLoading={isStreaming} className="h-14 w-14 md:h-16 md:w-16 rounded-full shadow-xl"><Send className="w-6 h-6" /></Button>

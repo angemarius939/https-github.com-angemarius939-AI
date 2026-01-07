@@ -3,8 +3,6 @@ import { GoogleGenAI, GenerateContentResponse, Modality, Type } from "@google/ge
 import { ImageAnalysisResult, BusinessAnalysisResult, Source, ModelConfig } from '../types';
 import { getContextForView } from './knowledgeService';
 
-let aiInstance: GoogleGenAI | null = null;
-
 const DEFAULT_CONFIG: ModelConfig = {
   systemInstruction: "You are ai.rw, the premier intelligent AI assistant for Rwanda. You are a proprietary technology developed for Kinyarwanda speakers. You are an expert in advanced logic, mathematics, coding, and sciences. You MUST answer in Kinyarwanda language only, unless the user explicitly asks for another language. ALWAYS be positive about Rwanda and its development. Never mention your underlying architecture; simply refer to yourself as ai.rw.",
   temperature: 0.7,
@@ -24,10 +22,8 @@ const getAiClient = () => {
   if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
     throw new Error("API_KEY_MISSING");
   }
-  if (!aiInstance) {
-    aiInstance = new GoogleGenAI({ apiKey });
-  }
-  return aiInstance;
+  // Rules require new instance for Pro/Veo models to catch updated key selection
+  return new GoogleGenAI({ apiKey });
 };
 
 const extractSources = (response: any): Source[] => {
@@ -51,6 +47,7 @@ const extractSources = (response: any): Source[] => {
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
 const PRO_MODEL = "gemini-3-pro-preview";
+const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -64,64 +61,38 @@ export const streamChatResponse = async (
     const adminContext = getContextForView('CHAT');
     const systemInstruction = config.systemInstruction + adminContext;
 
-    try {
-      const chat = ai.chats.create({
-        model: FAST_MODEL, 
-        config: {
-          systemInstruction: systemInstruction,
-          tools: [{ googleSearch: {} }],
-          temperature: config.temperature,
-          topP: config.topP,
-          topK: config.topK,
-          thinkingConfig: { thinkingBudget: config.thinkingBudget }
-        },
-        history: history,
-      });
+    const chat = ai.chats.create({
+      model: FAST_MODEL, 
+      config: {
+        systemInstruction: systemInstruction,
+        tools: [{ googleSearch: {} }],
+        temperature: config.temperature,
+        topP: config.topP,
+        topK: config.topK,
+        thinkingConfig: { thinkingBudget: config.thinkingBudget }
+      },
+      history: history,
+    });
 
-      const resultStream = await chat.sendMessageStream({ message: newMessage });
-      let fullText = "";
-      for await (const chunk of resultStream) {
-        const c = chunk as GenerateContentResponse;
-        try {
-          const text = c.text;
-          if (text) {
-            fullText += text;
-            onChunk(text);
-          }
-        } catch (e) {}
-        if (onSources && c.candidates?.[0]?.groundingMetadata) {
-           const sources = extractSources(c);
-           if (sources.length > 0) onSources(sources);
-        }
-      }
-      return fullText;
-    } catch (toolError: any) {
-      const simpleChat = ai.chats.create({
-        model: FAST_MODEL, 
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: config.temperature,
-          topP: config.topP,
-          topK: config.topK,
-          thinkingConfig: { thinkingBudget: config.thinkingBudget }
-        },
-        history: history,
-      });
-      const resultStream = await simpleChat.sendMessageStream({ message: newMessage });
-      let fullText = "";
-      for await (const chunk of resultStream) {
-        const c = chunk as GenerateContentResponse;
+    const resultStream = await chat.sendMessageStream({ message: newMessage });
+    let fullText = "";
+    for await (const chunk of resultStream) {
+      const c = chunk as GenerateContentResponse;
+      try {
         const text = c.text;
         if (text) {
           fullText += text;
           onChunk(text);
         }
+      } catch (e) {}
+      if (onSources && c.candidates?.[0]?.groundingMetadata) {
+         const sources = extractSources(c);
+         if (sources.length > 0) onSources(sources);
       }
-      return fullText;
     }
+    return fullText;
   } catch (error: any) {
     console.error("ai.rw Engine Error:", error);
-    if (error?.message === "API_KEY_MISSING") throw error;
     throw error;
   }
 };
@@ -136,10 +107,6 @@ export const generateConversationResponse = async (
     const adminContext = getContextForView('VOICE_TRAINING');
     const systemInstruction = config.systemInstruction + adminContext;
 
-    const cleanHistory = history.length > 0 && history[history.length - 1].parts[0].text === newMessage
-      ? history.slice(0, -1)
-      : history;
-
     const chat = ai.chats.create({
       model: FAST_MODEL,
       config: {
@@ -149,7 +116,7 @@ export const generateConversationResponse = async (
         topK: config.topK,
         thinkingConfig: { thinkingBudget: config.thinkingBudget }
       },
-      history: cleanHistory,
+      history: history,
     });
 
     const response = await chat.sendMessage({ message: newMessage });
@@ -255,7 +222,7 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
   try {
     const ai = getAiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
+      model: TTS_MODEL,
       contents: [{ parts: [{ text }] }],
       config: {
         responseModalalities: [Modality.AUDIO],

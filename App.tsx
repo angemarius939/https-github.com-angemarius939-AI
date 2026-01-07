@@ -8,6 +8,7 @@ import { AppView } from './types';
 import { recordVisit } from './services/statsService';
 import { LandingPage } from './components/LandingPage';
 import { Logo } from './components/Logo';
+import { Onboarding } from './components/Onboarding';
 
 // Lazy load feature components
 const TextAssistant = lazy(() => import('./components/TextAssistant').then(m => ({ default: m.TextAssistant })));
@@ -30,19 +31,38 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    // Explicitly check for landing page enablement
-    // We prioritize the landing page as the 'Hero' entry point for ai.rw
-    const landingPreference = localStorage.getItem('ai_rw_landing_enabled');
-    const isLandingEnabled = landingPreference !== 'false'; 
+    const initializeApp = async () => {
+      // Determine View Preference
+      const landingPreference = localStorage.getItem('ai_rw_landing_enabled');
+      const isLandingEnabled = landingPreference !== 'false'; 
+      
+      // Default to landing if enabled, otherwise chat
+      setCurrentView(isLandingEnabled ? AppView.LANDING : AppView.CHAT);
+      
+      // Record visit stats
+      recordVisit().catch(console.error);
+    };
     
-    // Set landing as the initial view if it's enabled (default is true)
-    setCurrentView(isLandingEnabled ? AppView.LANDING : AppView.CHAT);
-    
-    // Log the visit for analytics
-    recordVisit().catch(console.error);
+    initializeApp();
   }, []);
+
+  const handleStartApp = (view: AppView = AppView.CHAT) => {
+    setCurrentView(view);
+    
+    // Check if onboarding is needed when entering the main app
+    const hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  };
+
+  const completeOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('ai_rw_onboarding_seen', 'true');
+  };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -54,7 +74,6 @@ export default function App() {
   const handleViewChange = (view: AppView) => {
     setCurrentView(view);
     setIsSidebarOpen(false);
-    // Smooth scroll to top when changing views
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -91,25 +110,23 @@ export default function App() {
 
   if (currentView === null) return <LoadingView />;
 
-  // If we are in Landing View, we render only the Landing Page without the sidebar layout
-  // This creates a clean "Hero" entry experience
   if (currentView === AppView.LANDING) {
     return (
       <ToastProvider>
-        <LandingPage onStart={handleViewChange} />
+        <LandingPage onStart={handleStartApp} />
       </ToastProvider>
     );
   }
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans">
+      <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans relative">
+        {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+        
         <Sidebar currentView={currentView} onChangeView={handleViewChange} isOpen={isSidebarOpen} />
         <div className="flex-1 flex flex-col min-w-0 relative h-full">
-          {/* Background Pattern Overlay */}
           <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
           
-          {/* Mobile Header */}
           <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
             <div className="flex items-center gap-3">
                <button onClick={() => handleViewChange(AppView.LANDING)}>
@@ -122,7 +139,6 @@ export default function App() {
             </button>
           </div>
 
-          {/* Desktop Breadcrumbs Header */}
           <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
              <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
                 <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
@@ -134,7 +150,6 @@ export default function App() {
              </div>
           </header>
 
-          {/* Main Content Viewport */}
           <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
             <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
                <Suspense fallback={<LoadingView />}>
@@ -144,7 +159,6 @@ export default function App() {
           </main>
         </div>
 
-        {/* Overlay for mobile sidebar */}
         {isSidebarOpen && <div className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in" onClick={() => setIsSidebarOpen(false)} />}
       </div>
     </ToastProvider>
