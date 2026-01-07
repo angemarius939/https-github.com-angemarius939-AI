@@ -22,8 +22,12 @@ const getAiClient = () => {
   if (!apiKey || apiKey === '' || apiKey === 'undefined' || apiKey === 'null') {
     throw new Error("API_KEY_MISSING");
   }
-  // Rules require new instance for Pro/Veo models to catch updated key selection
   return new GoogleGenAI({ apiKey });
+};
+
+const cleanJsonString = (str: string): string => {
+  // Remove markdown code blocks if present
+  return str.replace(/```json/g, '').replace(/```/g, '').trim();
 };
 
 const extractSources = (response: any): Source[] => {
@@ -46,7 +50,7 @@ const extractSources = (response: any): Source[] => {
 };
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
-const PRO_MODEL = "gemini-3-pro-preview";
+const PRO_MODEL = "gemini-3-flash-preview"; // Switching to Flash for better stability on free tier
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 export const streamChatResponse = async (
@@ -69,7 +73,7 @@ export const streamChatResponse = async (
         temperature: config.temperature,
         topP: config.topP,
         topK: config.topK,
-        thinkingConfig: { thinkingBudget: config.thinkingBudget }
+        thinkingConfig: config.thinkingBudget > 0 ? { thinkingBudget: config.thinkingBudget } : undefined
       },
       history: history,
     });
@@ -113,8 +117,7 @@ export const generateConversationResponse = async (
         systemInstruction: systemInstruction,
         temperature: config.temperature,
         topP: config.topP,
-        topK: config.topK,
-        thinkingConfig: { thinkingBudget: config.thinkingBudget }
+        topK: config.topK
       },
       history: history,
     });
@@ -212,7 +215,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
         }
       }
     });
-    return JSON.parse(response.text || "{}");
+    return JSON.parse(cleanJsonString(response.text || "{}"));
   } catch (error: any) {
     throw error;
   }
@@ -272,7 +275,7 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
         }
       }
     });
-    return JSON.parse(response.text || "{}");
+    return JSON.parse(cleanJsonString(response.text || "{}"));
   } catch (error: any) {
     throw error;
   }

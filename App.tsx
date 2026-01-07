@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X, Loader2 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
@@ -10,15 +10,15 @@ import { LandingPage } from './components/LandingPage';
 import { Logo } from './components/Logo';
 import { Onboarding } from './components/Onboarding';
 
-// Lazy load feature components
-const TextAssistant = lazy(() => import('./components/TextAssistant').then(m => ({ default: m.TextAssistant })));
-const ImageTools = lazy(() => import('./components/ImageTools').then(m => ({ default: m.ImageTools })));
-const RuralAssistant = lazy(() => import('./components/RuralAssistant').then(m => ({ default: m.RuralAssistant })));
-const CourseGenerator = lazy(() => import('./components/CourseGenerator').then(m => ({ default: m.CourseGenerator })));
-const VoiceConversation = lazy(() => import('./components/VoiceConversation').then(m => ({ default: m.VoiceConversation })));
-const TextToSpeech = lazy(() => import('./components/TextToSpeech').then(m => ({ default: m.TextToSpeech })));
-const DecisionAssistant = lazy(() => import('./components/DecisionAssistant').then(m => ({ default: m.DecisionAssistant })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+// Direct imports to ensure reliability
+import { TextAssistant } from './components/TextAssistant';
+import { ImageTools } from './components/ImageTools';
+import { RuralAssistant } from './components/RuralAssistant';
+import { CourseGenerator } from './components/CourseGenerator';
+import { VoiceConversation } from './components/VoiceConversation';
+import { TextToSpeech } from './components/TextToSpeech';
+import { DecisionAssistant } from './components/DecisionAssistant';
+import { AdminDashboard } from './components/AdminDashboard';
 
 const LoadingView = () => (
   <div className="h-full w-full flex flex-col items-center justify-center bg-white/50">
@@ -152,9 +152,7 @@ export default function App() {
 
           <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
             <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
-               <Suspense fallback={<LoadingView />}>
-                 {renderContent()}
-               </Suspense>
+               {renderContent()}
             </div>
           </main>
         </div>
