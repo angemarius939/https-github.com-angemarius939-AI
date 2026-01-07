@@ -17,7 +17,6 @@ import { FormattedText } from './FormattedText';
 import { SourcesToggle } from './SourcesToggle';
 
 // Improved Sprout icon placeholder replacement
-// Moved to the top to avoid "used before declaration" error in exampleTopics
 const Sprout = (props: any) => (
   <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 20h10" /><path d="M10 20V8a3 3 0 0 0-3-3 3 3 0 0 0-3 3v12" /><path d="M14 20V6a3 3 0 0 1 3-3 3 3 0 0 1 3 3v14" />

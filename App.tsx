@@ -32,11 +32,12 @@ export default function App() {
   const [ttsInitialText, setTtsInitialText] = useState('');
 
   useEffect(() => {
-    // Explicitly check for landing page enablement, defaulting to true if not set
+    // Explicitly check for landing page enablement
+    // We prioritize the landing page as the 'Hero' entry point for ai.rw
     const landingPreference = localStorage.getItem('ai_rw_landing_enabled');
     const isLandingEnabled = landingPreference !== 'false'; 
     
-    // Ensure we start at LANDING if enabled, otherwise go to CHAT
+    // Set landing as the initial view if it's enabled (default is true)
     setCurrentView(isLandingEnabled ? AppView.LANDING : AppView.CHAT);
     
     // Log the visit for analytics
@@ -91,6 +92,7 @@ export default function App() {
   if (currentView === null) return <LoadingView />;
 
   // If we are in Landing View, we render only the Landing Page without the sidebar layout
+  // This creates a clean "Hero" entry experience
   if (currentView === AppView.LANDING) {
     return (
       <ToastProvider>
