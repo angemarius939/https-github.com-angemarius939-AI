@@ -72,7 +72,6 @@ const extractSources = (response: any): Source[] => {
 };
 
 const FAST_MODEL = "gemini-3-flash-preview"; 
-const PRO_MODEL = "gemini-3-pro-preview";
 const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 export const streamChatResponse = async (
@@ -134,13 +133,12 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   Ugomba gusubiza mu buryo bwa JSON yonyine ukurikije iyi miterere (schema).`;
 
   const response = await ai.models.generateContent({
-    model: PRO_MODEL,
+    model: FAST_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
     config: {
       systemInstruction: `Uri umusesenguzi w'ubwenge (Business Analyst) wa ai.rw mu Rwanda. Isesengura ryawe rigomba kuba ryimbitse kandi rishingiye ku mibare n'ukuri. Subiza mu Kinyarwanda gusa. ${context}`,
       responseMimeType: "application/json",
       temperature: 0.2, 
-      thinkingConfig: { thinkingBudget: 16000 },
       responseSchema: {
         type: Type.OBJECT,
         properties: {
@@ -229,11 +227,10 @@ export const generateCourse = async (topic: string, level: string, duration: str
   4. Umwanzuro n'inama zo gukomeza (Conclusion & Next steps)`;
 
   const response = await ai.models.generateContent({
-    model: PRO_MODEL,
+    model: FAST_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
     config: {
       systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw. Kora isomo rirambuye cyane, ukoresha Ikinyarwanda gikungahaye kandi cyumvikana neza. ${context}`,
-      thinkingConfig: { thinkingBudget: 24000 }
     }
   });
   return { text: response.text || "", sources: extractSources(response) };
