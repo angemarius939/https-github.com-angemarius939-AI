@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
             
             {showDisclaimer && (
               <div className="mt-2 text-[9px] text-gray-400 leading-relaxed text-justify opacity-80 animate-in fade-in slide-in-from-top-1 duration-200">
-                <p>Iyi AI ikora ishingiye ku makuru akomoka ahantu hatandukanye. Turasaba imbabazi ku makosa bishobora kuba bituzuye.</p>
+                <p>Iyi AI ikora ishingiye ku makuru akomoka ahantu hatandukanye. Turacyubaka uru rubuga, Tubiseguyeho ku makosa ashobora kuza mu bisubizo cyangwa mu gihe ibisubizo bishobora kuba bituzuye neza.</p>
               </div>
             )}
           </div>

@@ -144,7 +144,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
         </div>
         <nav className="flex-1 p-6 space-y-1.5 overflow-y-auto">
-          <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3">Dashboard</div>
+          <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3">Incamake</div>
           <SidebarItem tab="dashboard" icon={LayoutDashboard} label="Imbonerahamwe" />
           
           <div className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] px-4 mb-3 mt-8">Amakuru yo Kwigisha</div>
