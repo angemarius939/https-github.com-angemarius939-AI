@@ -95,7 +95,6 @@ export const streamChatResponse = async (
         temperature: config.temperature,
         topP: config.topP,
         topK: config.topK,
-        // Removed googleSearch tool to avoid 403 errors on some API keys
       }
     });
 
@@ -113,6 +112,58 @@ export const streamChatResponse = async (
     return fullText;
   } catch (error) {
     console.error("Gemini Streaming Error:", error);
+    throw error;
+  }
+};
+
+export const streamCourseResponse = async (
+  topic: string, 
+  level: string, 
+  duration: string, 
+  prerequisites: string,
+  onChunk: (text: string) => void
+): Promise<string> => {
+  const apiKey = process.env.API_KEY || "";
+  const ai = new GoogleGenAI({ apiKey });
+  const context = getContextForView('COURSE');
+  
+  const prompt = `Tegura isomo rirambuye mu Kinyarwanda:
+  - Ingingo: ${topic}
+  - Urwego: ${level}
+  - Igihe: ${duration}
+  - Ibisabwa mbere: ${prerequisites}
+  
+  Isomo rigomba kuba rifite:
+  # Intangiriro
+  ## Module 1: [Umutwe]
+  ## Module 2: [Umutwe]
+  ## Module 3: [Umutwe]
+  # Imyitozo
+  # Umwanzuro
+  
+  Koresha imitwe (headers) ifite akamenyetso ka # kugira ngo isomeke neza.`;
+
+  try {
+    const responseStream = await ai.models.generateContentStream({
+      model: FAST_MODEL,
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: `Uri umwalimu kuri ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa kandi ukoreshe uburyo bwa Markdown bwizewe. ${context}`,
+        temperature: 0.7,
+      }
+    });
+
+    let fullText = "";
+    for await (const chunk of responseStream) {
+      const text = chunk.text;
+      if (text) {
+        fullText += text;
+        onChunk(text);
+      }
+    }
+    return fullText;
+  } catch (error) {
+    console.error("Course Generation Error:", error);
     throw error;
   }
 };
@@ -153,29 +204,6 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
       systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika mu Kinyarwanda. ${context}`,
-    }
-  });
-  return { text: response.text || "", sources: extractSources(response) };
-};
-
-export const generateCourse = async (topic: string, level: string, duration: string, prerequisites: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-  const context = getContextForView('COURSE');
-  
-  const prompt = `Tegura isomo rirambuye mu Kinyarwanda:
-  - Ingingo: ${topic}
-  - Urwego: ${level}
-  - Igihe: ${duration}
-  - Ibisabwa mbere: ${prerequisites}
-  
-  Isomo rigomba kuba rifite: Intangiriro, Amasomo nyirizina (Modules), Imyitozo, n'Umwanzuro.`;
-
-  const response = await ai.models.generateContent({
-    model: FAST_MODEL,
-    contents: [{ parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: `Uri umwalimu kuri ai.rw. Subiza mu Kinyarwanda gusa. ${context}`,
-      temperature: 0.7,
     }
   });
   return { text: response.text || "", sources: extractSources(response) };

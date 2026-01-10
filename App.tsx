@@ -33,7 +33,8 @@ const LoadingView = () => (
 );
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.LANDING);
+  // Start directly on CHAT view
+  const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -68,7 +69,8 @@ export default function App() {
     try {
       localStorage.setItem('ai_rw_onboarding_seen', 'true');
     } catch (e) {}
-    // Stay on current view (LANDING) instead of forcing CHAT
+    // Ensure we are on CHAT after onboarding
+    setCurrentView(AppView.CHAT);
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -112,7 +114,7 @@ export default function App() {
       case AppView.DECISION_ASSISTANT: return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR: return <CourseGenerator />;
       case AppView.ADMIN: return <AdminDashboard onNavigate={handleViewChange} />;
-      default: return <LandingPage onStart={handleViewChange} />;
+      default: return <ChatInterface onNavigate={handleViewChange} />;
     }
   };
 
@@ -148,7 +150,7 @@ export default function App() {
           {/* Desktop Navigation Header */}
           <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
              <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
-                <button onClick={() => handleViewChange(AppView.LANDING)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
+                <button onClick={() => handleViewChange(AppView.CHAT)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
                    <Logo size="sm" />
                    ai.rw
                 </button>
