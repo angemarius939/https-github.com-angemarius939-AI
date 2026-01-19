@@ -33,7 +33,6 @@ const LoadingView = () => (
 );
 
 export default function App() {
-  // Start directly on CHAT view
   const [currentView, setCurrentView] = useState<AppView>(AppView.CHAT);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [ttsInitialText, setTtsInitialText] = useState('');
@@ -43,21 +42,17 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Run stats in background
         recordVisit().catch(() => {});
-        
         let hasSeenOnboarding = false;
         try {
           hasSeenOnboarding = localStorage.getItem('ai_rw_onboarding_seen') === 'true';
         } catch (e) {
           console.warn("Storage access issue:", e);
         }
-        
         if (!hasSeenOnboarding) {
           setShowOnboarding(true);
         }
       } finally {
-        // Small delay for smooth UI transition
         setTimeout(() => setIsInitializing(false), 500);
       }
     };
@@ -69,7 +64,6 @@ export default function App() {
     try {
       localStorage.setItem('ai_rw_onboarding_seen', 'true');
     } catch (e) {}
-    // Ensure we are on CHAT after onboarding
     setCurrentView(AppView.CHAT);
   };
 
@@ -82,7 +76,7 @@ export default function App() {
 
   const handleViewChange = (view: AppView) => {
     setCurrentView(view);
-    setIsSidebarOpen(false);
+    setIsSidebarOpen(false); // Crucial: close sidebar on navigation
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -122,51 +116,58 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-full bg-stone-100 overflow-hidden font-sans relative">
+      <div className="flex h-screen w-full bg-stone-50 overflow-hidden font-sans relative">
         {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
         
         <Sidebar 
           currentView={currentView} 
           onChangeView={handleViewChange} 
           isOpen={isSidebarOpen} 
+          onClose={() => setIsSidebarOpen(false)}
         />
         
         <div className="flex-1 flex flex-col min-w-0 relative h-full">
-          <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
+          <div className="absolute inset-0 rwanda-pattern-light opacity-30 pointer-events-none z-0"></div>
           
           {/* Mobile Header */}
-          <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-[45] shadow-xl">
+          <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-emerald-100 relative z-[45] shadow-sm">
             <div className="flex items-center gap-3">
-               <button onClick={toggleSidebar} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all">
+               <button onClick={toggleSidebar} className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus:outline-none transition-all active:scale-95 shadow-sm border border-emerald-100">
                   <Menu className="w-6 h-6" />
                </button>
-               <h1 className="text-sm font-black uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
+               <h1 className="text-sm font-black text-emerald-950 uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
             </div>
-            <button onClick={() => handleViewChange(AppView.CHAT)}>
-              <Logo size="sm" variant="light" className="shadow-inner" />
+            <button onClick={() => handleViewChange(AppView.CHAT)} className="active:scale-90 transition-transform">
+              <Logo size="sm" className="shadow-emerald-200/50" />
             </button>
           </div>
 
           {/* Desktop Navigation Header */}
-          <header className="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-emerald-100/30 relative z-10">
-             <div className="flex items-center gap-2 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
-                <button onClick={() => handleViewChange(AppView.CHAT)} className="hover:text-emerald-600 transition-colors flex items-center gap-2">
-                   <Logo size="sm" />
-                   ai.rw
+          <header className="hidden md:flex items-center justify-between px-8 py-5 bg-white/60 backdrop-blur-xl border-b border-emerald-100/50 relative z-10">
+             <div className="flex items-center gap-3 text-[10px] font-black text-emerald-900/40 uppercase tracking-[0.2em]">
+                <button onClick={() => handleViewChange(AppView.CHAT)} className="hover:text-emerald-600 transition-colors flex items-center gap-2 group">
+                   <Logo size="sm" className="group-hover:scale-105 transition-transform" />
+                   <span className="text-emerald-950 group-hover:text-emerald-600">ai.rw</span>
                 </button>
-                <span>/</span>
+                <span className="text-stone-300">/</span>
                 <span className="text-emerald-600">{getPageTitle()}</span>
              </div>
           </header>
 
-          <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-8 relative z-10">
-            <div className="h-full bg-white/95 backdrop-blur shadow-2xl rounded-[40px] border border-white/50 overflow-hidden">
+          <main className="flex-1 overflow-hidden p-2 md:p-6 lg:p-10 relative z-10">
+            <div className="h-full bg-white shadow-2xl shadow-emerald-900/5 rounded-[32px] md:rounded-[48px] border border-white/50 overflow-hidden">
                {renderContent()}
             </div>
           </main>
         </div>
 
-        {isSidebarOpen && <div className="fixed inset-0 bg-emerald-950/90 z-40 md:hidden backdrop-blur-sm animate-in fade-in" onClick={() => setIsSidebarOpen(false)} />}
+        {/* Improved Backdrop: Lightened for better aesthetics */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[55] md:hidden animate-in fade-in duration-300" 
+            onClick={() => setIsSidebarOpen(false)} 
+          />
+        )}
       </div>
     </ToastProvider>
   );
