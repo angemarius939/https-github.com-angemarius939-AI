@@ -198,7 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
                </div>
                <div className="lg:col-span-2 space-y-8">
                   <div className="bg-white p-6 rounded-[32px] shadow-sm border border-stone-100 flex gap-4 items-center">
-                     <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Shakisha mu bubiko..." className="flex-1 pl-6 py-4 bg-stone-50 border-2 border-stone-50 rounded-2xl outline-none" />
+                     <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Shakisha mu kiganiro..." className="flex-1 pl-6 py-4 bg-stone-50 border-2 border-stone-50 rounded-2xl outline-none" />
                   </div>
                   <div className="space-y-4">
                      {filteredItems.map(item => (

@@ -19,7 +19,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
     {
       id: 'welcome',
       role: MessageRole.MODEL,
-      text: 'Muraho! Nitwa **ai.rw**, umufasha wawe mu Kinyarwanda muri uyu mwaka wa **2026**. \n\nUbu turi mu **Kiganiro**. Nagufasha iki uyu munsi? Hitamo muri serivisi zihariye ziri hasi cyangwa unyandikire hano maze tuganire ku makuru agezweho.',
+      text: 'Muraho! Nitwa **ai.rw**, umufasha wawe mu Kinyarwanda. \n\nUbu turi mu **Kiganiro**. Nagufasha iki uyu munsi? Hitamo muri serivisi zihariye ziri hasi cyangwa unyandikire hano maze tuganire.',
       timestamp: Date.now()
     }
   ]);
@@ -149,7 +149,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
   };
 
   const confirmClearChat = () => {
-    setMessages([{ id: Date.now().toString(), role: MessageRole.MODEL, text: 'Ikiganiro gishya cyatangiye muri Mutarama 2026!', timestamp: Date.now() }]);
+    setMessages([{ id: Date.now().toString(), role: MessageRole.MODEL, text: 'Ikiganiro gishya cyatangiye!', timestamp: Date.now() }]);
     setIsClearConfirmOpen(false);
     setSearchQuery('');
     setIsSearchOpen(false);
@@ -292,7 +292,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onNavigate }) => {
                 handleSendMessage();
               }
             }}
-            placeholder="Baza ai.rw icyo wifuza muri 2026..." 
+            placeholder="Baza icyo wifuza kumenya." 
             className="w-full p-4 border-2 border-emerald-100 rounded-[24px] focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none h-14 md:h-16 bg-slate-50/50 transition-all font-medium resize-none" 
             disabled={isStreaming} 
           />

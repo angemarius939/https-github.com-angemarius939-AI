@@ -135,15 +135,15 @@ export default function App() {
           <div className="absolute inset-0 rwanda-pattern-light opacity-40 pointer-events-none z-0"></div>
           
           {/* Mobile Header */}
-          <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-20 shadow-xl">
+          <div className="md:hidden flex items-center justify-between p-4 bg-emerald-950 text-white relative z-[45] shadow-xl">
             <div className="flex items-center gap-3">
-               <button onClick={() => handleViewChange(AppView.CHAT)}>
-                 <Logo size="sm" variant="light" className="shadow-inner" />
+               <button onClick={toggleSidebar} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all">
+                  <Menu className="w-6 h-6" />
                </button>
                <h1 className="text-sm font-black uppercase tracking-widest truncate max-w-[150px]">{getPageTitle()}</h1>
             </div>
-            <button onClick={toggleSidebar} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white focus:outline-none transition-all">
-              {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <button onClick={() => handleViewChange(AppView.CHAT)}>
+              <Logo size="sm" variant="light" className="shadow-inner" />
             </button>
           </div>
 

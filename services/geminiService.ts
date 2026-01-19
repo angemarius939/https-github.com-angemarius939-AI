@@ -4,7 +4,7 @@ import { ImageAnalysisResult, BusinessAnalysisResult, Source, ModelConfig } from
 import { getContextForView } from './knowledgeService';
 
 const DEFAULT_CONFIG: ModelConfig = {
-  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Uyu munsi ni tariki ya 20 Mutarama 2026. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Tanga amakuru agezweho kandi ashingiye ku bimenyetso.",
+  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Tanga amakuru agezweho kandi ashingiye ku bimenyetso.",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
@@ -91,7 +91,7 @@ export const streamChatResponse = async (
       model: FAST_MODEL,
       contents,
       config: {
-        systemInstruction: `${config.systemInstruction}\n${context}\nUyu munsi ni muri Mutarama 2026. Tanga amakuru agezweho, ukoresheje imbonerahamwe (tables) niba ari ngombwa ngo amakuru asomeke neza.`,
+        systemInstruction: `${config.systemInstruction}\n${context}\nTanga amakuru agezweho, ukoresheje imbonerahamwe (tables) niba ari ngombwa ngo amakuru asomeke neza.`,
         temperature: config.temperature,
         topP: config.topP,
         topK: config.topK,
@@ -149,7 +149,7 @@ export const streamCourseResponse = async (
       model: FAST_MODEL,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: `Uri umwalimu kuri ai.rw mu Rwanda. Uyu munsi ni Mutarama 2026. Subiza mu Kinyarwanda gusa kandi ukoreshe uburyo bwa Markdown bwizewe harimo n'imbonerahamwe. ${context}`,
+        systemInstruction: `Uri umwalimu kuri ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa kandi ukoreshe uburyo bwa Markdown bwizewe harimo n'imbonerahamwe. ${context}`,
         temperature: 0.7,
         tools: [{ googleSearch: {} }]
       }
@@ -175,7 +175,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
   const context = getContextForView('BUSINESS');
   
   const prompt = `Sesengura ubu bucuruzi kandi utange isesengura mu Kinyarwanda: "${input}". 
-  Tanga igisubizo cya JSON yonyine. Ubusesenguzi bwawe bugomba kwita ku miterere y'ubukungu bw'u Rwanda muri uyu mwaka wa 2026:
+  Tanga igisubizo cya JSON yonyine. Ubusesenguzi bwawe bugomba kwita ku miterere y'ubukungu bw'u Rwanda:
   {
     "summary": "incamake irambuye mu Kinyarwanda",
     "isFinancial": true,
@@ -189,7 +189,7 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     model: FAST_MODEL,
     contents: [{ parts: [{ text: prompt }] }],
     config: {
-      systemInstruction: `Uri umusesenguzi wa ai.rw mu Rwanda mu mwaka wa 2026. Subiza mu Kinyarwanda gusa. ${context}`,
+      systemInstruction: `Uri umusesenguzi wa ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa. ${context}`,
       responseMimeType: "application/json",
       temperature: 0.1,
       tools: [{ googleSearch: {} }]
@@ -206,7 +206,7 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
     model: FAST_MODEL,
     contents: `Urwego: ${sector}. Ikibazo: ${query}`,
     config: {
-      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw mu mwaka wa 2026. Tanga inama zifatika kandi zigezweho mu Kinyarwanda. ${context}`,
+      systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika kandi zigezweho mu Kinyarwanda. ${context}`,
       tools: [{ googleSearch: {} }]
     }
   });
@@ -231,7 +231,7 @@ export const generateTextAnalysis = async (prompt: string, type: string, tone: s
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
-    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw mu mwaka wa 2026." }
+    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw." }
   });
   return response.text || "";
 };
@@ -296,7 +296,7 @@ export const generateConversationResponse = async (history: any[], newMessage: s
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents,
-    config: { systemInstruction: "Uri ijwi rya ai.rw mu mwaka wa 2026. Subiza mu Kinyarwanda gito kandi gishimishije." }
+    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito kandi gishimishije." }
   });
   return response.text || "";
 };
