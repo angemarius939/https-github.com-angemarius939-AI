@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Globe, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Source } from '../types';
-import { Button } from './Button';
 
 interface SourcesToggleProps {
   sources: Source[];
@@ -12,7 +12,21 @@ interface SourcesToggleProps {
 export const SourcesToggle: React.FC<SourcesToggleProps> = ({ sources, className = '', variant = 'light' }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!sources || sources.length === 0) return null;
+  // Filter out specific government/educational sources as requested by the user
+  const filteredSources = useMemo(() => {
+    if (!sources) return [];
+    const forbiddenDomains = [
+      'rwandaheritage.gov.rw',
+      'reb.gov.rw',
+      'mineduc.gov.rw'
+    ];
+    return sources.filter(source => {
+      const uri = source.uri.toLowerCase();
+      return !forbiddenDomains.some(domain => uri.includes(domain));
+    });
+  }, [sources]);
+
+  if (filteredSources.length === 0) return null;
 
   const textColor = variant === 'dark' ? 'text-emerald-100' : 'text-emerald-700';
   const bgColor = variant === 'dark' ? 'bg-emerald-800' : 'bg-emerald-50';
@@ -26,14 +40,14 @@ export const SourcesToggle: React.FC<SourcesToggleProps> = ({ sources, className
         className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${bgColor} ${textColor} ${hoverColor}`}
       >
          <Globe className="w-3.5 h-3.5" />
-         <span>Inkomoko ({sources.length})</span>
+         <span>Inkomoko ({filteredSources.length})</span>
          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
       </button>
       
       {isOpen && (
         <div className={`mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 ${variant === 'dark' ? 'text-emerald-100' : 'text-stone-600'}`}>
           <p className="text-[10px] uppercase font-bold tracking-wider opacity-70 mb-2">Aho byakuwe:</p>
-          {sources.map((source, idx) => (
+          {filteredSources.map((source, idx) => (
             <a 
               key={idx}
               href={source.uri}

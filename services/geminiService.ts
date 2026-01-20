@@ -117,6 +117,55 @@ export const streamChatResponse = async (
   }
 };
 
+export const generateKinyarwandaContent = async (
+  prompt: string,
+  type: 'learning' | 'composition',
+  onChunk: (text: string) => void,
+  onSources?: (sources: Source[]) => void
+): Promise<string> => {
+  const apiKey = process.env.API_KEY || "";
+  const ai = new GoogleGenAI({ apiKey });
+  const context = getContextForView('LEARN_KINYARWANDA');
+  
+  const systemInstruction = `Uri impuguke mu rurimi rw'Ikinyarwanda, amateka, n'ubuvanganzo bw'u Rwanda. 
+  Mubyo ukora byose, ugomba gushingira ku mabwiriza n'inyandiko ziva muri:
+  1. Rwanda Cultural Heritage Academy (Inteko y'Umuco - rwandaheritage.gov.rw)
+  2. Ministry of Education (MINEDUC)
+  3. Rwanda Education Board (REB - reb.gov.rw)
+  
+  Iyo urimo kwigisha (type: learning), itandukanye n'imyandikire mibi, wigishe ikibonezamvugo (grammar) n'imyandikire (orthography) nyayo.
+  Iyo urimo guhanga (type: composition), hamba imivugo (poems), inkuru (stories), cyangwa ibitekerezo ukoresheje Ikinyarwanda cy'umwimerere kandi gishituye.
+  Ugomba gukoresha Google Search kugira ngo ubone amakuru nyayo n'inkomoko zizewe muri izo nzego zavuzwe haruguru.`;
+
+  try {
+    const responseStream = await ai.models.generateContentStream({
+      model: FAST_MODEL,
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: `${systemInstruction}\n${context}`,
+        temperature: 0.7,
+        tools: [{ googleSearch: {} }]
+      }
+    });
+
+    let fullText = "";
+    for await (const chunk of responseStream) {
+      const text = chunk.text;
+      if (text) {
+        fullText += text;
+        onChunk(text);
+      }
+      if (onSources && chunk.candidates?.[0]?.groundingMetadata) {
+        onSources(extractSources(chunk));
+      }
+    }
+    return fullText;
+  } catch (error) {
+    console.error("Kinyarwanda Content Error:", error);
+    throw error;
+  }
+};
+
 export const streamCourseResponse = async (
   topic: string, 
   level: string, 

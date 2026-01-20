@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download, X } from 'lucide-react';
+import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download, X, BookOpen } from 'lucide-react';
 import { AppView } from '../types';
 import { Logo } from './Logo';
 
@@ -36,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
 
   const menuItems = [
     { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
+    { id: AppView.TWIGE_IKINYARWANDA, label: 'Twige Ikinyarwanda', icon: <BookOpen className="w-5 h-5" /> },
     { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
     { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
     { id: AppView.RURAL_SUPPORT, label: 'Iterambere', icon: <Sprout className="w-5 h-5" /> },

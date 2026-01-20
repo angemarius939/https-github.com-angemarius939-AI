@@ -31,10 +31,11 @@ export enum AppView {
   VOICE_CONVERSATION = 'voice_conversation',
   TEXT_TO_SPEECH = 'text_to_speech',
   DECISION_ASSISTANT = 'decision_assistant',
+  TWIGE_IKINYARWANDA = 'twige_ikinyarwanda',
   ADMIN = 'admin'
 }
 
-export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING' | 'LEGAL' | 'TECHNICAL';
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING' | 'LEGAL' | 'TECHNICAL' | 'LEARN_KINYARWANDA';
 
 export interface KnowledgeItem {
   id: string;

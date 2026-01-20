@@ -18,6 +18,7 @@ import { CourseGenerator } from './components/CourseGenerator';
 import { VoiceConversation } from './components/VoiceConversation';
 import { TextToSpeech } from './components/TextToSpeech';
 import { DecisionAssistant } from './components/DecisionAssistant';
+import { KinyarwandaLearning } from './components/KinyarwandaLearning';
 import { AdminDashboard } from './components/AdminDashboard';
 
 const LoadingView = () => (
@@ -91,6 +92,7 @@ export default function App() {
       case AppView.RURAL_SUPPORT: return 'Iterambere';
       case AppView.DECISION_ASSISTANT: return 'Umujyanama';
       case AppView.COURSE_GENERATOR: return 'Amasomo';
+      case AppView.TWIGE_IKINYARWANDA: return 'Twige Ikinyarwanda';
       case AppView.ADMIN: return 'Ubuyobozi';
       default: return 'ai.rw';
     }
@@ -107,6 +109,7 @@ export default function App() {
       case AppView.RURAL_SUPPORT: return <RuralAssistant />;
       case AppView.DECISION_ASSISTANT: return <DecisionAssistant />;
       case AppView.COURSE_GENERATOR: return <CourseGenerator />;
+      case AppView.TWIGE_IKINYARWANDA: return <KinyarwandaLearning />;
       case AppView.ADMIN: return <AdminDashboard onNavigate={handleViewChange} />;
       default: return <ChatInterface onNavigate={handleViewChange} />;
     }
