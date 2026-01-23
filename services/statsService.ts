@@ -8,25 +8,19 @@ export const recordVisit = async () => {
   
   try {
     if (sessionStorage.getItem('visited_session')) return;
-  } catch (e) {
-    // Session storage might be blocked in some private modes
-  }
+  } catch (e) {}
   
   let countryCode = 'RW';
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1500);
-    
     const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
     clearTimeout(timeoutId);
-    
     if (res.ok) {
         const data = await res.json();
         countryCode = data.country_code || 'RW';
     }
-  } catch (e) {
-    // Fail silently
-  }
+  } catch (e) {}
 
   try {
     const today = new Date().toISOString().split('T')[0];
@@ -46,9 +40,7 @@ export const recordVisit = async () => {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
     sessionStorage.setItem('visited_session', 'true');
-  } catch (e) {
-    // Storage might be full or blocked
-  }
+  } catch (e) {}
 };
 
 export const getVisitStats = (): DailyStats[] => {
@@ -57,12 +49,32 @@ export const getVisitStats = (): DailyStats[] => {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) return [];
       const stats: Record<string, DailyStats> = JSON.parse(stored);
-      return Object.values(stats)
-        .sort((a, b) => b.date.localeCompare(a.date))
-        .slice(0, 30);
+      return Object.values(stats).sort((a, b) => b.date.localeCompare(a.date));
     } catch (e) {
       return [];
     }
+};
+
+export const getAggregatedStats = () => {
+  const stats = getVisitStats();
+  const now = new Date();
+  
+  const isWithinDays = (dateStr: string, days: number) => {
+    const date = new Date(dateStr);
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= days;
+  };
+
+  const todayStr = now.toISOString().split('T')[0];
+
+  return {
+    today: stats.find(s => s.date === todayStr)?.count || 0,
+    week: stats.filter(s => isWithinDays(s.date, 7)).reduce((acc, curr) => acc + curr.count, 0),
+    month: stats.filter(s => isWithinDays(s.date, 30)).reduce((acc, curr) => acc + curr.count, 0),
+    year: stats.filter(s => isWithinDays(s.date, 365)).reduce((acc, curr) => acc + curr.count, 0),
+    total: stats.reduce((acc, curr) => acc + curr.count, 0)
+  };
 };
 
 export const getCountryAggregate = (): CountryStats[] => {
@@ -70,10 +82,8 @@ export const getCountryAggregate = (): CountryStats[] => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) return [];
-      
       const stats: Record<string, DailyStats> = JSON.parse(stored);
       const agg: Record<string, number> = {};
-      
       Object.values(stats).forEach(day => {
           if (day.countries) {
               Object.entries(day.countries).forEach(([code, count]) => {
@@ -81,27 +91,14 @@ export const getCountryAggregate = (): CountryStats[] => {
               });
           }
       });
-
       const getFlagEmoji = (countryCode: string) => {
           if (!countryCode || countryCode === 'Unknown') return '🌍';
           try {
-              return countryCode
-                .toUpperCase()
-                .replace(/./g, char => String.fromCodePoint(char.charCodeAt(0) + 127397));
-          } catch (e) {
-              return '🇷🇼';
-          }
+              return countryCode.toUpperCase().replace(/./g, char => String.fromCodePoint(char.charCodeAt(0) + 127397));
+          } catch (e) { return '🇷🇼'; }
       };
-
-      return Object.entries(agg)
-          .map(([code, count]) => ({
-              code,
-              count,
-              name: code === 'RW' ? 'Rwanda' : code,
-              flag: getFlagEmoji(code)
-          }))
-          .sort((a, b) => b.count - a.count);
-    } catch (e) {
-      return [];
-    }
+      return Object.entries(agg).map(([code, count]) => ({
+              code, count, name: code === 'RW' ? 'Rwanda' : code, flag: getFlagEmoji(code)
+          })).sort((a, b) => b.count - a.count);
+    } catch (e) { return []; }
 };

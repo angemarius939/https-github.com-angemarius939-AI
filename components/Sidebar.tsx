@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download, X, BookOpen } from 'lucide-react';
-import { AppView } from '../types';
+import { AppView, ModelConfig } from '../types';
 import { Logo } from './Logo';
 
 interface SidebarProps {
@@ -15,6 +15,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isOpen, onClose, unreadCounts = {} }) => {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isTwigePublic, setIsTwigePublic] = useState(false);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -22,7 +23,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
       setInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    
+    // Check if Twige is public
+    const checkConfig = () => {
+      const stored = localStorage.getItem('ai_rw_model_config');
+      if (stored) {
+        const config: ModelConfig = JSON.parse(stored);
+        setIsTwigePublic(!!config.isTwigePublic);
+      }
+    };
+    
+    checkConfig();
+    // Re-check periodically or could use a custom event if needed
+    const interval = setInterval(checkConfig, 2000);
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleInstallClick = async () => {
@@ -34,15 +52,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
     }
   };
 
-  const menuItems = [
-    { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
-    { id: AppView.TWIGE_IKINYARWANDA, label: 'Twige Ikinyarwanda', icon: <BookOpen className="w-5 h-5" /> },
-    { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
-    { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
-    { id: AppView.RURAL_SUPPORT, label: 'Iterambere', icon: <Sprout className="w-5 h-5" /> },
-    { id: AppView.DECISION_ASSISTANT, label: 'Umujyanama', icon: <TrendingUp className="w-5 h-5" /> },
-    { id: AppView.COURSE_GENERATOR, label: 'Amasomo', icon: <GraduationCap className="w-5 h-5" /> },
-  ];
+  const menuItems = useMemo(() => {
+    const items = [
+      { id: AppView.CHAT, label: 'Ikiganiro', icon: <MessageSquare className="w-5 h-5" /> }, 
+    ];
+
+    if (isTwigePublic) {
+      items.push({ id: AppView.TWIGE_IKINYARWANDA, label: 'Twige Ikinyarwanda', icon: <BookOpen className="w-5 h-5" /> });
+    }
+
+    items.push(
+      { id: AppView.TEXT_TO_SPEECH, label: 'Soma Inyandiko', icon: <AudioLines className="w-5 h-5" /> },
+      { id: AppView.TEXT_TOOLS, label: 'Umwandiko', icon: <FileText className="w-5 h-5" /> }, 
+      { id: AppView.RURAL_SUPPORT, label: 'Iterambere', icon: <Sprout className="w-5 h-5" /> },
+      { id: AppView.DECISION_ASSISTANT, label: 'Umujyanama', icon: <TrendingUp className="w-5 h-5" /> },
+      { id: AppView.COURSE_GENERATOR, label: 'Amasomo', icon: <GraduationCap className="w-5 h-5" /> }
+    );
+
+    return items;
+  }, [isTwigePublic]);
 
   return (
     <div className={`fixed inset-y-0 left-0 z-[60] w-72 bg-emerald-950 text-white transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 overflow-hidden shadow-2xl md:shadow-none`}>

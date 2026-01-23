@@ -53,6 +53,7 @@ export interface ModelConfig {
   topP: number;
   topK: number;
   thinkingBudget: number;
+  isTwigePublic?: boolean;
 }
 
 export interface AnnotationBox {
