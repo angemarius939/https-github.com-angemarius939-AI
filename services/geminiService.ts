@@ -4,11 +4,13 @@ import { ImageAnalysisResult, BusinessAnalysisResult, Source, ModelConfig } from
 import { getContextForView } from './knowledgeService';
 
 const DEFAULT_CONFIG: ModelConfig = {
-  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Tanga amakuru agezweho kandi ashingiye ku bimenyetso.",
+  systemInstruction: "Wowe uri ai.rw, umufasha w'ubwenge mu Rwanda. Ugomba gusubiza mu Kinyarwanda gusa. Komeza ube umunyakuri kandi ushyigikire iterambere ry'u Rwanda. Tanga amakuru agezweho kandi ashingiye ku bimenyetso. MU BURYO BW'INGENZI: Kurikiza amategeko y'imyandikire n'ikibonezamvugo ari mu bumenyi (Knowledge Base) wahawe.",
   temperature: 0.7,
   topP: 0.95,
   topK: 40,
-  thinkingBudget: 0
+  thinkingBudget: 0,
+  maxOutputTokens: 2048,
+  seed: 42
 };
 
 const getModelConfig = (): ModelConfig => {
@@ -65,8 +67,8 @@ const extractSources = (response: any): Source[] => {
   return sources;
 };
 
-const FAST_MODEL = "gemini-3-flash-preview"; 
-const TTS_MODEL = "gemini-2.5-flash-preview-tts";
+const FAST_MODEL = 'gemini-3-flash-preview'; 
+const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 export const streamChatResponse = async (
   history: { role: string; parts: { text: string }[] }[],
@@ -74,12 +76,13 @@ export const streamChatResponse = async (
   onChunk: (text: string) => void,
   onSources?: (sources: Source[]) => void
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY || "";
-  if (!apiKey) throw new Error("API_KEY is missing from environment.");
-  
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const config = getModelConfig();
-  const context = getContextForView('CHAT');
+  
+  // Inject grammar and general training context
+  const grammarContext = getContextForView('GRAMMAR');
+  const vocabContext = getContextForView('VOCABULARY');
+  const chatContext = getContextForView('CHAT');
 
   const contents = [
     ...history,
@@ -91,10 +94,13 @@ export const streamChatResponse = async (
       model: FAST_MODEL,
       contents,
       config: {
-        systemInstruction: `${config.systemInstruction}\n${context}\nTanga amakuru agezweho, ukoresheje imbonerahamwe (tables) niba ari ngombwa ngo amakuru asomeke neza.`,
+        systemInstruction: `${config.systemInstruction}\n\n[LINGUISTIC RULES]:\n${grammarContext}\n${vocabContext}\n\n[INTERFACE CONTEXT]:\n${chatContext}`,
         temperature: config.temperature,
         topP: config.topP,
         topK: config.topK,
+        maxOutputTokens: config.maxOutputTokens,
+        thinkingConfig: { thinkingBudget: config.thinkingBudget },
+        seed: config.seed,
         tools: [{ googleSearch: {} }]
       }
     });
@@ -120,22 +126,33 @@ export const streamChatResponse = async (
 export const generateKinyarwandaContent = async (
   prompt: string,
   type: 'learning' | 'composition',
+  level: string,
   onChunk: (text: string) => void,
   onSources?: (sources: Source[]) => void
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY || "";
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
   const context = getContextForView('LEARN_KINYARWANDA');
+  const grammar = getContextForView('GRAMMAR');
   
+  const levelText = level === 'beginner' ? 'Abatangiye (Beginner)' : level === 'intermediate' ? 'Abaziho bike (Intermediate)' : 'Ababizi cyane (Advanced)';
+
   const systemInstruction = `Uri impuguke mu rurimi rw'Ikinyarwanda, amateka, n'ubuvanganzo bw'u Rwanda. 
-  Mubyo ukora byose, ugomba gushingira ku mabwiriza n'inyandiko ziva muri:
-  1. Rwanda Cultural Heritage Academy (Inteko y'Umuco - rwandaheritage.gov.rw)
-  2. Ministry of Education (MINEDUC)
-  3. Rwanda Education Board (REB - reb.gov.rw)
+  Mubyo ukora byose, ugomba gushingira ku mabwiriza n'inyandiko ziva mu nzego z'uburezi n'inteko y'umuco.
   
-  Iyo urimo kwigisha (type: learning), itandukanye n'imyandikire mibi, wigishe ikibonezamvugo (grammar) n'imyandikire (orthography) nyayo.
-  Iyo urimo guhanga (type: composition), hamba imivugo (poems), inkuru (stories), cyangwa ibitekerezo ukoresheje Ikinyarwanda cy'umwimerere kandi gishituye.
-  Ugomba gukoresha Google Search kugira ngo ubone amakuru nyayo n'inkomoko zizewe muri izo nzego zavuzwe haruguru.`;
+  URWEGO RWO KWIGA: ${levelText}
+
+  [LATEST GRAMMAR RULES]:
+  ${grammar}
+
+  AMABWIRIZA Y'INYONGERA (DETAILED REQUIREMENTS):
+  1. **Kurambura (Extreme Detail)**: Isomo rigomba kuba rirambuye cyane. Ntugasubize muri make. Buri gice kigomba kuba gifite amapaji n'ibisobanuro bihagije.
+  2. **Ingero z'Ubuzima (Rwandan Examples)**: Shyiramo ingero zifatika zigaragara mu mibereho y'abanyarwanda (nka: ku isoko rya Kimironko, mu murenge wa Nyarugenge, mu mirimo y'ubuhinzi mu cyaro, cyangwa mu buzima bw'umujyi wa Kigali).
+  3. **Guhenganya (Tailoring)**:
+     - Niba ari **Abatangiye**: Koresha imvugo yoroheje, ibisobanuro bifatika, n'ingero zoroheje cyane.
+     - Niba ari **Abaziho bike**: Winjire mu mizi y'amategeko y'ururimi n'ubuvanganzo busanzwe.
+     - Niba ari **Ababizi cyane**: Koresha Ikinyarwanda gishituye, kigaragaza ubuhanga buhanitse, amategeko yimbitse, n'ubusesenguzi bukomeye.
+  4. **Icons**: Ugomba gukoresha emojis nyinshi kugira ngo isomo rishimishe.`;
 
   try {
     const responseStream = await ai.models.generateContentStream({
@@ -143,7 +160,7 @@ export const generateKinyarwandaContent = async (
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: `${systemInstruction}\n${context}`,
-        temperature: 0.7,
+        temperature: 0.8,
         tools: [{ googleSearch: {} }]
       }
     });
@@ -166,6 +183,7 @@ export const generateKinyarwandaContent = async (
   }
 };
 
+// ... remaining service methods updated to include grammar/context injection ...
 export const streamCourseResponse = async (
   topic: string, 
   level: string, 
@@ -173,33 +191,32 @@ export const streamCourseResponse = async (
   prerequisites: string,
   onChunk: (text: string) => void
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY || "";
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
   const context = getContextForView('COURSE');
+  const grammar = getContextForView('GRAMMAR');
   
-  const prompt = `Tegura isomo rirambuye mu Kinyarwanda:
-  - Ingingo: ${topic}
-  - Urwego: ${level}
-  - Igihe: ${duration}
-  - Ibisabwa mbere: ${prerequisites}
+  const levelDescription = level === 'beginner' ? 'Abatangiye (Beginners) - koresha imvugo yoroheje, ibisobanuro byumvikana vuba, ingero zifatika zo mu Rwanda' : 
+                          level === 'intermediate' ? 'Abaziho bike (Intermediate) - koresha imvugo irimo ubumenyi buvunnye gato, amasesengura asanzwe' : 
+                          'Ababizi cyane (Advanced) - koresha imvugo ya gihanga (technical terms), amategeko yimbitse, n\'amasesengura akomeye yo mu Rwanda';
+
+  const prompt = `Tegura isomo rirambuye cyane (extremely detailed course) rikoresheje Ikinyarwanda.
   
-  Isomo rigomba kuba rifite:
-  # Intangiriro
-  ## Module 1: [Umutwe]
-  ## Module 2: [Umutwe]
-  ## Module 3: [Umutwe]
-  # Imyitozo
-  # Umwanzuro
-  
-  Koresha imitwe (headers) ifite akamenyetso ka # kandi niba hari imibare cyangwa igereranya, koresha imbonerahamwe (tables).`;
+  INGINGO: ${topic}
+  URWEGO: ${levelDescription}
+  IGIHE CYO KWIGA: ${duration}
+  IBISABWA MBERE: ${prerequisites}
+
+  [GRAMMAR RULES TO FOLLOW]:
+  ${grammar}`;
 
   try {
     const responseStream = await ai.models.generateContentStream({
       model: FAST_MODEL,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
-        systemInstruction: `Uri umwalimu kuri ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa kandi ukoreshe uburyo bwa Markdown bwizewe harimo n'imbonerahamwe. ${context}`,
-        temperature: 0.7,
+        systemInstruction: `Uri umwalimu w'impuguke kuri ai.rw mu Rwanda. Inshingano yawe ni gutegura amasomo arambuye kandi ashimishije mu Kinyarwanda cy'umwimerere. Buri gihe tanga ingero zifatika zo mu Rwanda. ${context}`,
+        temperature: 0.8,
         tools: [{ googleSearch: {} }]
       }
     });
@@ -220,19 +237,13 @@ export const streamCourseResponse = async (
 };
 
 export const generateBusinessAnalysis = async (input: string): Promise<BusinessAnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
   const context = getContextForView('BUSINESS');
+  const grammar = getContextForView('GRAMMAR');
   
   const prompt = `Sesengura ubu bucuruzi kandi utange isesengura mu Kinyarwanda: "${input}". 
-  Tanga igisubizo cya JSON yonyine. Ubusesenguzi bwawe bugomba kwita ku miterere y'ubukungu bw'u Rwanda:
-  {
-    "summary": "incamake irambuye mu Kinyarwanda",
-    "isFinancial": true,
-    "financials": {"revenue": 0, "expense": 0, "profit": 0, "currency": "RWF"},
-    "risks": ["kibazo1", "kibazo2"],
-    "advice": ["inama1", "inama2"],
-    "chartData": [{"label": "Izina", "value": 0, "type": "revenue"}]
-  }`;
+  Tanga igisubizo cya JSON yonyine. [GRAMMAR RULES]: ${grammar}`;
 
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
@@ -240,7 +251,9 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
     config: {
       systemInstruction: `Uri umusesenguzi wa ai.rw mu Rwanda. Subiza mu Kinyarwanda gusa. ${context}`,
       responseMimeType: "application/json",
-      temperature: 0.1,
+      temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK,
       tools: [{ googleSearch: {} }]
     }
   });
@@ -249,13 +262,19 @@ export const generateBusinessAnalysis = async (input: string): Promise<BusinessA
 };
 
 export const generateRuralAdvice = async (query: string, sector: string): Promise<{ text: string, sources: Source[] }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
   const context = getContextForView('RURAL');
+  const grammar = getContextForView('GRAMMAR');
+  
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
-    contents: `Urwego: ${sector}. Ikibazo: ${query}`,
+    contents: `Urwego: ${sector}. Ikibazo: ${query}\n[LATEST GRAMMAR]: ${grammar}`,
     config: {
       systemInstruction: `Uri umujyanama mu by'icyaro wa ai.rw. Tanga inama zifatika kandi zigezweho mu Kinyarwanda. ${context}`,
+      temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK,
       tools: [{ googleSearch: {} }]
     }
   });
@@ -263,10 +282,12 @@ export const generateRuralAdvice = async (query: string, sector: string): Promis
 };
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const context = getContextForView('VOICE_TRAINING');
+  
   const response = await ai.models.generateContent({
     model: TTS_MODEL,
-    contents: [{ parts: [{ text }] }],
+    contents: [{ parts: [{ text: `${context}\n${text}` }] }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
@@ -275,28 +296,25 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore'): 
   return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || "";
 };
 
-export const generateTextAnalysis = async (prompt: string, type: string, tone: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-  const response = await ai.models.generateContent({
-    model: FAST_MODEL,
-    contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}`,
-    config: { systemInstruction: "Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw." }
-  });
-  return response.text || "";
-};
-
 export const analyzeImage = async (base64Image: string, prompt: string): Promise<ImageAnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const context = getContextForView('IMAGE_TOOLS');
+  const grammar = getContextForView('GRAMMAR');
+  const config = getModelConfig();
+  
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: prompt || "Sesengura iyi foto mu Kinyarwanda." }
+        { text: `${context}\n${grammar}\n${prompt || "Sesengura iyi foto mu Kinyarwanda."}` }
       ]
     },
     config: {
       responseMimeType: "application/json",
+      temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK,
       responseSchema: {
         type: Type.OBJECT,
         properties: {
@@ -313,39 +331,84 @@ export const analyzeImage = async (base64Image: string, prompt: string): Promise
 };
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents: {
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: "Kuramo umwandiko mu Kinyarwanda." }
+        { text: "Nyamuneka kura inyandiko iri muri iyi foto uyishyire mu mwandiko usomeka neza mu Kinyarwanda niba ari rwo rurimi ruriho. Garura inyandiko yakuwemo gusa." }
       ]
+    },
+    config: {
+      temperature: 0.1,
+      topP: config.topP,
+      topK: config.topK,
+      seed: config.seed
     }
   });
   return response.text || "";
 };
 
 export const generateImage = async (prompt: string, aspectRatio: string = "1:1"): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-image",
-    contents: { parts: [{ text: prompt }] },
-    config: { imageConfig: { aspectRatio: aspectRatio as any } },
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [{ text: prompt }],
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: aspectRatio as any,
+      },
+    },
   });
+
   for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
   }
-  throw new Error("Nta foto yabonetse.");
+  throw new Error("Nta foto yabonetse mu gisubizo cya AI.");
 };
 
 export const generateConversationResponse = async (history: any[], newMessage: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
+  const context = getContextForView('VOICE_TRAINING');
+  const grammar = getContextForView('GRAMMAR');
+  
   const contents = [...history, { role: 'user', parts: [{ text: newMessage }] }];
+  
   const response = await ai.models.generateContent({
     model: FAST_MODEL,
     contents,
-    config: { systemInstruction: "Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito kandi gishimishije." }
+    config: { 
+      systemInstruction: `Uri ijwi rya ai.rw. Subiza mu Kinyarwanda gito kandi gishimishije. ${context}\n[RULES]: ${grammar}`,
+      temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK
+    }
+  });
+  return response.text || "";
+};
+
+export const generateTextAnalysis = async (prompt: string, type: string, tone: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const config = getModelConfig();
+  const context = getContextForView('CHAT');
+  const grammar = getContextForView('GRAMMAR');
+  
+  const response = await ai.models.generateContent({
+    model: FAST_MODEL,
+    contents: `Igikorwa: ${type}. Umwandiko: ${prompt}. Imvugo: ${tone}\n[RULES]: ${grammar}`,
+    config: { 
+      systemInstruction: `Uri impuguke mu rurimi rw'Ikinyarwanda kuri ai.rw. ${context}`,
+      temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK
+    }
   });
   return response.text || "";
 };

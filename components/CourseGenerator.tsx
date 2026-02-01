@@ -123,7 +123,7 @@ export const CourseGenerator: React.FC = () => {
   const levelOptions: { value: CourseLevel; label: string }[] = [
     { value: 'beginner', label: 'Abatangiye' },
     { value: 'intermediate', label: 'Abaziho bike' },
-    { value: 'advanced', label: 'Ababiziranyi' }
+    { value: 'advanced', label: 'Ababizi cyane' }
   ];
 
   return (
@@ -205,7 +205,7 @@ export const CourseGenerator: React.FC = () => {
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <main className="flex-1 overflow-hidden flex flex-col h-full relative">
           {courseContent && (
             <button 
               onClick={() => setIsMobileSidebarOpen(true)}

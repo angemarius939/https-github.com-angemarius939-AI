@@ -35,7 +35,7 @@ export enum AppView {
   ADMIN = 'admin'
 }
 
-export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING' | 'LEGAL' | 'TECHNICAL' | 'LEARN_KINYARWANDA';
+export type KnowledgeScope = 'ALL' | 'RURAL' | 'BUSINESS' | 'COURSE' | 'CHAT' | 'IMAGE_TOOLS' | 'VOICE_TRAINING' | 'LEGAL' | 'TECHNICAL' | 'LEARN_KINYARWANDA' | 'GRAMMAR' | 'VOCABULARY';
 
 export interface KnowledgeItem {
   id: string;
@@ -53,6 +53,8 @@ export interface ModelConfig {
   topP: number;
   topK: number;
   thinkingBudget: number;
+  maxOutputTokens?: number;
+  seed?: number;
   isTwigePublic?: boolean;
 }
 
@@ -62,22 +64,17 @@ export interface AnnotationBox {
   box_2d: number[]; 
 }
 
-export interface ImageTrainingData {
-  imageDescription: string;
-  annotations: AnnotationBox[];
-}
-
-export interface DetectedObject {
-  label: string;
-  box_2d: number[]; 
-}
-
 export interface ImageAnalysisResult {
   description: string;
   confidenceScore: number;
   keyObservations: string[];
   imageType: string;
   detectedObjects?: DetectedObject[];
+}
+
+export interface DetectedObject {
+  label: string;
+  box_2d: number[]; 
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';

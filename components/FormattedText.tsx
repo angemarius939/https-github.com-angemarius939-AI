@@ -96,13 +96,30 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
           );
         }
 
-        // Process line by line to detect tables
+        // Process line by line to detect tables, graphic boxes, and standard markdown
         const lines = part.split('\n');
         const finalElements: React.ReactNode[] = [];
         let tableBuffer: string[] = [];
 
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i].trim();
+          
+          // Special Box Handling (e.g. 🖼️ ISHUSHO Y'ISOMO or [BOX])
+          if (line.startsWith('🖼️') || line.startsWith('BOX:') || (line.startsWith('###') && line.includes('🖼️'))) {
+              finalElements.push(
+                <div key={`graphic-${i}`} className="my-8 p-8 bg-amber-50 border-2 border-dashed border-amber-200 rounded-[32px] relative overflow-hidden group">
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-amber-200/20 rounded-full blur-2xl group-hover:scale-150 transition-transform"></div>
+                  <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+                     <div className="text-4xl">🎨</div>
+                     <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest" dangerouslySetInnerHTML={{ __html: parseInline(line) }} />
+                     <div className="text-sm text-amber-800 italic leading-relaxed max-w-lg" dangerouslySetInnerHTML={{ __html: parseInline(lines[i+1] || "") }} />
+                  </div>
+                </div>
+              );
+              i++; // Skip the next line as we consumed it for description
+              continue;
+          }
+
           if (line.includes('|') && (line.startsWith('|') || line.endsWith('|') || (lines[i+1] && lines[i+1].includes('|--')))) {
             tableBuffer.push(lines[i]);
           } else {
@@ -116,8 +133,8 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
                  const level = trimmed.match(/^(#{1,3})\s/)?.[1].length || 1;
                  const content = trimmed.replace(/^#{1,3}\s/, '');
                  const HeaderTag = level === 1 ? 'h2' : level === 2 ? 'h3' : 'h4';
-                 const classes = level === 1 ? 'text-3xl font-black mt-10 mb-5 tracking-tight text-emerald-950' 
-                               : level === 2 ? 'text-2xl font-bold mt-8 mb-4 text-emerald-900' : 'text-xl font-bold mt-6 mb-3 text-emerald-800';
+                 const classes = level === 1 ? 'text-3xl font-black mt-10 mb-5 tracking-tight text-emerald-950 flex items-center gap-3' 
+                               : level === 2 ? 'text-2xl font-bold mt-8 mb-4 text-emerald-900 flex items-center gap-2' : 'text-xl font-bold mt-6 mb-3 text-emerald-800 flex items-center gap-2';
                  finalElements.push(React.createElement(HeaderTag, { key: `h-${i}`, className: classes, dangerouslySetInnerHTML: { __html: parseInline(content) } }));
               } else if (trimmed.match(/^[\*\-]\s/)) {
                  finalElements.push(
@@ -125,6 +142,12 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, className = 
                     <span className="mt-2.5 mr-4 flex-shrink-0 w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform"></span>
                     <span className="text-base" dangerouslySetInnerHTML={{ __html: parseInline(trimmed.replace(/^[\*\-]\s/, '')) }} />
                   </div>
+                 );
+              } else if (trimmed.startsWith('>')) {
+                 finalElements.push(
+                   <blockquote key={`quote-${i}`} className="border-l-4 border-emerald-500 bg-emerald-50 p-6 rounded-r-2xl my-6 italic text-emerald-900 font-medium">
+                     <span dangerouslySetInnerHTML={{ __html: parseInline(trimmed.substring(1)) }} />
+                   </blockquote>
                  );
               } else {
                 finalElements.push(<p key={`p-${i}`} className="mb-4 text-base md:text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: parseInline(trimmed) }} />);

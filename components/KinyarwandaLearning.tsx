@@ -1,16 +1,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { BookOpen, PenTool, Sparkles, Send, Copy, Check, History, GraduationCap, Languages, ScrollText, Library, FileText, ExternalLink } from 'lucide-react';
+import { BookOpen, PenTool, Sparkles, Send, Copy, Check, History, GraduationCap, Languages, ScrollText, Library, FileText, ExternalLink, Layers } from 'lucide-react';
 import { generateKinyarwandaContent } from '../services/geminiService';
 import { Button } from './Button';
 import { useToast } from './ToastProvider';
 import { ProgressBar } from './ProgressBar';
 import { FormattedText } from './FormattedText';
 import { SourcesToggle } from './SourcesToggle';
-import { Source } from '../types';
+import { Source, CourseLevel } from '../types';
 
 export const KinyarwandaLearning: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'learn' | 'compose'>('learn');
+  const [level, setLevel] = useState<CourseLevel>('beginner');
   const [topic, setTopic] = useState('');
   const [result, setResult] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
@@ -20,17 +21,23 @@ export const KinyarwandaLearning: React.FC = () => {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const learnTopics = [
-    { label: "Ikibonezamvugo (Grammar)", icon: BookOpen },
-    { label: "Imyandikire (Orthography)", icon: PenTool },
-    { label: "Amagambo n'Inyito (Vocabulary)", icon: Library },
-    { label: "Ubuvanganzo (Literature)", icon: ScrollText }
+    { label: "✍️ Ikibonezamvugo (Grammar)", icon: BookOpen },
+    { label: "📝 Imyandikire (Orthography)", icon: PenTool },
+    { label: "📚 Amagambo n'Inyito (Vocabulary)", icon: Library },
+    { label: "📜 Ubuvanganzo (Literature)", icon: ScrollText }
   ];
 
   const composeFormats = [
-    { label: "Umurabyo (Poem)", icon: Sparkles },
-    { label: "Inkuru (Story)", icon: ScrollText },
-    { label: "Ikina (Play)", icon: GraduationCap },
-    { label: "Ibaruwa (Letter)", icon: FileText }
+    { label: "✨ Umurabyo (Poem)", icon: Sparkles },
+    { label: "📖 Inkuru (Story)", icon: ScrollText },
+    { label: "🎭 Ikina (Play)", icon: GraduationCap },
+    { label: "✉️ Ibaruwa (Letter)", icon: FileText }
+  ];
+
+  const levelOptions: { value: CourseLevel; label: string }[] = [
+    { value: 'beginner', label: 'Abatangiye' },
+    { value: 'intermediate', label: 'Abaziho bike' },
+    { value: 'advanced', label: 'Ababizi cyane' }
   ];
 
   const handleAction = async (customPrompt?: string) => {
@@ -45,12 +52,13 @@ export const KinyarwandaLearning: React.FC = () => {
     try {
       let fullText = "";
       const promptWithInstruction = activeTab === 'learn' 
-        ? `Nyamuneka nyigisha ibijyanye na: ${finalPrompt}. Koresha amategeko y'Inteko y'Umuco na REB.`
-        : `Nyamuneka mpa umwandiko uhanganye kuri: ${finalPrompt}. Koresha Ikinyarwanda cy'umwimerere kandi gishituye.`;
+        ? `Nyamuneka nyigisha ibijyanye na: ${finalPrompt}. Koresha amategeko y'Inteko y'Umuco na REB. Urwego rwanjye ni: ${level === 'beginner' ? 'Abatangiye' : level === 'intermediate' ? 'Abaziho bike' : 'Ababizi cyane'}.`
+        : `Nyamuneka mpa umwandiko uhanganye kuri: ${finalPrompt}. Koresha Ikinyarwanda cy'umwimerere kandi gishituye. Urwego ni: ${level === 'beginner' ? 'Abatangiye' : level === 'intermediate' ? 'Abaziho bike' : 'Ababizi cyane'}.`;
 
       await generateKinyarwandaContent(
         promptWithInstruction,
         activeTab,
+        level,
         (chunk) => {
           fullText += chunk;
           setResult(fullText);
@@ -108,24 +116,49 @@ export const KinyarwandaLearning: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-emerald-50 space-y-8">
-            <h3 className="text-xs font-black text-stone-400 uppercase tracking-[0.2em] px-2">
-              {activeTab === 'learn' ? 'Hitamo icyo wiga' : 'Hitamo icyo uhanga'}
-            </h3>
             
-            <div className="grid grid-cols-1 gap-3">
-              {(activeTab === 'learn' ? learnTopics : composeFormats).map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleAction(item.label)}
-                  disabled={isLoading}
-                  className="flex items-center gap-4 p-5 rounded-3xl border-2 border-stone-50 bg-white hover:border-emerald-200 hover:bg-emerald-50 transition-all text-left group"
-                >
-                  <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
-                    <item.icon className="w-6 h-6" />
-                  </div>
-                  <span className="font-bold text-stone-700 group-hover:text-emerald-900 transition-colors uppercase text-xs tracking-tight">{item.label}</span>
-                </button>
-              ))}
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] px-2 flex items-center gap-2">
+                <Layers className="w-3 h-3" /> Urwego rw'Isomo
+              </h3>
+              <div className="grid grid-cols-1 gap-2 px-1">
+                {levelOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setLevel(opt.value)}
+                    className={`p-3 rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
+                      level === opt.value 
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg' 
+                        : 'bg-white border-stone-50 text-stone-500 hover:border-emerald-200'
+                    }`}
+                  >
+                    {opt.label}
+                    {level === opt.value && <Check className="w-4 h-4" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-emerald-50 space-y-4">
+              <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] px-2">
+                {activeTab === 'learn' ? 'Hitamo icyo wiga' : 'Hitamo icyo uhanga'}
+              </h3>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {(activeTab === 'learn' ? learnTopics : composeFormats).map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleAction(item.label)}
+                    disabled={isLoading}
+                    className="flex items-center gap-4 p-4 rounded-3xl border-2 border-stone-50 bg-white hover:border-emerald-200 hover:bg-emerald-50 transition-all text-left group"
+                  >
+                    <div className="p-2.5 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform shadow-sm">
+                      <item.icon className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold text-stone-700 group-hover:text-emerald-900 transition-colors uppercase text-[10px] tracking-tight">{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="pt-6 border-t border-emerald-50">
@@ -148,8 +181,8 @@ export const KinyarwandaLearning: React.FC = () => {
              <div className="absolute inset-0 rwanda-pattern opacity-10 pointer-events-none"></div>
              <div className="relative z-10">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400 mb-4">Ubufasha bwa ai.rw</h4>
-                <p className="text-xs text-emerald-100/70 leading-relaxed">
-                  Iyi interface igufasha gusobanukirwa ururimi rw'Ikinyarwanda hakurikijwe amategeko agenga imyandikire n'imyivugire yemejwe mu Rwanda.
+                <p className="text-xs text-emerald-100/70 leading-relaxed italic">
+                  "Iyi interface igufasha gusobanukirwa ururimi rw'Ikinyarwanda hakurikijwe amategeko agenga imyandikire n'imyivugire yemejwe mu Rwanda. Koresha ingero z'ubuzima bwa buri munsi kugira ngo wumve neza ururimi."
                 </p>
              </div>
           </div>
@@ -164,7 +197,7 @@ export const KinyarwandaLearning: React.FC = () => {
                  </div>
                  <div>
                     <h3 className="text-lg font-black text-emerald-950 uppercase tracking-tighter leading-none">{activeTab === 'learn' ? 'Imyigishirize' : 'Umubumbe w\'Ibhangano'}</h3>
-                    <p className="text-[10px] text-emerald-600/50 font-bold uppercase tracking-widest mt-1">Hifashishijwe ubumenyi bwa AI</p>
+                    <p className="text-[10px] text-emerald-600/50 font-bold uppercase tracking-widest mt-1">Hifashishijwe ubumenyi bwa AI • {levelOptions.find(o => o.value === level)?.label}</p>
                  </div>
               </div>
               {result && (
@@ -181,19 +214,22 @@ export const KinyarwandaLearning: React.FC = () => {
               {result ? (
                 <div className="animate-in fade-in duration-700">
                   <FormattedText text={result} className="text-stone-700 leading-relaxed text-lg" />
-                  <SourcesToggle sources={sources} className="mt-12" />
+                  <div className="mt-8 pt-4 border-t border-stone-50">
+                    <SourcesToggle sources={sources} />
+                  </div>
                 </div>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
                   {isLoading ? (
                     <div className="w-full max-w-sm space-y-4">
                        <ProgressBar isLoading={true} duration={8000} label="ai.rw irimo gutunganya inyandiko..." />
-                       <p className="text-xs font-black uppercase tracking-widest animate-pulse">Irimo gushaka amakuru...</p>
+                       <p className="text-xs font-black uppercase tracking-widest animate-pulse">Irimo gushaka amakuru arambuye...</p>
                     </div>
                   ) : (
                     <>
                       <Library className="w-24 h-24 text-emerald-900" />
                       <p className="text-lg font-bold uppercase tracking-tighter text-emerald-950">Tangira urugendo rwawe rw'Ikinyarwanda</p>
+                      <p className="text-xs text-stone-500 max-w-xs font-medium uppercase tracking-widest">Hitamo urwego n'ingingo ibumoso kugira ngo utangire isomo rirambuye.</p>
                     </>
                   )}
                 </div>

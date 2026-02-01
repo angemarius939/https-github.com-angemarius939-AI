@@ -4,7 +4,7 @@ import {
   Sparkles, MessageSquare, Sprout, 
   TrendingUp, GraduationCap, FileText, 
   ArrowRight, Globe, Users, ShieldCheck, 
-  Cpu, Heart
+  Cpu, Heart, Smartphone, Apple, Play
 } from 'lucide-react';
 import { AppView } from '../types';
 import { Button } from './Button';
@@ -25,9 +25,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     setTotalVisits(total > 0 ? total : 1240); // Fallback to a base number if local stats empty
   }, []);
 
-  const scrollToTools = () => {
-    const toolsSection = document.getElementById('serivisi-section');
-    toolsSection?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToSection = (id: string) => {
+    const section = document.getElementById(id);
+    section?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const tools = [
@@ -49,8 +49,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           </div>
           <div className="flex items-center gap-4 md:gap-8">
              <div className="hidden md:flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-stone-400">
-                <button onClick={scrollToTools} className="hover:text-emerald-600 transition-colors">Serivisi</button>
-                <button onClick={() => document.getElementById('vision-section')?.scrollIntoView({behavior: 'smooth'})} className="hover:text-emerald-600 transition-colors">Intego</button>
+                <button onClick={() => scrollToSection('serivisi-section')} className="hover:text-emerald-600 transition-colors">Serivisi</button>
+                <button onClick={() => scrollToSection('download-section')} className="hover:text-emerald-600 transition-colors">Mobile App</button>
+                <button onClick={() => scrollToSection('vision-section')} className="hover:text-emerald-600 transition-colors">Intego</button>
              </div>
              <Button onClick={() => onStart(AppView.CHAT)} variant="primary" className="px-6 py-2.5 rounded-full text-[10px] shadow-lg shadow-emerald-600/20 uppercase font-black tracking-widest">Tangira ubu</Button>
           </div>
@@ -97,7 +98,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               Tangira ubu <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
             </button>
             <button 
-              onClick={scrollToTools}
+              onClick={() => scrollToSection('serivisi-section')}
               className="px-10 py-6 bg-white text-emerald-900 border-2 border-emerald-100 rounded-[32px] text-lg font-bold hover:bg-emerald-50 transition-all shadow-sm"
             >
               Reba ibishya
@@ -133,6 +134,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* Mobile App Download Section */}
+      <section id="download-section" className="py-24 px-6 max-w-7xl mx-auto">
+        <div className="bg-emerald-900 rounded-[64px] overflow-hidden shadow-2xl relative">
+          <div className="absolute inset-0 rwanda-pattern opacity-10 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-br from-emerald-500/20 to-transparent"></div>
+          
+          <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12 p-12 lg:p-24 text-center lg:text-left">
+            <div className="flex-1 space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-400 border border-white/10">
+                <Smartphone className="w-4 h-4" /> 
+                Genda na AI yawe
+              </div>
+              <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
+                Kuramo <br />
+                <span className="text-emerald-400">Mobile App</span>
+              </h2>
+              <p className="text-emerald-100/70 text-lg md:text-xl font-medium max-w-xl">
+                Iboneze AI kuri telefoni yawe. Baza ibibazo ukoresheje ijwi, sesengura amafoto ako kanya, kandi wige Ikinyarwanda aho uri hose.
+              </p>
+              
+              <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                <button className="flex items-center gap-3 bg-black text-white px-8 py-4 rounded-2xl hover:bg-stone-900 transition-all border border-white/10 shadow-xl group">
+                  <Apple className="w-8 h-8 group-hover:scale-110 transition-transform" />
+                  <div className="text-left">
+                    <div className="text-[10px] uppercase font-bold text-stone-400 leading-none mb-1">Yibone kuri</div>
+                    <div className="text-xl font-black leading-none">App Store</div>
+                  </div>
+                </button>
+                <button className="flex items-center gap-3 bg-black text-white px-8 py-4 rounded-2xl hover:bg-stone-900 transition-all border border-white/10 shadow-xl group">
+                  <Play className="w-8 h-8 fill-current text-emerald-500 group-hover:scale-110 transition-transform" />
+                  <div className="text-left">
+                    <div className="text-[10px] uppercase font-bold text-stone-400 leading-none mb-1">Yibone kuri</div>
+                    <div className="text-xl font-black leading-none">Google Play</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 relative">
+              <div className="relative z-10 w-full max-w-sm mx-auto transform hover:scale-105 transition-transform duration-700">
+                <div className="bg-emerald-950 rounded-[40px] border-[8px] border-emerald-800 shadow-2xl p-4 aspect-[9/18.5] relative overflow-hidden">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-6 bg-emerald-800 rounded-b-2xl z-20"></div>
+                  <div className="h-full w-full bg-white rounded-[24px] overflow-hidden flex flex-col p-4 space-y-4">
+                    <Logo size="sm" />
+                    <div className="h-4 w-2/3 bg-stone-100 rounded-full"></div>
+                    <div className="flex-1 space-y-2">
+                       <div className="h-24 w-full bg-emerald-50 rounded-2xl"></div>
+                       <div className="h-4 w-full bg-stone-50 rounded-full"></div>
+                       <div className="h-4 w-4/5 bg-stone-50 rounded-full"></div>
+                       <div className="h-24 w-full bg-blue-50 rounded-2xl"></div>
+                    </div>
+                    <div className="h-12 w-full bg-emerald-600 rounded-xl"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/30 rounded-full blur-[80px] -z-10 animate-pulse"></div>
+            </div>
+          </div>
         </div>
       </section>
 

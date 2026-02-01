@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download, X, BookOpen } from 'lucide-react';
+import { MessageSquare, FileText, Sprout, GraduationCap, AudioLines, ChevronDown, ChevronUp, Info, TrendingUp, Settings, Download, X, BookOpen, Smartphone } from 'lucide-react';
 import { AppView, ModelConfig } from '../types';
 import { Logo } from './Logo';
 
@@ -135,23 +135,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isO
             )}
           </div>
 
-          <button
-            onClick={() => onChangeView(AppView.ADMIN)}
-            className={`flex items-center w-full px-4 py-2.5 mt-2 rounded-xl transition-all duration-200 text-[10px] font-black uppercase tracking-widest ${
-               currentView === AppView.ADMIN ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/80'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5 mr-2" />
-            <span>Kuyobora (Admin)</span>
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={() => onChangeView(AppView.LANDING)}
+              className={`flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 text-xs font-black uppercase tracking-widest bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95`}
+            >
+              <Smartphone className="w-4 h-4 mr-2" />
+              <span>Kuramo App</span>
+            </button>
+
+            <button
+              onClick={() => onChangeView(AppView.ADMIN)}
+              className={`flex items-center w-full px-4 py-2.5 rounded-xl transition-all duration-200 text-[10px] font-black uppercase tracking-widest ${
+                currentView === AppView.ADMIN ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/80'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5 mr-2" />
+              <span>Kuyobora (Admin)</span>
+            </button>
+          </div>
 
           {installPrompt && (
             <button
               onClick={handleInstallClick}
-              className="flex items-center justify-center w-full px-4 py-3 mt-4 rounded-xl transition-all duration-200 text-xs font-black uppercase tracking-widest bg-emerald-500 text-white hover:bg-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-95"
+              className="flex items-center justify-center w-full px-4 py-2 mt-2 rounded-xl transition-all duration-200 text-[9px] font-black uppercase tracking-widest bg-white/10 text-emerald-400 border border-emerald-400/20 hover:bg-white/20 active:scale-95"
             >
-              <Download className="w-4 h-4 mr-2" />
-              <span>Shyira muri Telefoni</span>
+              <Download className="w-3 h-3 mr-2" />
+              <span>Shyira muri Telefoni (PWA)</span>
             </button>
           )}
         </div>
