@@ -3,78 +3,52 @@
 <html lang="rw">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#10b981" />
-    <title>ai.rw</title>
+    <title>ai.rw Assistant</title>
     <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/10b981/ffffff?text=ai.rw" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script>
       if (typeof window.process === "undefined") {
         window.process = { env: {} };
       }
     </script>
     <style>
+      :root {
+        --safe-area-inset-top: env(safe-area-inset-top);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom);
+      }
       html, body, #root {
         height: 100%;
         margin: 0;
         padding: 0;
         background-color: #f8fafc;
+        overflow: hidden;
       }
       body {
         font-family: 'Inter', sans-serif;
-      }
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #e2e8f0; 
-        border-radius: 10px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #cbd5e1; 
-      }
-
-      .rwanda-pattern-light {
-        background-color: #f8fafc;
-        background-image: 
-          linear-gradient(135deg, #e2e8f0 25%, transparent 25%), 
-          linear-gradient(225deg, #e2e8f0 25%, transparent 25%), 
-          linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
-          linear-gradient(315deg, #e2e8f0 25%, transparent 25%);
-        background-position: 20px 0, 20px 0, 0 0, 0 0;
-        background-size: 40px 40px;
-        background-repeat: repeat;
-      }
-
-      @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes pulse-subtle {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.85; transform: scale(1.02); }
-      }
-      .animate-pulse-subtle {
-        animation: pulse-subtle 2s ease-in-out infinite;
+        -webkit-tap-highlight-color: transparent;
       }
     </style>
     <script type="importmap">
-    {
-      "imports": {
-        "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "react/jsx-runtime": "https://aistudiocdn.com/react@^19.2.0/jsx-runtime",
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-        "vite": "https://aistudiocdn.com/vite@^7.2.4"
-      }
-    }
-    </script>
+{
+  "imports": {
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/jsx-runtime": "https://aistudiocdn.com/react@^19.2.0/jsx-runtime",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.3"
+  }
+}
+</script>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>

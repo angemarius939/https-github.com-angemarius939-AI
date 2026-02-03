@@ -58,10 +58,19 @@ export interface ModelConfig {
   isTwigePublic?: boolean;
 }
 
-export interface AnnotationBox {
-  label: string;
-  description?: string;
-  box_2d: number[]; 
+// Fix: Add missing DailyStats interface
+export interface DailyStats {
+  date: string;
+  count: number;
+  countries: Record<string, number>;
+}
+
+// Fix: Add missing CountryStats interface
+export interface CountryStats {
+  code: string;
+  count: number;
+  name: string;
+  flag: string;
 }
 
 export interface ImageAnalysisResult {
@@ -69,21 +78,10 @@ export interface ImageAnalysisResult {
   confidenceScore: number;
   keyObservations: string[];
   imageType: string;
-  detectedObjects?: DetectedObject[];
-}
-
-export interface DetectedObject {
-  label: string;
-  box_2d: number[]; 
+  detectedObjects?: { label: string; box_2d: number[] }[];
 }
 
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
-
-export interface ChartDataPoint {
-  label: string;
-  value: number;
-  type: string;
-}
 
 export interface BusinessAnalysisResult {
   summary: string;
@@ -94,25 +92,7 @@ export interface BusinessAnalysisResult {
     profit: number;
     currency: string;
   };
-  kpiCards?: {
-    label: string;
-    value: string;
-    color?: string;
-  }[];
   risks: string[];
   advice: string[];
-  chartData: ChartDataPoint[];
-}
-
-export interface DailyStats {
-  date: string;
-  count: number;
-  countries: Record<string, number>;
-}
-
-export interface CountryStats {
-  code: string;
-  count: number;
-  name: string;
-  flag: string;
+  chartData: {label: string; value: number; type: string}[];
 }

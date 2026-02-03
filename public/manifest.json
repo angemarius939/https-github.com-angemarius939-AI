@@ -1,5 +1,6 @@
+
 {
-  "name": "ai.rw",
+  "name": "ai.rw Assistant",
   "short_name": "ai.rw",
   "start_url": "/",
   "display": "standalone",

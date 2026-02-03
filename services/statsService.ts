@@ -87,7 +87,9 @@ export const getCountryAggregate = (): CountryStats[] => {
       Object.values(stats).forEach(day => {
           if (day.countries) {
               Object.entries(day.countries).forEach(([code, count]) => {
-                  agg[code] = (agg[code] || 0) + count;
+                  // Fix: Ensure count is treated as a number
+                  const numericCount = typeof count === 'number' ? count : 0;
+                  agg[code] = (agg[code] || 0) + numericCount;
               });
           }
       });
